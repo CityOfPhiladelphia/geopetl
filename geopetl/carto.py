@@ -5,9 +5,6 @@ from petl import Table
 def tocarto(table, url, geom_field=None):
     from cartodb import CartoDBAPIKey, CartoDBException, FileImport
 
-    # parse url
-    # get name of
-
     filename = name + '.csv'
 
     # write to csv
