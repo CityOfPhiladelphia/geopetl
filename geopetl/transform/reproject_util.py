@@ -15,6 +15,8 @@ class WktTransformer(object):
         )
 
     def transform(self, from_wkt):
+        if from_wkt is None:
+            return None
         # TODO do we need to use shapely here?
         from_shp = shp_loads(from_wkt)
         shp_t = shp_transform(self.project, from_shp)
