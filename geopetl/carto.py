@@ -19,9 +19,18 @@ def tocarto(table, domain=None, table_name=None, api_key=None, geom_field=None):
         .tocsv(temp_file_path)
     )
 
-    # import to carto
+    # create auth client
     base_url = 'https://{}.carto.com'.format(domain)
     auth_client = APIKeyAuthClient(base_url, api_key)
+
+    # drop existing table
+    # TODO figure out why this isn't taking effect until after the file import
+    # runs. the table gets dropped, but the file being uploaded is suffixed _1.
+    # sql_client = SQLClient(auth_client)
+    # drop_stmt = "DROP TABLE IF EXISTS {}".format(table_name)
+    # drop_resp = sql_client.send(drop_stmt)
+
+    # import to carto
     file_import_job = FileImportJob(temp_file_path, auth_client)
     file_import_job.run(table_name=table_name)
 
