@@ -36,11 +36,3 @@ def parse_db_url(url):
         'table_name':   table_name,
         'query':        parse_qs(parsed.query),
     }
-
-# TODO alter parse_db_url to be more generic so we don't need this. just have a
-# `path` component rather than trying to intuit db vs. table names.
-def parse_carto_url(url):
-    r = parse_db_url(url)
-    r['table_name'] = r['db_name']
-    r.pop('db_name')
-    return r

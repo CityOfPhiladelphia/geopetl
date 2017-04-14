@@ -2,24 +2,12 @@ import os
 import tempfile
 import petl as etl
 from petl import Table
-from geopetl.util import parse_carto_url
 
 
-def tocarto(table, url, geom_field=None):
+def tocarto(table, domain=None, table_name=None, api_key=None, geom_field=None):
     from carto.auth import APIKeyAuthClient
     from carto.file_import import FileImportJob
-
-    # parse url
-    try:
-        parsed = parse_carto_url(url)
-        domain = parsed['host']
-        table_name = parsed['table_name']
-        try:
-            api_key = parsed['query']['API_KEY']
-        except KeyError:
-            raise ValueError('Carto API key not supplied')
-    except ValueError:
-        raise ValueError('Invalid Carto URL')
+    from carto.sql import SQLClient
 
     temp_dir = tempfile.gettempdir()
     temp_file_path = os.path.join(temp_dir, table_name + '.csv')
