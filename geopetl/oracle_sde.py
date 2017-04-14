@@ -585,30 +585,19 @@ class OracleSdeTable(object):
         # execute this later
         c = self.db.cursor
         c.execute('select * from {} where rownum = 1'.format(self.name))
-        # print(c.description)
         db_types = {d[0]: d[1] for d in self.db.cursor.description}
-        # print(db_types)
-        # print('\n\nINPUT SIZES')
-        # pprint(db_types)
 
         # Prepare statement
         placeholders_joined = ', '.join(placeholders)
         stmt_fields_joined = ', '.join(stmt_fields)
         stmt = "INSERT INTO {} ({}) VALUES ({})".format(self.name, \
             stmt_fields_joined, placeholders_joined)
-        # print('STMT****', stmt)
         self.db.cursor.prepare(stmt)
 
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in fields}
         # db_types_filtered.pop('ID')
 
-        # print('\n\nDB TYPES FILT')
-        # pprint(db_types_filtered)
-
         c.setinputsizes(**db_types_filtered)
-
-        # print('\n\nNAMES', c.bindnames())
-        # print('\n\nVARS', c.bindvars)
 
         # Make list of value lists
         val_rows = []
@@ -618,16 +607,12 @@ class OracleSdeTable(object):
         rows = rows.records()
 
         for i, row in enumerate(rows):
-            # print('\n\n**** ID:', row['id'])
-
-            # val_row = []
             val_row = {}
             for field, type_ in type_map_items:
                 if type_ == 'geom':
                     geom = row[rows_geom_field]
                     val = self._prepare_geom(geom, srid, \
                         multi_geom=multi_geom)
-                    # val_row.append(val)
                     val_row[field.upper()] = val
                 else:
                     val = self._prepare_val(row[field], type_)
@@ -635,9 +620,7 @@ class OracleSdeTable(object):
                     # if type_ == 'nclob':
                     # val_row.append(val)
                     val_row[field.upper()] = val
-            # pprint(val_row)
             val_rows.append(val_row)
-            # pprint(val_rows)
 
             if i % buffer_size == 0:
                 # execute
@@ -649,7 +632,6 @@ class OracleSdeTable(object):
 
         self.db.cursor.executemany(None, val_rows, batcherrors=True)
         er = self.db.cursor.getbatcherrors()
-        # print('errrrrr', er)
         self.db.dbo.commit()
 
     def truncate(self, cascade=False):
