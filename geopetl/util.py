@@ -4,7 +4,7 @@ import petl as etl
 if etl.compat.PY2:
     from urlparse import urlparse
 else:
-    from urllib.parse import urlparse
+    from urllib.parse import urlparse, parse_qs
 
 def parse_db_url(url):
     """Convenience function for parsing SQLAlchemy-style DB URLs."""
@@ -34,5 +34,5 @@ def parse_db_url(url):
         'password':     parsed.password,
         'db_name':      db_name,
         'table_name':   table_name,
+        'query':        parse_qs(parsed.query),
     }
-    
