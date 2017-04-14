@@ -94,12 +94,12 @@ class OracleSdeDatabase(object):
         if isinstance(dbo, string_types):
             # try to parse as url
             try:
-                parsed = parse_db_url(dbo)
-                database =  parsed['db_name']
-                user =      parsed['user']
-                password =  parsed['password']
-                host =      parsed['host']
-                port =      parsed['port'] or 1521
+                parsed      = parse_db_url(dbo)
+                database    = parsed['db_name']
+                user        = parsed['user']
+                password    = parsed['password']
+                host        = parsed['host']
+                port        = parsed['port'] or 1521
 
                 # make dsn
                 dsn = cx_Oracle.makedsn(host, port, database)
