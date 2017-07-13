@@ -186,6 +186,8 @@ FIELD_TYPE_MAP = {
     'FIXED_CHAR':   'text',
     # HACK: Nothing else in an SDE database should be using OBJECTVAR.
     'OBJECTVAR':    'geom',
+    # cx_Oracle 6.0 uses 'object' for geom
+    'OBJECT':       'geom',
     # Not sure why cx_Oracle returns this for a NUMBER field.
     'LONG_STRING':  'num',
     'NCLOB':        'nclob',
