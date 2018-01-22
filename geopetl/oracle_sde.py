@@ -192,6 +192,11 @@ FIELD_TYPE_MAP = {
     # Not sure why cx_Oracle returns this for a NUMBER field.
     'LONG_STRING':  'num',
     'NCLOB':        'nclob',
+    'BLOB':         'blob',
+    'CLOB':         'clob',
+    # this is a "pseudocolumn" that appears to consist of string values
+    # https://docs.oracle.com/cd/B19306_01/server.102/b14200/sql_elements001.htm#i46148
+    'ROWID':        'text',
 }
 
 class OracleSdeTable(object):
