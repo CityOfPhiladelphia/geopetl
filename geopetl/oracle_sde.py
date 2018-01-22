@@ -229,6 +229,9 @@ class OracleSdeTable(object):
 
         self.objectid_field = self._get_objectid_field()
 
+    def __repr__(self):
+        return 'OracleSdeTable: {}.{}'.format(self._owner, self.name)
+
     @property
     def metadata(self):
         stmt = "SELECT * FROM {} WHERE 1 = 0".format(self.name_with_schema)
