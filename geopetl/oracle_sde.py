@@ -151,7 +151,8 @@ class OracleSdeDatabase(object):
             WHERE TABLE_NAME NOT IN (
                 SELECT VIEW_NAME
                 FROM ALL_VIEWS
-                WHERE OWNER = '{}')
+                WHERE OWNER = '{}'
+            )
         """.format(self._user_p)
         self.cursor.execute(stmt)
         return sorted([x[0] for x in self.cursor.fetchall()])
@@ -182,7 +183,7 @@ FIELD_TYPE_MAP = {
     'NCHAR':        'text',
     'STRING':       'text',
     'DATETIME':     'date',
-    'TIMESTAMP':     'date',
+    'TIMESTAMP':    'date',
     'FIXED_CHAR':   'text',
     # HACK: Nothing else in an SDE database should be using OBJECTVAR.
     'OBJECTVAR':    'geom',
