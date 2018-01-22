@@ -121,7 +121,7 @@ class OracleSdeDatabase(object):
         # is it a callable?
         # REVIEW petl already handles db api connections?
         elif callable(dbo):
-            dbo = callable()
+            dbo = dbo()
 
         # then it must be a cx_Oracle connection.
         elif not isinstance(dbo, cx_Oracle.Connection):
