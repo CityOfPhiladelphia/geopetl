@@ -11,9 +11,7 @@ from petl.util.base import Table
 from geopetl.base import SpatialQuery
 from geopetl.util import parse_db_url
 
-
 DEFAULT_WRITE_BUFFER_SIZE = 1000
-
 
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
@@ -21,7 +19,6 @@ def fromoraclesde(dbo, table_name, **kwargs):
     return table.query(**kwargs)
 
 etl.fromoraclesde = fromoraclesde
-
 
 def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
                 buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
@@ -444,7 +441,6 @@ class OracleSdeTable(object):
             geom = 'ST_Multi({})'.format(geom)
 
         return geom
-
 
     def write(self, rows, srid=None, table_srid=None,
               buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
