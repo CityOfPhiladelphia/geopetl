@@ -108,11 +108,9 @@ class OracleSdeDatabase(object):
                 try:
                     dbo = cx_Oracle.connect(conn_str)
 
-                # if that didn't work, try using the db name as a service name
-                # instead of sid.
+                # if that didn't work, try using the host name as a tns name
                 except cx_Oracle.DatabaseError:
-                    dsn = cx_Oracle.makedsn(host, port, service_name=database)
-                    conn_str = '{}/{}@{}'.format(user, password, dsn)
+                    conn_str = '{}/{}@{}'.format(user, password, host)
                     dbo = cx_Oracle.connect(conn_str)
 
             # otherwise, assume it's an oracle-native connection string
