@@ -15,7 +15,8 @@ def parse_db_url(url):
     if scheme in [None, '']:
         raise ValueError('Not a valid URL')
 
-    # convert generic (sqlalchemy-style) names to spatial ones; remove special chars
+    # convert generic (sqlalchemy-style) names to spatial ones; remove special
+    # chars
     scheme = scheme.replace('postgresql', 'postgis')\
                    .replace('-', '')\
                    .replace('_', '')
