@@ -142,7 +142,7 @@ class OracleSdeDatabase(object):
         return OracleSdeTable(self, name)
 
     @property
-    def tables(self):
+    def table_names(self):
         """Return a list of sorted table names belonging to the user."""
 
         stmt = """
@@ -155,6 +155,11 @@ class OracleSdeDatabase(object):
         """.format(self._user_p)
         self.cursor.execute(stmt)
         return sorted([x[0] for x in self.cursor.fetchall()])
+
+    @property
+    def tables(self):
+        """Return a list of OracleSdeTable objects belonging to the user."""
+        return [OracleSdeTable(self, x) for x in self.table_names]
 
     def _exec(self, stmt):
         """
