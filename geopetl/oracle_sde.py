@@ -382,6 +382,8 @@ class OracleSdeTable(object):
 
         Shout-out to Vince as usual:
         http://gis.stackexchange.com/questions/193424/get-the-geometry-type-of-an-empty-arcsde-feature-class
+
+        Note: if the table isn't registered with SDE, this will fail.
         """
 
         if self.geom_field is None:
@@ -398,8 +400,6 @@ class OracleSdeTable(object):
                 owner = '{}' and
                 table_name = '{}'
         '''.format(self._owner.upper(), self.name.upper())
-        # If the table isn't registered with SDE, this will fail.
-
 
         self.db.cursor.execute(stmt)
         r = self.db.cursor.fetchone()
@@ -425,13 +425,13 @@ class OracleSdeTable(object):
         if self.geom_field is None:
             return None
 
-        stmt = '''
+        stmt = """
             select s.auth_srid
             from sde.layers l
             join sde.spatial_references s
             on l.srid = s.srid
             where l.owner = '{}' and l.table_name = '{}'
-        '''.format(self._owner.upper(), self.name.upper())
+        """.format(self._owner.upper(), self.name.upper())
 
         self.db.cursor.execute(stmt)
         row = self.db.cursor.fetchone()
