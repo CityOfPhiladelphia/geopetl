@@ -152,6 +152,21 @@ class OracleSdeDatabase(object):
         return sorted([x[0] for x in self.cursor.fetchall()])
 
     @property
+    def all_tables(self):
+        """Returns a list of all tables, including those not belonging to the
+        user. Each item is a dictionary with the table and owner."""
+        stmt = """
+            SELECT
+                OWNER,
+                TABLE_NAME
+            FROM
+                ALL_TABLES
+        """
+        self.cursor.execute(stmt)
+        rows = [x for x in self.cursor.fetchall()]
+        return [dict(zip(['owner', 'table_name'], x)) for x in rows]
+
+    @property
     def table_names(self):
         """Return a list of sorted table names belonging to the user."""
 
