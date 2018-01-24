@@ -193,7 +193,16 @@ class OracleSdeDatabase(object):
                 )
         """.format(self._user_p)
         self.cursor.execute(stmt)
-        return sorted([x[0] for x in self.cursor.fetchall()])
+        table_names = [x[0] for x in self.cursor.fetchall()]
+
+        # filter out sde business tables
+        table_names_filtered = self._exclude_sde_tables(table_names)
+
+        # sort
+        table_names_sorted = sorted(table_names_filtered)
+
+        return table_names_sorted
+
     def _exclude_sde_tables(self, tables):
         """Utility for removing SDE tables from a list of tables."""
         return [x for x in tables if
