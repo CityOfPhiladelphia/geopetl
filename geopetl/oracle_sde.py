@@ -179,24 +179,43 @@ class OracleSdeDatabase(object):
 ################################################################################
 
 FIELD_TYPE_MAP = {
+    # num
     'NUMBER':       'num',
-    'NCHAR':        'text',
-    'STRING':       'text',
-    'DATETIME':     'date',
-    'TIMESTAMP':    'date',
-    'FIXED_CHAR':   'text',
-    # HACK: Nothing else in an SDE database should be using OBJECTVAR.
-    'OBJECTVAR':    'geom',
-    # cx_Oracle 6.0 uses 'object' for geom
-    'OBJECT':       'geom',
-    # Not sure why cx_Oracle returns this for a NUMBER field.
+    'FLOAT':        'num',
     'LONG_STRING':  'num',
-    'NCLOB':        'nclob',
-    'BLOB':         'blob',
-    'CLOB':         'clob',
+
+    # text
+    'NCHAR':        'text',
+    'CHAR':         'text',
+    'NVARCHAR2':    'text',
+    'VARCHAR2':     'text',
+    'STRING':       'text',
+    'FIXED_CHAR':   'text',
     # this is a "pseudocolumn" that appears to consist of string values
     # https://docs.oracle.com/cd/B19306_01/server.102/b14200/sql_elements001.htm#i46148
     'ROWID':        'text',
+
+    # date
+    'DATETIME':     'date',
+    'DATE':         'date',
+    'TIMESTAMP':    'date',
+
+    # clob
+    # TODO clean these up - how will they get used?
+    'NCLOB':        'nclob',
+    'BLOB':         'blob',
+    'CLOB':         'clob',
+    'RAW':          'raw',
+
+    # sde stuff
+    'ST_GEOMETRY':  'geom',
+    # HACK: Nothing else in an SDE database should be using OBJECTVAR.
+    # it turns out this isn't true. there are other user-defined data types in
+    # the sde tables that come back as objectvar, or perhaps object.
+    'OBJECTVAR':    'geom',
+    # cx_Oracle 6.0 uses 'object' for geom
+    'OBJECT':       'geom',
+    'SP_GRID_INFO': 'other',
 }
 
 class OracleSdeTable(object):
