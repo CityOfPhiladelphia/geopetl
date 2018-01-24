@@ -253,21 +253,39 @@ class OracleSdeTable(object):
 
     @property
     def metadata(self):
-        stmt = "SELECT * FROM {} WHERE 1 = 0".format(self.name_with_schema)
+        stmt = """
+            SELECT
+                COLUMN_NAME,
+                DATA_TYPE,
+                DATA_LENGTH,
+                NULLABLE
+            FROM ALL_TAB_COLS
+            WHERE
+                OWNER = :1 AND
+                TABLE_NAME = :2 AND
+                HIDDEN_COLUMN = 'NO'
+            ORDER BY COLUMN_ID
+        """
         cursor = self.db.cursor
-        cursor.execute(stmt)
-        desc = cursor.description
+        cursor.execute(stmt, (self.schema, self.name,))
+        rows = cursor.fetchall()
         fields = OrderedDict()
 
-        for field in desc:
-            name = field[0].lower()
-            type_ = field[1].__name__
-            assert type_ in FIELD_TYPE_MAP, '{} not a known field type'\
-                .format(type_)
+        for row in rows:
+            name = row[0].lower()
+            type_ = row[1]
+            type_without_length = re.match('[A-Z0-9_]+', type_).group()
+            length = row[2]
+            nullable = row[3]
+            assert type_without_length in FIELD_TYPE_MAP, \
+                '{} not a known field type' .format(type_)
             fields[name] = {
-                # 'name':     name,
-                'type':     FIELD_TYPE_MAP[type_],
+                'type': FIELD_TYPE_MAP[type_without_length],
+                'db_type': type_,
+                'length': length,
+                'nullable': nullable == 'Y',
             }
+
         return fields
 
     @property
