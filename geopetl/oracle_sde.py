@@ -185,11 +185,12 @@ class OracleSdeDatabase(object):
         stmt = """
             SELECT TABLE_NAME
             FROM USER_TABLES
-            WHERE TABLE_NAME NOT IN (
-                SELECT VIEW_NAME
-                FROM ALL_VIEWS
-                WHERE OWNER = '{}'
-            )
+            WHERE
+                TABLE_NAME NOT IN (
+                    SELECT VIEW_NAME
+                    FROM ALL_VIEWS
+                    WHERE OWNER = '{}'
+                )
         """.format(self._user_p)
         self.cursor.execute(stmt)
         return sorted([x[0] for x in self.cursor.fetchall()])
