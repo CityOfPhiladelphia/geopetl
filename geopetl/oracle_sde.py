@@ -98,16 +98,16 @@ class OracleSdeDatabase(object):
                 host        = parsed['host']
                 port        = parsed['port'] or 1521
 
-                # make dsn
-                dsn = cx_Oracle.makedsn(host, port, database)
-                conn_str = '{}/{}@{}'.format(user, password, dsn)
-
-                try:
-                    dbo = cx_Oracle.connect(conn_str)
-
-                # if that didn't work, try using the host name as a tns name
-                except cx_Oracle.DatabaseError:
+                # check the host for the __tns flag, in which case we treat it
+                # as a tns name.
+                if host.endswith('__tns'):
+                    host = host.replace('__tns', '')
                     conn_str = '{}/{}@{}'.format(user, password, host)
+                    dbo = cx_Oracle.connect(conn_str)
+                # otherwise, treat it as a host
+                else:
+                    dsn = cx_Oracle.makedsn(host, port, database)
+                    conn_str = '{}/{}@{}'.format(user, password, dsn)
                     dbo = cx_Oracle.connect(conn_str)
 
             # otherwise, assume it's an oracle-native connection string
