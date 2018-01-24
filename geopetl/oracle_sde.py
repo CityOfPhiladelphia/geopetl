@@ -166,6 +166,18 @@ class OracleSdeDatabase(object):
         rows = [x for x in self.cursor.fetchall()]
         return [dict(zip(['owner', 'table_name'], x)) for x in rows]
 
+    def tables_for_user(self, user):
+        """Returns a list of OracleSdeTable objects of tables belonging to a
+        user."""
+        stmt = """
+            SELECT TABLE_NAME
+            FROM ALL_TABLES
+            WHERE OWNER = :1
+        """
+        self.cursor.execute(stmt, (user,))
+        tables = [x[0] for x in self.cursor.fetchall()]
+        return sorted(self._exclude_sde_tables(tables))
+
     @property
     def table_names(self):
         """Return a list of sorted table names belonging to the user."""
