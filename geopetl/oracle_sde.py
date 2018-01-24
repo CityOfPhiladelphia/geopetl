@@ -142,6 +142,16 @@ class OracleSdeDatabase(object):
         return OracleSdeTable(self, name)
 
     @property
+    def users(self):
+        """Return a list of user names."""
+        stmt = """
+            SELECT USERNAME
+            FROM ALL_USERS
+        """
+        self.cursor.execute(stmt)
+        return sorted([x[0] for x in self.cursor.fetchall()])
+
+    @property
     def table_names(self):
         """Return a list of sorted table names belonging to the user."""
 
