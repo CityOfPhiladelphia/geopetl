@@ -194,6 +194,13 @@ class OracleSdeDatabase(object):
         """.format(self._user_p)
         self.cursor.execute(stmt)
         return sorted([x[0] for x in self.cursor.fetchall()])
+    def _exclude_sde_tables(self, tables):
+        """Utility for removing SDE tables from a list of tables."""
+        return [x for x in tables if
+                not re.match('^S\d+_IDX\$$', x) and
+                not re.match('^KEYSET_', x) and
+                not re.match('SDE_LOGFILE', x)
+               ]
 
     @property
     def tables(self):
