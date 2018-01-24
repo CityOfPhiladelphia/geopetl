@@ -547,6 +547,23 @@ class OracleSdeTable(object):
 
         return geom
 
+    @property
+    def privileges(self):
+        stmt = """
+            SELECT
+                GRANTEE,
+                PRIVILEGE
+            FROM ALL_TAB_PRIVS
+            WHERE
+                TABLE_SCHEMA = :1 AND
+                TABLE_NAME = :2
+        """
+        cursor = self.db.cursor
+        cursor.execute(stmt, (self.schema, self.name,))
+        rows = cursor.fetchall()
+
+        return [dict(zip(['grantee', 'privilege'], x)) for x in rows]
+
     def write(self, rows, srid=None, table_srid=None,
               buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
         """
