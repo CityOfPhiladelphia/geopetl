@@ -779,6 +779,14 @@ class OracleSdeTable(object):
         self.db.cursor.execute(stmt)
         self.db.dbo.commit()
 
+    @property
+    def count(self):
+        """Count rows."""
+        stmt = "SELECT COUNT(*) FROM :1"
+        cursor = self.db.cursor
+        cursor.execute(stmt, (self.name_with_schema))
+        return cursor.fetchone()[0]
+
 
 ################################################################################
 # QUERY
