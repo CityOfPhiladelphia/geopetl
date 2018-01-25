@@ -272,8 +272,12 @@ FIELD_TYPE_MAP = {
     'SP_GRID_INFO': 'other',
 }
 
-# TODO give this a cursor property that points to the db's cursor? turns out
-# it gets used a lot, so we should standardize how it's accessed.
+"""
+TODO:
+- give this a cursor property that points to the db's cursor? turns out it gets
+  used a lot, so we should standardize how it's accessed.
+- used parametrized queries/bind variables across the board
+"""
 class OracleSdeTable(object):
     def __init__(self, db, name, srid=None):
         self.db = db
