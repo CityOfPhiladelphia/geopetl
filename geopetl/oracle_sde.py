@@ -349,6 +349,26 @@ class OracleSdeTable(object):
         return fields
 
     @property
+    def sde_type(self):
+        stmt = """
+            SELECT T.NAME
+            FROM
+                GDB_ITEMS I,
+                GDB_ITEMTYPES T
+            WHERE
+                I.PHYSICALNAME = :1 AND
+                I.TYPE = T.UUID
+        """
+        cursor = self.db.cursor
+        cursor.execute(stmt, (self._name_with_schema,))
+        row = cursor.fetchone()
+        try:
+            sde_type = row[0]
+        except (TypeError, IndexError):
+            sde_type = None
+        return sde_type
+
+    @property
     def _owner(self):
         """Return the owner name for querying system tables. This is either
         the schema or the DB user."""
