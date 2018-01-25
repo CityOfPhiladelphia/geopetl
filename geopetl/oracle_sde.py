@@ -566,6 +566,23 @@ class OracleSdeTable(object):
 
         return [dict(zip(['grantee', 'privilege'], x)) for x in rows]
 
+    @property
+    def indexes(self):
+        stmt = """
+            SELECT
+                INDEX_NAME,
+                COLUMN_NAME
+            FROM ALL_IND_COLUMNS
+            WHERE
+                TABLE_OWNER = :1 AND
+                TABLE_NAME = :2
+        """
+        cursor = self.db.cursor
+        cursor.execute(stmt, (self.schema, self.name,))
+        rows = cursor.fetchall()
+
+        return [dict(zip(['grantee', 'privilege'], x)) for x in rows]
+
     def write(self, rows, srid=None, table_srid=None,
               buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
         """
