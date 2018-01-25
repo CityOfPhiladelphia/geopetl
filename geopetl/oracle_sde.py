@@ -472,15 +472,25 @@ class OracleSdeTable(object):
             .format(geom_field_t, geom_field)
 
     @property
-    def name_with_schema(self):
-        """Returns the table name prepended with the schema name, prepared for
-        a query."""
+    def _name_with_schema(self):
+        """Returns the table name prepended with the schema name."""
 
         # If there's a schema we have to double quote the owner and the table
         # name, but also make them uppercase.
         if self.schema:
-            comps = [self.schema.upper(), self.name.upper()]
-            return '.'.join([_quote(x) for x in comps])
+            return '.'.join([self.schema.upper(), self.name.upper()])
+        return self.name
+
+    @property
+    def _name_with_schema_p(self):
+        """Returns the table name prepended with the schema name, prepared
+        for a query (quoted)."""
+
+        # If there's a schema we have to double quote the owner and the table
+        # name, but also make them uppercase.
+        if self.schema:
+            comps = [_quote(self.schema.upper()), self.name.upper()]
+            return '.'.join(comps)
         return self.name
 
     @property
@@ -777,7 +787,7 @@ class OracleSdeTable(object):
 
     def truncate(self, cascade=False):
         """Delete all rows."""
-        name = self.name_with_schema
+        name = self._name_with_schema_p
         stmt = "TRUNCATE TABLE {}".format(name)
         stmt += ' CASCADE' if cascade else ''
         self.db.cursor.execute(stmt)
@@ -850,7 +860,8 @@ class OracleSdeQuery(SpatialQuery):
 
         # form statement
         fields_joined = ', '.join(fields)
-        stmt = 'SELECT {} FROM {}'.format(fields_joined, self.table.name_with_schema)
+        stmt = 'SELECT {} FROM {}'.format(fields_joined,
+                                          self.table._name_with_schema_p)
 
         # where conditions
         wheres = [self.where]
