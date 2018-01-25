@@ -796,9 +796,10 @@ class OracleSdeTable(object):
     @property
     def count(self):
         """Count rows."""
-        stmt = "SELECT COUNT(*) FROM :1"
+        # note: this didn't work with a bind variable
+        stmt = "SELECT COUNT(*) FROM {}".format(self._name_with_schema)
         cursor = self.db.cursor
-        cursor.execute(stmt, (self.name_with_schema))
+        cursor.execute(stmt)
         return cursor.fetchone()[0]
 
 
