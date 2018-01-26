@@ -615,7 +615,7 @@ class OracleSdeTable(object):
         cursor.execute(stmt, (self.schema, self.name,))
         rows = cursor.fetchall()
 
-        return [dict(zip(['grantee', 'privilege'], x)) for x in rows]
+        return [dict(zip(['name', 'field'], x)) for x in rows]
 
     def write(self, rows, srid=None, table_srid=None,
               buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
