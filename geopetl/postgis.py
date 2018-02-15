@@ -1,6 +1,5 @@
 from collections import OrderedDict
 import re
-from psycopg2.extras import RealDictCursor
 import petl as etl
 from petl.compat import string_types
 from petl.util.base import Table
@@ -80,6 +79,7 @@ Table.topostgis = _topostgis
 class PostgisDatabase(object):
     def __init__(self, dbo):
         import psycopg2
+        from psycopg2.extras import RealDictCursor
 
         # if dbo is a string, create connection object
         if isinstance(dbo, string_types):
