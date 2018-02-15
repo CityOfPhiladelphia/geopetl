@@ -1,5 +1,5 @@
-from collections import OrderedDict
 import os
+from collections import OrderedDict
 from datetime import datetime
 from decimal import Decimal
 import re
@@ -602,6 +602,7 @@ class OracleSdeTable(object):
 
     @property
     def indexes(self):
+        """Returns a map of index name => fields: []."""
         stmt = """
             SELECT
                 INDEX_NAME,
@@ -615,7 +616,14 @@ class OracleSdeTable(object):
         cursor.execute(stmt, (self.schema, self.name,))
         rows = cursor.fetchall()
 
-        return [dict(zip(['name', 'field'], x)) for x in rows]
+        indexes = {}
+
+        for row in rows:
+            name, field = row
+            indexes.setdefault(name, {'fields': []})
+            indexes[name]['fields'].append(field)
+
+        return indexes
 
     def write(self, rows, srid=None, table_srid=None,
               buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
