@@ -38,7 +38,6 @@ def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
     # sample = 0 if create else None # sample whole table
 
     if create:
-        print(table_name_no_schema.upper(), db.tables)
         # TODO create table if it doesn't exist
         raise NotImplementedError('Autocreate tables for Oracle SDE not currently implemented.')
     else:
