@@ -326,7 +326,7 @@ class OracleSdeTable(object):
             ORDER BY COLUMN_ID
         """
         cursor = self.db.cursor
-        cursor.execute(stmt, (self.schema, self.name,))
+        cursor.execute(stmt, (self._owner, self.name,))
         rows = cursor.fetchall()
         fields = OrderedDict()
 
@@ -371,7 +371,7 @@ class OracleSdeTable(object):
     def _owner(self):
         """Return the owner name for querying system tables. This is either
         the schema or the DB user."""
-        return self.schema or self.db.user
+        return self.schema or self.db.user.upper()
 
     def _get_objectid_field(self):
         """Get the object ID field with a not-null constraint."""
