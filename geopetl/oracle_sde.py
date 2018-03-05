@@ -308,7 +308,6 @@ class OracleSdeTable(object):
         else:
             self.schema = None
             self.name = name
-
         self.geom_field = self._get_geom_field()
         self.geom_type = self._get_geom_type()
 
@@ -345,7 +344,7 @@ class OracleSdeTable(object):
             ORDER BY COLUMN_ID
         """
         cursor = self.db.cursor
-        cursor.execute(stmt, (self._owner, self.name,))
+        cursor.execute(stmt, (self._owner, self.name.upper(),))
         rows = cursor.fetchall()
         fields = OrderedDict()
 
@@ -363,7 +362,6 @@ class OracleSdeTable(object):
                 'length': length,
                 'nullable': nullable == 'Y',
             }
-
         return fields
 
     @property
