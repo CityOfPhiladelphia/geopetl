@@ -21,9 +21,9 @@ def fromoraclesde(dbo, table_name, **kwargs):
 etl.fromoraclesde = fromoraclesde
 
 def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
-                buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+                buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=True):
     """
-    Writes rows to database.
+    Writes rows to database. Truncates by default.
 
     If table isn't registered with SDE, you must specify a to_srid.
     """
@@ -34,13 +34,13 @@ def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
 
     # do we need to create the table?
     table_name_no_schema = table.name
-    create = table_name_no_schema.upper() not in db.tables
+    create = table_name_no_schema.upper() not in db.table_names
     # sample = 0 if create else None # sample whole table
 
     if create:
         # TODO create table if it doesn't exist
         raise NotImplementedError('Autocreate tables for Oracle SDE not currently implemented.')
-    else:
+    elif truncate:
         table.truncate()
 
     table.write(rows, srid=srid, table_srid=table_srid)
@@ -58,7 +58,26 @@ def _tooraclesde(self, dbo, table_name, table_srid=None,
 
 Table.tooraclesde = _tooraclesde
 
+def appendoraclesde(rows, dbo, table_name, srid=None, table_srid=None,
+                buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+    """
+    Appends rows to database. Calls tooraclesde with truncate parameter set to False.
+    """
+    return tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
+                buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=False)
 
+etl.appendoraclesde = appendoraclesde
+
+def _appendoraclesde(self, dbo, table_name, table_srid=None,
+                 buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+    """
+    This wraps appendoraclesde and adds a `self` arg so it can be attached to
+    the Table class. This enables functional-style chaining.
+    """
+    return appendoraclesde(self, dbo, table_name, table_srid=table_srid,
+                       buffer_size=buffer_size)
+
+Table.appendoraclesde = _appendoraclesde
 ################################################################################
 # DB
 ################################################################################
@@ -289,7 +308,6 @@ class OracleSdeTable(object):
         else:
             self.schema = None
             self.name = name
-
         self.geom_field = self._get_geom_field()
         self.geom_type = self._get_geom_type()
 
@@ -326,7 +344,7 @@ class OracleSdeTable(object):
             ORDER BY COLUMN_ID
         """
         cursor = self.db.cursor
-        cursor.execute(stmt, (self._owner, self.name,))
+        cursor.execute(stmt, (self._owner, self.name.upper(),))
         rows = cursor.fetchall()
         fields = OrderedDict()
 
@@ -344,7 +362,6 @@ class OracleSdeTable(object):
                 'length': length,
                 'nullable': nullable == 'Y',
             }
-
         return fields
 
     @property
