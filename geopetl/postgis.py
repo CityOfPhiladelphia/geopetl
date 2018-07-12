@@ -43,7 +43,6 @@ def topostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_B
     """
     Writes rows to database.
     """
-
     # create db wrappers
     db = PostgisDatabase(dbo)
 
@@ -126,14 +125,21 @@ class PostgisDatabase(object):
         # return rows
         return self.cursor.fetchall()
 
+    # @property
+    # def tables(self, schema='public'):
+    #     tables = (self.table('information_schema.tables')
+    #                   .query(fields=['table_name'],
+    #                          where="table_schema = '{}' AND \
+    #                                 table_type = 'BASE TABLE'".format(schema))
+    #              )
+    #     return [x[0] for x in tables]
     @property
-    def tables(self, schema='public'):
+    def tables(self):
         tables = (self.table('information_schema.tables')
-                      .query(fields=['table_name'],
-                             where="table_schema = '{}' AND \
-                                    table_type = 'BASE TABLE'".format(schema))
+                      .query(fields=['table_schema', 'table_name'],
+                             where="table_type = 'BASE TABLE'")
                  )
-        return [x[0] for x in tables]
+        return ['.'.join([x[0], x[1]]) for x in tables]
 
     def table(self, name):
         return PostgisTable(self, name)
@@ -197,11 +203,16 @@ class PostgisTable(object):
 
     @property
     def metadata(self):
+        # stmt = """
+        #     select column_name as name, data_type as type
+        #     from information_schema.columns
+        #     where table_name = '{}'
+        # """.format(self.name)
         stmt = """
             select column_name as name, data_type as type
             from information_schema.columns
-            where table_name = '{}'
-        """.format(self.name)
+            where table_schema = '{}' and table_name = '{}'
+        """.format(self.schema, self.name)
         fields = self.db.fetch(stmt)
         for field in fields:
             field['type'] = FIELD_TYPE_MAP[field['type']]
@@ -249,10 +260,10 @@ class PostgisTable(object):
         stmt = """
             SELECT type
             FROM geometry_columns
-            WHERE f_table_schema = 'public'
+            WHERE f_table_schema = '{}'
             AND f_table_name = '{}'
             and f_geometry_column = '{}';
-        """.format(self.name, self.geom_field)
+        """.format(self.schema, self.name, self.geom_field)
         return self.db.fetch(stmt)[0]['type']
 
     @property
@@ -362,7 +373,7 @@ class PostgisTable(object):
         type_map_items = type_map.items()
 
         fields_joined = ', '.join(fields)
-        stmt = "INSERT INTO {} ({}) VALUES ".format(self.name, fields_joined)
+        stmt = "INSERT INTO {} ({}) VALUES ".format('.'.join([self.schema, self.name]), fields_joined)
 
         len_rows = len(rows)
         if buffer_size is None or len_rows < buffer_size:
@@ -417,18 +428,29 @@ class PostgisTable(object):
         execute(cur_stmt)
         commit()
 
+    # def truncate(self, cascade=False):
+    #     """Drop all rows."""
+    #
+    #     name = self.name
+    #     # RESTART IDENTITY resets sequence generators.
+    #     stmt = "TRUNCATE {} RESTART IDENTITY".format(name)
+    #     if cascade:
+    #         stmt += ' CASCADE'
+    #
+    #     self.db.cursor.execute(stmt)
+    #     self.db.dbo.commit()
     def truncate(self, cascade=False):
         """Drop all rows."""
 
         name = self.name
+        schema = self.schema
         # RESTART IDENTITY resets sequence generators.
-        stmt = "TRUNCATE {} RESTART IDENTITY".format(name)
+        stmt = "TRUNCATE {} RESTART IDENTITY".format('.'.join([schema, name]))
         if cascade:
             stmt += ' CASCADE'
 
         self.db.cursor.execute(stmt)
         self.db.dbo.commit()
-
 
 ################################################################################
 # QUERY
