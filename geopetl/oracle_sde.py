@@ -504,8 +504,10 @@ class OracleSdeTable(object):
         # if to_srid and to_srid != self.srid:
         #     geom_field_t = "SDE.ST_Transform({}, {})"\
         #         .format(geom_field, to_srid)
-        return "SDE.ST_AsText({}) AS {}"\
-            .format(geom_field_t, geom_field)
+        # return "SDE.ST_AsText({}) AS {}"\
+        #     .format(geom_field_t, geom_field)
+        return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else to_char(SDE.ST_AsText({})) end AS {}" \
+            .format(geom_field_t, geom_field_t, geom_field)
 
     @property
     def _name_with_schema(self):
@@ -692,7 +694,7 @@ class OracleSdeTable(object):
             rows_geom_field = None
             for i, val in enumerate(first_row):
                 # TODO make a function to screen for wkt-like text
-                if str(val).startswith(('POINT', 'POLYGON', 'LINESTRING')):
+                if str(val).startswith(('POINT', 'POLYGON', 'LINESTRING', 'MULTIPOLYGON')):
                     if rows_geom_field:
                         raise ValueError('Multiple geometry fields found: {}'.format(', '.join([rows_geom_field, first_row_header[i]])))
                     rows_geom_field = first_row_header[i]
@@ -824,7 +826,6 @@ class OracleSdeTable(object):
 
                 val_rows = []
                 cur_stmt = stmt
-
         self.db.cursor.executemany(None, val_rows, batcherrors=True)
         er = self.db.cursor.getbatcherrors()
         self.db.dbo.commit()
@@ -853,7 +854,7 @@ class OracleSdeTable(object):
 
 class OracleSdeQuery(SpatialQuery):
     def __init__(self,  db, table, fields=None, return_geom=True, to_srid=None,
-                 where=None, limit=None):
+                 where=None, limit=None, timestamp=False):
         self.db = db
         self.table = table
         self.fields = fields
@@ -861,6 +862,7 @@ class OracleSdeQuery(SpatialQuery):
         self.to_srid = to_srid
         self.where = where
         self.limit = limit
+        self.timestamp = timestamp
 
     def __iter__(self):
         """Proxy iteration to core petl."""
@@ -874,13 +876,13 @@ class OracleSdeQuery(SpatialQuery):
 
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
         geom_field = self.table.geom_field
-        if self.geom_field and self.return_geom:
-            db_view = db_view.convert(self.geom_field.upper(), 'read')
+        # if self.geom_field and self.return_geom:
+        #     db_view = db_view.convert(self.geom_field.upper(), 'read')
+
 
         # lowercase headers
         headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in headers])
-
         iter_fn = db_view.__iter__()
 
         return iter_fn
@@ -896,6 +898,8 @@ class OracleSdeQuery(SpatialQuery):
             # default to non geom fields
             fields = self.table.non_geom_fields
         fields = [_quote(field.upper()) for field in fields]
+        if self.timestamp:
+            fields.append('CURRENT_TIMESTAMP as etl_read_timestamp')
 
         # handle geom
         geom_field = self.table.geom_field
@@ -905,8 +909,11 @@ class OracleSdeQuery(SpatialQuery):
 
         # form statement
         fields_joined = ', '.join(fields)
-        stmt = 'SELECT {} FROM {}'.format(fields_joined,
-                                          self.table._name_with_schema_p)
+        if self.timestamp:
+            stmt = 'SELECT {} FROM {}, dual'.format(fields_joined, self.table._name_with_schema_p)
+        else:
+            stmt = 'SELECT {} FROM {}'.format(fields_joined,
+                                              self.table._name_with_schema_p)
 
         # where conditions
         wheres = [self.where]
