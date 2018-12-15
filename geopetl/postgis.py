@@ -71,6 +71,29 @@ def _topostgis(self, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_
 
 Table.topostgis = _topostgis
 
+
+def appendpostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+    """
+    Writes rows to database.
+    """
+    # create db wrappers
+    db = PostgisDatabase(dbo)
+
+    # write
+    table = db.table(table_name)
+    table.write(rows, from_srid=from_srid)
+
+etl.appendpostgis = appendpostgis
+
+def _appendpostgis(self, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+    """
+    This wraps topostgis and adds a `self` arg so it can be attached to
+    the Table class. This enables functional-style chaining.
+    """
+    return appendpostgis(self, dbo, table_name, from_srid=from_srid, buffer_size=buffer_size)
+
+Table.appendpostgis = _appendpostgis
+
 ################################################################################
 # DB
 ################################################################################
@@ -175,13 +198,16 @@ class PostgisDatabase(object):
 
 # maps db field types to more generic internal ones
 FIELD_TYPE_MAP = {
-    'integer':              'num',
-    'numeric':              'num',
-    'double precision':     'num',
-    'text':                 'text',
-    'character varying':    'text',
-    'date':                 'date',
-    'USER-DEFINED':         'geometry',
+    'integer':                  'num',
+    'numeric':                  'num',
+    'double precision':         'num',
+    'text':                     'text',
+    'character varying':        'text',
+    'date':                     'date',
+    'USER-DEFINED':             'geometry',
+    'timestamp with time zone': 'timestamp',
+    'timestamp without time zone': 'timestamp',
+    'boolean':                  'boolean'
 }
 
 class PostgisTable(object):
@@ -298,6 +324,15 @@ class PostgisTable(object):
                 val = 'NULL'
         elif type_ == 'geometry':
             val = str(val)
+        elif type_ == 'timestamp':
+            if not val:
+                val = 'NULL'
+            elif 'timestamp' not in val.lower():
+                val = '''TIMESTAMP '{}' '''.format(val)
+            else:
+                val = val
+        elif type_ == 'boolean':
+            val = val
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -351,7 +386,7 @@ class PostgisTable(object):
         if geom_field:
             srid = from_srid or self.get_srid()
             row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
-                if geom_field else None
+                if geom_field and rows[0][geom_field] else None
             table_geom_type = self.geom_type if geom_field else None
 
         # Do we need to cast the geometry to a MULTI type? (Assuming all rows
