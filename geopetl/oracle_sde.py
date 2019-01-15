@@ -887,6 +887,7 @@ class OracleSdeQuery(SpatialQuery):
 
         return iter_fn
 
+
     @property
     def geom_field(self):
         return self.table.geom_field
@@ -908,7 +909,7 @@ class OracleSdeQuery(SpatialQuery):
             fields.append(wkt_getter)
 
         # form statement
-        fields_joined = ', '.join(fields)
+        fields_joined = ', '.join(fields) if fields else '*'
         if self.timestamp:
             stmt = 'SELECT {} FROM {}, dual'.format(fields_joined, self.table._name_with_schema_p)
         else:
