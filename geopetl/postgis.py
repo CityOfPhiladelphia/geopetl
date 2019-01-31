@@ -339,7 +339,7 @@ class PostgisTable(object):
 
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
-        geom = "ST_GeomFromText('{}', {})".format(geom, srid)
+        geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
 
         # Handle 3D geometries
         # TODO: screen these with regex
@@ -376,7 +376,8 @@ class PostgisTable(object):
         # Get fields from the row because some fields from self.fields may be
         # optional, such as autoincrementing integers.
         # raise
-        fields = rows.header()
+        #fields = rows.header()
+        fields = rows[0]
         geom_field = self.geom_field
 
         # convert rows to records (hybrid objects that can behave like dicts)
@@ -385,8 +386,10 @@ class PostgisTable(object):
         # Get geom metadata
         if geom_field:
             srid = from_srid or self.get_srid()
-            row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
-                if geom_field and rows[0][geom_field] else None
+            #row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
+            #    if geom_field and rows[0][geom_field] else None
+            match = re.match('[A-Z]+', rows[0][geom_field])
+            row_geom_type = match.group() if match else None
             table_geom_type = self.geom_type if geom_field else None
 
         # Do we need to cast the geometry to a MULTI type? (Assuming all rows
