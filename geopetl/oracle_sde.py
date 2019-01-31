@@ -344,7 +344,7 @@ class OracleSdeTable(object):
             ORDER BY COLUMN_ID
         """
         cursor = self.db.cursor
-        cursor.execute(stmt, (self._owner, self.name.upper(),))
+        cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
         fields = OrderedDict()
 
@@ -898,6 +898,10 @@ class OracleSdeQuery(SpatialQuery):
             # default to non geom fields
             fields = self.table.non_geom_fields
         fields = [_quote(field.upper()) for field in fields]
+        # if still no fields, try select *: TODO: revisit
+        if not fields:
+            fields.append('{}.*'.format(self.table._name_with_schema_p))
+        # handle timestamp argument
         if self.timestamp:
             fields.append('CURRENT_TIMESTAMP as etl_read_timestamp')
 
@@ -912,8 +916,7 @@ class OracleSdeQuery(SpatialQuery):
         if self.timestamp:
             stmt = 'SELECT {} FROM {}, dual'.format(fields_joined, self.table._name_with_schema_p)
         else:
-            stmt = 'SELECT {} FROM {}'.format(fields_joined,
-                                              self.table._name_with_schema_p)
+            stmt = 'SELECT {} FROM {}'.format(fields_joined, self.table._name_with_schema_p)
 
         # where conditions
         wheres = [self.where]
