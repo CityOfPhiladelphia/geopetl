@@ -343,6 +343,7 @@ class OracleSdeTable(object):
                 HIDDEN_COLUMN = 'NO'
             ORDER BY COLUMN_ID
         """
+
         cursor = self.db.cursor
         cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
@@ -440,6 +441,27 @@ class OracleSdeTable(object):
         if self.geom_field is None:
             return None
 
+        row_count_stmt = '''
+            select count(*) from {}.{}
+        '''.format(self._owner.upper(), self.name.upper())
+        self.db.cursor.execute(row_count_stmt)
+        row_count = self.db.cursor.fetchone()[0]
+        # If the table isn't empty, get geom types from sde.st_geometrytype()
+        if row_count > 0:
+            stmt = '''select distinct sde.st_geometrytype({}) from {}.{} WHERE SDE.ST_ISEMPTY(SHAPE) = 0 '''.format(self.geom_field, self._owner.upper(), self.name.upper())
+            geom_type_response = self.db.cursor.execute(stmt)
+            geom_types = []
+            for geom_type in geom_type_response.fetchall()[0]:
+                geom_types.append(geom_type[3:]) # remove 'ST_' prefix
+            if not geom_types:
+                return None
+            elif len(geom_types) == 1:
+               geom_type = geom_types[0]
+            else:
+                geom_type = 'GEOMETRY'
+
+            return geom_type
+
         stmt = '''
             select
                 bitand(eflags, 2),
@@ -506,8 +528,19 @@ class OracleSdeTable(object):
         #         .format(geom_field, to_srid)
         # return "SDE.ST_AsText({}) AS {}"\
         #     .format(geom_field_t, geom_field)
-        return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else to_char(SDE.ST_AsText({})) end AS {}" \
+        #
+        # Determine if conversion of geom field from lob -> text can happen in the database or after using cx_oracle read() fct:
+        #     - cx_oracle read() fct is much slower than conversion in the database
+        #     - lob length must be < 4000 char limit for conversion in the datbase
+        #     - therefore choose query based on max length of geom
+        #     - for not use geom_type as proxy for length of geom (handle POINT geom_type conversions in the database
+        #     - TODO: make determination based on max geom field length
+        if self.geom_type == 'POINT':
+            return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else TO_CHAR(SDE.ST_AsText({})) end AS {}" \
             .format(geom_field_t, geom_field_t, geom_field)
+        else:
+            return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then EMPTY_CLOB() else SDE.ST_AsText({}) end AS {}" \
+                .format(geom_field_t, geom_field_t, geom_field)
 
     @property
     def _name_with_schema(self):
@@ -694,7 +727,7 @@ class OracleSdeTable(object):
             rows_geom_field = None
             for i, val in enumerate(first_row):
                 # TODO make a function to screen for wkt-like text
-                if str(val).startswith(('POINT', 'POLYGON', 'LINESTRING', 'MULTIPOLYGON')):
+                if str(val).startswith(('POINT', 'POLYGON', 'LINESTRING', 'MULTIPOLYGON', 'GEOMETRY')):
                     if rows_geom_field:
                         raise ValueError('Multiple geometry fields found: {}'.format(', '.join([rows_geom_field, first_row_header[i]])))
                     rows_geom_field = first_row_header[i]
@@ -876,8 +909,8 @@ class OracleSdeQuery(SpatialQuery):
 
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
         geom_field = self.table.geom_field
-        # if self.geom_field and self.return_geom:
-        #     db_view = db_view.convert(self.geom_field.upper(), 'read')
+        if self.geom_field and self.return_geom and not self.table.geom_type == 'POINT':
+            db_view = db_view.convert(self.geom_field.upper(), 'read')
 
 
         # lowercase headers
