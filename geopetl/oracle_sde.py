@@ -452,13 +452,14 @@ class OracleSdeTable(object):
             geom_type_response = self.db.cursor.execute(stmt)
             geom_types = []
             for geom_type in geom_type_response.fetchall()[0]:
-                geom_types.append(geom_type[3:]) # remove 'ST_' prefix
+                geom_types.append(geom_type.replace('ST_', '').replace('MULTI', '')) # remove 'ST_' & 'MULTI' prefix
+                geom_types = list(set(geom_types))
             if not geom_types:
                 return None
             elif len(geom_types) == 1:
                geom_type = geom_types[0]
             else:
-                geom_type = 'GEOMETRY'
+                geom_type = geom_types[0] # TODO: handle > 1 geom type and multi nuances
 
             return geom_type
 
@@ -727,7 +728,7 @@ class OracleSdeTable(object):
             rows_geom_field = None
             for i, val in enumerate(first_row):
                 # TODO make a function to screen for wkt-like text
-                if str(val).startswith(('POINT', 'POLYGON', 'LINESTRING', 'MULTIPOLYGON', 'GEOMETRY')):
+                if str(val).startswith(('POINT', 'POLYGON', 'LINESTRING', 'MULTIPOLYGON')):
                     if rows_geom_field:
                         raise ValueError('Multiple geometry fields found: {}'.format(', '.join([rows_geom_field, first_row_header[i]])))
                     rows_geom_field = first_row_header[i]

@@ -544,6 +544,4 @@ class PostgisQuery(Table):
         if limit:
             stmt += ' LIMIT {}'.format(limit)
 
-        # print('from stmt', stmt)
-
         return stmt
