@@ -12,6 +12,8 @@ from geopetl.base import SpatialQuery
 from geopetl.util import parse_db_url
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
+MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
+
 
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
@@ -310,6 +312,7 @@ class OracleSdeTable(object):
             self.name = name
         self.geom_field = self._get_geom_field()
         self.geom_type = self._get_geom_type()
+        self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
 
         # handle srid
         table_srid = self._get_srid()
@@ -519,6 +522,22 @@ class OracleSdeTable(object):
             srid = None
         return srid
 
+    def _get_max_num_points_in_geom(self):
+        assert self.geom_field
+        stmt = '''
+            select max(sde.st_numpoints({})) from {}.{}
+            '''.format(self.geom_field, self._owner.upper(), self.name.upper())
+        self.db.cursor.execute(stmt)
+        row = self.db.cursor.fetchone()
+        try:
+            max_num_points_in_geom = row[0]
+        except TypeError:
+            # this is probably because the table isn't registered with sde
+            # or no geom field exists
+            max_num_points_in_geom = 0
+        return max_num_points_in_geom
+
+
     def wkt_getter(self, to_srid):
         assert self.geom_field
         geom_field_t = geom_field = self.geom_field
@@ -536,7 +555,9 @@ class OracleSdeTable(object):
         #     - therefore choose query based on max length of geom
         #     - for not use geom_type as proxy for length of geom (handle POINT geom_type conversions in the database
         #     - TODO: make determination based on max geom field length
-        if self.geom_type == 'POINT':
+
+#        if self.geom_type == 'POINT':
+        if self.max_num_points_in_geom < MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else TO_CHAR(SDE.ST_AsText({})) end AS {}" \
             .format(geom_field_t, geom_field_t, geom_field)
         else:
@@ -910,7 +931,7 @@ class OracleSdeQuery(SpatialQuery):
 
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
         geom_field = self.table.geom_field
-        if self.geom_field and self.return_geom and not self.table.geom_type == 'POINT':
+        if self.geom_field and self.return_geom and not self.table.max_num_points_in_geom >= 3700:
             db_view = db_view.convert(self.geom_field.upper(), 'read')
 
 
