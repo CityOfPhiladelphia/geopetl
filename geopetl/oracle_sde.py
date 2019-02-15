@@ -556,8 +556,8 @@ class OracleSdeTable(object):
         #     - for not use geom_type as proxy for length of geom (handle POINT geom_type conversions in the database
         #     - TODO: make determination based on max geom field length
 
-#        if self.geom_type == 'POINT':
-        if self.max_num_points_in_geom < MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
+##        if self.geom_type == 'POINT':
+        if self.max_num_points_in_geom <= MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else TO_CHAR(SDE.ST_AsText({})) end AS {}" \
             .format(geom_field_t, geom_field_t, geom_field)
         else:
@@ -931,7 +931,7 @@ class OracleSdeQuery(SpatialQuery):
 
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
         geom_field = self.table.geom_field
-        if self.geom_field and self.return_geom and not self.table.max_num_points_in_geom >= 3700:
+        if self.geom_field and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             db_view = db_view.convert(self.geom_field.upper(), 'read')
 
 
