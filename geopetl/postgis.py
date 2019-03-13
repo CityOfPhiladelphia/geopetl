@@ -207,7 +207,8 @@ FIELD_TYPE_MAP = {
     'USER-DEFINED':             'geometry',
     'timestamp with time zone': 'timestamp',
     'timestamp without time zone': 'timestamp',
-    'boolean':                  'boolean'
+    'boolean':                  'boolean',
+    'uuid':                     'uuid'
 }
 
 class PostgisTable(object):
