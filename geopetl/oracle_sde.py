@@ -16,12 +16,16 @@ DEFAULT_WRITE_BUFFER_SIZE = 1000
 MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
 
 
+def extract_table_schema(dbo, table_name, **kwargs):
+    db = OracleSdeDatabase(dbo)
+    table = db.table(table_name)
+    table.extract_table_schema()
+
+etl.extract_table_schema = extract_table_schema
+
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
-    extract_schema = kwargs.get('extract_schema', '')
-    if extract_schema:
-        table.extract_table_schema()
 
     return table.query(**kwargs)
 
@@ -304,7 +308,7 @@ TODO:
 - used parametrized queries/bind variables across the board
 """
 class OracleSdeTable(object):
-    def __init__(self, db, name, srid=None, extract_schema=False):
+    def __init__(self, db, name, srid=None):
         self.db = db
 
         # Check for a schema
@@ -332,11 +336,6 @@ class OracleSdeTable(object):
         # TODO check if table is registered with SDE? and warn if not?
 
         self.objectid_field = self._get_objectid_field()
-
-        # Extract table schema if flag:
-        if extract_schema:
-            self._extract_table_schema()
-
 
 
     def __repr__(self):
@@ -931,7 +930,7 @@ class OracleSdeTable(object):
 
 class OracleSdeQuery(SpatialQuery):
     def __init__(self,  db, table, fields=None, return_geom=True, to_srid=None,
-                 where=None, limit=None, timestamp=False, extract_schema=False):
+                 where=None, limit=None, timestamp=False):
         self.db = db
         self.table = table
         self.fields = fields
@@ -940,7 +939,7 @@ class OracleSdeQuery(SpatialQuery):
         self.where = where
         self.limit = limit
         self.timestamp = timestamp
-        self.extract_schema = extract_schema
+
 
     def __iter__(self):
         """Proxy iteration to core petl."""
