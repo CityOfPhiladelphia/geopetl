@@ -3,6 +3,7 @@ from collections import OrderedDict
 from datetime import datetime
 from decimal import Decimal
 import re
+import json
 import warnings
 import petl as etl
 from petl.compat import string_types
@@ -18,6 +19,10 @@ MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
+    extract_schema = kwargs.get('extract_schema', '')
+    if extract_schema:
+        table.extract_table_schema()
+
     return table.query(**kwargs)
 
 etl.fromoraclesde = fromoraclesde
@@ -299,7 +304,7 @@ TODO:
 - used parametrized queries/bind variables across the board
 """
 class OracleSdeTable(object):
-    def __init__(self, db, name, srid=None):
+    def __init__(self, db, name, srid=None, extract_schema=False):
         self.db = db
 
         # Check for a schema
@@ -327,6 +332,12 @@ class OracleSdeTable(object):
         # TODO check if table is registered with SDE? and warn if not?
 
         self.objectid_field = self._get_objectid_field()
+
+        # Extract table schema if flag:
+        if extract_schema:
+            self._extract_table_schema()
+
+
 
     def __repr__(self):
         return 'OracleSdeTable: {}.{}'.format(self.db._user_p, self.name)
@@ -413,6 +424,16 @@ class OracleSdeTable(object):
         if not (len(fields) == 1 and len(fields[0]) == 1):
             return None
         return fields[0][0]
+
+    def extract_table_schema(self):
+        metadata = self.metadata
+        if self.geom_field:
+            metadata[self.geom_field]['geom_type'] = self.geom_type
+            metadata[self.geom_field]['srid'] = self.srid
+        # TODO: map/transform field types for json schema file
+        schema_filename = '''{account}__{table_name}.json'''.format(account=self.schema.lower(), table_name=self.name.lower())
+        with open(schema_filename, 'w') as fp:
+            json.dump(metadata, fp)
 
     def _get_geom_field(self):
         f = [field for field, desc in self.metadata.items() \
@@ -698,6 +719,7 @@ class OracleSdeTable(object):
 
         return indexes
 
+
     def write(self, rows, srid=None, table_srid=None,
               buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
         """
@@ -909,7 +931,7 @@ class OracleSdeTable(object):
 
 class OracleSdeQuery(SpatialQuery):
     def __init__(self,  db, table, fields=None, return_geom=True, to_srid=None,
-                 where=None, limit=None, timestamp=False):
+                 where=None, limit=None, timestamp=False, extract_schema=False):
         self.db = db
         self.table = table
         self.fields = fields
@@ -918,6 +940,7 @@ class OracleSdeQuery(SpatialQuery):
         self.where = where
         self.limit = limit
         self.timestamp = timestamp
+        self.extract_schema = extract_schema
 
     def __iter__(self):
         """Proxy iteration to core petl."""
