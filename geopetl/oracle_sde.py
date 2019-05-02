@@ -447,6 +447,11 @@ class OracleSdeTable(object):
                     kv_fmt['constraints'] = {}
                 kv_fmt['constraints']['required'] = 'true'
             metadata_fmt['fields'].append(kv_fmt)
+        if self.objectid_field:
+            if not 'primaryKey' in metadata_fmt:
+                metadata_fmt['primaryKey'] = []
+            metadata_fmt['primaryKey'].append(self.objectid_field)
+
         with open(table_schema_output_path, 'w') as fp:
             json.dump(metadata_fmt, fp)
 
