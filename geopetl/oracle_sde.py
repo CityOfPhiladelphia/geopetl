@@ -16,10 +16,10 @@ DEFAULT_WRITE_BUFFER_SIZE = 1000
 MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
 
 
-def extract_table_schema(dbo, table_name, **kwargs):
+def extract_table_schema(dbo, table_name, table_schema_output_path):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
-    table.extract_table_schema()
+    table.extract_table_schema(table_schema_output_path)
 
 etl.extract_table_schema = extract_table_schema
 
@@ -337,7 +337,6 @@ class OracleSdeTable(object):
 
         self.objectid_field = self._get_objectid_field()
 
-
     def __repr__(self):
         return 'OracleSdeTable: {}.{}'.format(self.db._user_p, self.name)
 
@@ -424,15 +423,32 @@ class OracleSdeTable(object):
             return None
         return fields[0][0]
 
-    def extract_table_schema(self):
-        metadata = self.metadata
+    def extract_table_schema(self, table_schema_output_path):
+        metadata = dict(self.metadata)
+        type_map = {'num': 'numeric', 'geom': 'geometry'}
         if self.geom_field:
             metadata[self.geom_field]['geom_type'] = self.geom_type
             metadata[self.geom_field]['srid'] = self.srid
-        # TODO: map/transform field types for json schema file
-        schema_filename = '''{account}__{table_name}.json'''.format(account=self.schema.lower(), table_name=self.name.lower())
-        with open(schema_filename, 'w') as fp:
-            json.dump(metadata, fp)
+        metadata_fmt = {'fields':[]}
+        for key in metadata:
+            kv_fmt = {}
+            kv_fmt['name'] = key
+            md_type = metadata[key]['type']
+            kv_fmt['type'] = type_map[md_type] if md_type in type_map else md_type
+            geom_type = metadata[key].get('geom_type', '')
+            srid = metadata[key].get('srid', '')
+            nullable = metadata[key].get('nullable', '')
+            if geom_type:
+                kv_fmt['geometry_type'] = geom_type.lower()
+            if srid:
+                kv_fmt['srid'] = srid
+            if not nullable:
+                if not 'constraints' in kv_fmt:
+                    kv_fmt['constraints'] = {}
+                kv_fmt['constraints']['required'] = 'true'
+            metadata_fmt['fields'].append(kv_fmt)
+        with open(table_schema_output_path, 'w') as fp:
+            json.dump(metadata_fmt, fp)
 
     def _get_geom_field(self):
         f = [field for field, desc in self.metadata.items() \
