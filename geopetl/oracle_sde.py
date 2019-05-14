@@ -441,6 +441,8 @@ class OracleSdeTable(object):
             if geom_type:
                 kv_fmt['geometry_type'] = geom_type.lower()
             if srid:
+                if str(srid)[:4] == '3000':
+                    srid = 2272
                 kv_fmt['srid'] = srid
             if not nullable:
                 if not 'constraints' in kv_fmt:
