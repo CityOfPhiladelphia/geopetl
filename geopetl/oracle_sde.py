@@ -425,7 +425,7 @@ class OracleSdeTable(object):
 
     def extract_table_schema(self, table_schema_output_path):
         metadata = dict(self.metadata)
-        type_map = {'num': 'numeric', 'geom': 'geometry'}
+        type_map = {'num': 'numeric', 'geom': 'geometry', 'nclob': 'text', 'clob': 'text', 'blob': 'text'}
         if self.geom_field:
             metadata[self.geom_field]['geom_type'] = self.geom_type
             metadata[self.geom_field]['srid'] = self.srid
