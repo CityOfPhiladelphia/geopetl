@@ -3,6 +3,7 @@ from collections import OrderedDict
 from datetime import datetime
 from decimal import Decimal
 import re
+import json
 import warnings
 import petl as etl
 from petl.compat import string_types
@@ -12,10 +13,20 @@ from geopetl.base import SpatialQuery
 from geopetl.util import parse_db_url
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
+MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
+
+
+def extract_table_schema(dbo, table_name, table_schema_output_path):
+    db = OracleSdeDatabase(dbo)
+    table = db.table(table_name)
+    table.extract_table_schema(table_schema_output_path)
+
+etl.extract_table_schema = extract_table_schema
 
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
+
     return table.query(**kwargs)
 
 etl.fromoraclesde = fromoraclesde
@@ -310,6 +321,7 @@ class OracleSdeTable(object):
             self.name = name
         self.geom_field = self._get_geom_field()
         self.geom_type = self._get_geom_type()
+        self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
 
         # handle srid
         table_srid = self._get_srid()
@@ -343,8 +355,9 @@ class OracleSdeTable(object):
                 HIDDEN_COLUMN = 'NO'
             ORDER BY COLUMN_ID
         """
+
         cursor = self.db.cursor
-        cursor.execute(stmt, (self._owner, self.name.upper(),))
+        cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
         fields = OrderedDict()
 
@@ -410,6 +423,40 @@ class OracleSdeTable(object):
             return None
         return fields[0][0]
 
+    def extract_table_schema(self, table_schema_output_path):
+        metadata = dict(self.metadata)
+        type_map = {'num': 'numeric', 'geom': 'geometry', 'nclob': 'text', 'clob': 'text', 'blob': 'text'}
+        if self.geom_field:
+            metadata[self.geom_field]['geom_type'] = self.geom_type
+            metadata[self.geom_field]['srid'] = self.srid
+        metadata_fmt = {'fields':[]}
+        for key in metadata:
+            kv_fmt = {}
+            kv_fmt['name'] = key
+            md_type = metadata[key]['type']
+            kv_fmt['type'] = type_map[md_type] if md_type in type_map else md_type
+            geom_type = metadata[key].get('geom_type', '')
+            srid = metadata[key].get('srid', '')
+            nullable = metadata[key].get('nullable', '')
+            if geom_type:
+                kv_fmt['geometry_type'] = geom_type.lower()
+            if srid:
+                if str(srid)[:4] == '3000':
+                    srid = 2272
+                kv_fmt['srid'] = srid
+            if not nullable:
+                if not 'constraints' in kv_fmt:
+                    kv_fmt['constraints'] = {}
+                kv_fmt['constraints']['required'] = 'true'
+            metadata_fmt['fields'].append(kv_fmt)
+        if self.objectid_field:
+            if not 'primaryKey' in metadata_fmt:
+                metadata_fmt['primaryKey'] = []
+            metadata_fmt['primaryKey'].append(self.objectid_field)
+
+        with open(table_schema_output_path, 'w') as fp:
+            json.dump(metadata_fmt, fp)
+
     def _get_geom_field(self):
         f = [field for field, desc in self.metadata.items() \
                 if desc['type'] == 'geom']
@@ -439,6 +486,28 @@ class OracleSdeTable(object):
 
         if self.geom_field is None:
             return None
+
+        row_count_stmt = '''
+            select count(*) from {}.{}
+        '''.format(self._owner.upper(), self.name.upper())
+        self.db.cursor.execute(row_count_stmt)
+        row_count = self.db.cursor.fetchone()[0]
+        # If the table isn't empty, get geom types from sde.st_geometrytype()
+        if row_count > 0:
+            stmt = '''select distinct sde.st_geometrytype({}) from {}.{} WHERE SDE.ST_ISEMPTY(SHAPE) = 0 '''.format(self.geom_field, self._owner.upper(), self.name.upper())
+            geom_type_response = self.db.cursor.execute(stmt)
+            geom_types = []
+            for geom_type in geom_type_response.fetchall()[0]:
+                geom_types.append(geom_type.replace('ST_', '').replace('MULTI', '')) # remove 'ST_' & 'MULTI' prefix
+                geom_types = list(set(geom_types))
+            if not geom_types:
+                return None
+            elif len(geom_types) == 1:
+               geom_type = geom_types[0]
+            else:
+                geom_type = geom_types[0] # TODO: handle > 1 geom type and multi nuances
+
+            return geom_type
 
         stmt = '''
             select
@@ -496,6 +565,22 @@ class OracleSdeTable(object):
             srid = None
         return srid
 
+    def _get_max_num_points_in_geom(self):
+        assert self.geom_field
+        stmt = '''
+            select max(sde.st_numpoints({})) from {}.{}
+            '''.format(self.geom_field, self._owner.upper(), self.name.upper())
+        self.db.cursor.execute(stmt)
+        row = self.db.cursor.fetchone()
+        try:
+            max_num_points_in_geom = row[0]
+        except TypeError:
+            # this is probably because the table isn't registered with sde
+            # or no geom field exists
+            max_num_points_in_geom = 0
+        return max_num_points_in_geom
+
+
     def wkt_getter(self, to_srid):
         assert self.geom_field
         geom_field_t = geom_field = self.geom_field
@@ -504,8 +589,23 @@ class OracleSdeTable(object):
         # if to_srid and to_srid != self.srid:
         #     geom_field_t = "SDE.ST_Transform({}, {})"\
         #         .format(geom_field, to_srid)
-        return "SDE.ST_AsText({}) AS {}"\
-            .format(geom_field_t, geom_field)
+        # return "SDE.ST_AsText({}) AS {}"\
+        #     .format(geom_field_t, geom_field)
+        #
+        # Determine if conversion of geom field from lob -> text can happen in the database or after using cx_oracle read() fct:
+        #     - cx_oracle read() fct is much slower than conversion in the database
+        #     - lob length must be < 4000 char limit for conversion in the datbase
+        #     - therefore choose query based on max length of geom
+        #     - for not use geom_type as proxy for length of geom (handle POINT geom_type conversions in the database
+        #     - TODO: make determination based on max geom field length
+
+##        if self.geom_type == 'POINT':
+        if self.max_num_points_in_geom <= MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
+            return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else TO_CHAR(SDE.ST_AsText({})) end AS {}" \
+            .format(geom_field_t, geom_field_t, geom_field)
+        else:
+            return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then EMPTY_CLOB() else SDE.ST_AsText({}) end AS {}" \
+                .format(geom_field_t, geom_field_t, geom_field)
 
     @property
     def _name_with_schema(self):
@@ -641,6 +741,7 @@ class OracleSdeTable(object):
 
         return indexes
 
+
     def write(self, rows, srid=None, table_srid=None,
               buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
         """
@@ -692,7 +793,7 @@ class OracleSdeTable(object):
             rows_geom_field = None
             for i, val in enumerate(first_row):
                 # TODO make a function to screen for wkt-like text
-                if str(val).startswith(('POINT', 'POLYGON', 'LINESTRING')):
+                if str(val).startswith(('POINT', 'POLYGON', 'LINESTRING', 'MULTIPOLYGON')):
                     if rows_geom_field:
                         raise ValueError('Multiple geometry fields found: {}'.format(', '.join([rows_geom_field, first_row_header[i]])))
                     rows_geom_field = first_row_header[i]
@@ -824,7 +925,6 @@ class OracleSdeTable(object):
 
                 val_rows = []
                 cur_stmt = stmt
-
         self.db.cursor.executemany(None, val_rows, batcherrors=True)
         er = self.db.cursor.getbatcherrors()
         self.db.dbo.commit()
@@ -853,7 +953,7 @@ class OracleSdeTable(object):
 
 class OracleSdeQuery(SpatialQuery):
     def __init__(self,  db, table, fields=None, return_geom=True, to_srid=None,
-                 where=None, limit=None):
+                 where=None, limit=None, timestamp=False):
         self.db = db
         self.table = table
         self.fields = fields
@@ -861,6 +961,8 @@ class OracleSdeQuery(SpatialQuery):
         self.to_srid = to_srid
         self.where = where
         self.limit = limit
+        self.timestamp = timestamp
+
 
     def __iter__(self):
         """Proxy iteration to core petl."""
@@ -874,13 +976,13 @@ class OracleSdeQuery(SpatialQuery):
 
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
         geom_field = self.table.geom_field
-        if self.geom_field and self.return_geom:
+        if self.geom_field and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             db_view = db_view.convert(self.geom_field.upper(), 'read')
+
 
         # lowercase headers
         headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in headers])
-
         iter_fn = db_view.__iter__()
 
         return iter_fn
@@ -896,6 +998,12 @@ class OracleSdeQuery(SpatialQuery):
             # default to non geom fields
             fields = self.table.non_geom_fields
         fields = [_quote(field.upper()) for field in fields]
+        # if still no fields, try select *: TODO: revisit
+        if not fields:
+            fields.append('{}.*'.format(self.table._name_with_schema_p))
+        # handle timestamp argument
+        if self.timestamp:
+            fields.append('CURRENT_TIMESTAMP as etl_read_timestamp')
 
         # handle geom
         geom_field = self.table.geom_field
@@ -905,8 +1013,10 @@ class OracleSdeQuery(SpatialQuery):
 
         # form statement
         fields_joined = ', '.join(fields)
-        stmt = 'SELECT {} FROM {}'.format(fields_joined,
-                                          self.table._name_with_schema_p)
+        if self.timestamp:
+            stmt = 'SELECT {} FROM {}, dual'.format(fields_joined, self.table._name_with_schema_p)
+        else:
+            stmt = 'SELECT {} FROM {}'.format(fields_joined, self.table._name_with_schema_p)
 
         # where conditions
         wheres = [self.where]

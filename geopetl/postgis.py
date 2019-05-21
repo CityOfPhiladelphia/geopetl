@@ -43,7 +43,6 @@ def topostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_B
     """
     Writes rows to database.
     """
-
     # create db wrappers
     db = PostgisDatabase(dbo)
 
@@ -71,6 +70,29 @@ def _topostgis(self, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_
     return topostgis(self, dbo, table_name, from_srid=from_srid, buffer_size=buffer_size)
 
 Table.topostgis = _topostgis
+
+
+def appendpostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+    """
+    Writes rows to database.
+    """
+    # create db wrappers
+    db = PostgisDatabase(dbo)
+
+    # write
+    table = db.table(table_name)
+    table.write(rows, from_srid=from_srid)
+
+etl.appendpostgis = appendpostgis
+
+def _appendpostgis(self, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+    """
+    This wraps topostgis and adds a `self` arg so it can be attached to
+    the Table class. This enables functional-style chaining.
+    """
+    return appendpostgis(self, dbo, table_name, from_srid=from_srid, buffer_size=buffer_size)
+
+Table.appendpostgis = _appendpostgis
 
 ################################################################################
 # DB
@@ -126,14 +148,21 @@ class PostgisDatabase(object):
         # return rows
         return self.cursor.fetchall()
 
+    # @property
+    # def tables(self, schema='public'):
+    #     tables = (self.table('information_schema.tables')
+    #                   .query(fields=['table_name'],
+    #                          where="table_schema = '{}' AND \
+    #                                 table_type = 'BASE TABLE'".format(schema))
+    #              )
+    #     return [x[0] for x in tables]
     @property
-    def tables(self, schema='public'):
+    def tables(self):
         tables = (self.table('information_schema.tables')
-                      .query(fields=['table_name'],
-                             where="table_schema = '{}' AND \
-                                    table_type = 'BASE TABLE'".format(schema))
+                      .query(fields=['table_schema', 'table_name'],
+                             where="table_type = 'BASE TABLE'")
                  )
-        return [x[0] for x in tables]
+        return ['.'.join([x[0], x[1]]) for x in tables]
 
     def table(self, name):
         return PostgisTable(self, name)
@@ -169,13 +198,17 @@ class PostgisDatabase(object):
 
 # maps db field types to more generic internal ones
 FIELD_TYPE_MAP = {
-    'integer':              'num',
-    'numeric':              'num',
-    'double precision':     'num',
-    'text':                 'text',
-    'character varying':    'text',
-    'date':                 'date',
-    'USER-DEFINED':         'geometry',
+    'integer':                  'num',
+    'numeric':                  'num',
+    'double precision':         'num',
+    'text':                     'text',
+    'character varying':        'text',
+    'date':                     'date',
+    'USER-DEFINED':             'geometry',
+    'timestamp with time zone': 'timestamp',
+    'timestamp without time zone': 'timestamp',
+    'boolean':                  'boolean',
+    'uuid':                     'uuid'
 }
 
 class PostgisTable(object):
@@ -197,11 +230,16 @@ class PostgisTable(object):
 
     @property
     def metadata(self):
+        # stmt = """
+        #     select column_name as name, data_type as type
+        #     from information_schema.columns
+        #     where table_name = '{}'
+        # """.format(self.name)
         stmt = """
             select column_name as name, data_type as type
             from information_schema.columns
-            where table_name = '{}'
-        """.format(self.name)
+            where table_schema = '{}' and table_name = '{}'
+        """.format(self.schema, self.name)
         fields = self.db.fetch(stmt)
         for field in fields:
             field['type'] = FIELD_TYPE_MAP[field['type']]
@@ -249,10 +287,10 @@ class PostgisTable(object):
         stmt = """
             SELECT type
             FROM geometry_columns
-            WHERE f_table_schema = 'public'
+            WHERE f_table_schema = '{}'
             AND f_table_name = '{}'
             and f_geometry_column = '{}';
-        """.format(self.name, self.geom_field)
+        """.format(self.schema, self.name, self.geom_field)
         return self.db.fetch(stmt)[0]['type']
 
     @property
@@ -287,13 +325,22 @@ class PostgisTable(object):
                 val = 'NULL'
         elif type_ == 'geometry':
             val = str(val)
+        elif type_ == 'timestamp':
+            if not val:
+                val = 'NULL'
+            elif 'timestamp' not in val.lower():
+                val = '''TIMESTAMP '{}' '''.format(val)
+            else:
+                val = val
+        elif type_ == 'boolean':
+            val = val
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
 
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
-        geom = "ST_GeomFromText('{}', {})".format(geom, srid)
+        geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
 
         # Handle 3D geometries
         # TODO: screen these with regex
@@ -330,7 +377,8 @@ class PostgisTable(object):
         # Get fields from the row because some fields from self.fields may be
         # optional, such as autoincrementing integers.
         # raise
-        fields = rows.header()
+        #fields = rows.header()
+        fields = rows[0]
         geom_field = self.geom_field
 
         # convert rows to records (hybrid objects that can behave like dicts)
@@ -339,8 +387,10 @@ class PostgisTable(object):
         # Get geom metadata
         if geom_field:
             srid = from_srid or self.get_srid()
-            row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
-                if geom_field else None
+            #row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
+            #    if geom_field and rows[0][geom_field] else None
+            match = re.match('[A-Z]+', rows[0][geom_field])
+            row_geom_type = match.group() if match else None
             table_geom_type = self.geom_type if geom_field else None
 
         # Do we need to cast the geometry to a MULTI type? (Assuming all rows
@@ -362,7 +412,7 @@ class PostgisTable(object):
         type_map_items = type_map.items()
 
         fields_joined = ', '.join(fields)
-        stmt = "INSERT INTO {} ({}) VALUES ".format(self.name, fields_joined)
+        stmt = "INSERT INTO {} ({}) VALUES ".format('.'.join([self.schema, self.name]), fields_joined)
 
         len_rows = len(rows)
         if buffer_size is None or len_rows < buffer_size:
@@ -417,18 +467,29 @@ class PostgisTable(object):
         execute(cur_stmt)
         commit()
 
+    # def truncate(self, cascade=False):
+    #     """Drop all rows."""
+    #
+    #     name = self.name
+    #     # RESTART IDENTITY resets sequence generators.
+    #     stmt = "TRUNCATE {} RESTART IDENTITY".format(name)
+    #     if cascade:
+    #         stmt += ' CASCADE'
+    #
+    #     self.db.cursor.execute(stmt)
+    #     self.db.dbo.commit()
     def truncate(self, cascade=False):
         """Drop all rows."""
 
         name = self.name
+        schema = self.schema
         # RESTART IDENTITY resets sequence generators.
-        stmt = "TRUNCATE {} RESTART IDENTITY".format(name)
+        stmt = "TRUNCATE {} RESTART IDENTITY".format('.'.join([schema, name]))
         if cascade:
             stmt += ' CASCADE'
 
         self.db.cursor.execute(stmt)
         self.db.dbo.commit()
-
 
 ################################################################################
 # QUERY
@@ -483,7 +544,5 @@ class PostgisQuery(Table):
         limit = self.limit
         if limit:
             stmt += ' LIMIT {}'.format(limit)
-
-        # print('from stmt', stmt)
 
         return stmt
