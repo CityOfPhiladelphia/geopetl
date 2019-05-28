@@ -363,7 +363,7 @@ class OracleSdeTable(object):
         fields = OrderedDict()
 
         for row in rows:
-            name = row[0].lower()
+            name = row[0].lower().replace(' ', '_')
             type_ = row[1]
             type_without_length = re.match('[A-Z0-9_]+', type_).group()
             length = row[2]
