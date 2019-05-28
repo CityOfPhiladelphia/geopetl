@@ -347,7 +347,8 @@ class OracleSdeTable(object):
                 COLUMN_NAME,
                 DATA_TYPE,
                 DATA_LENGTH,
-                NULLABLE
+                NULLABLE,
+                DATA_SCALE
             FROM ALL_TAB_COLS
             WHERE
                 OWNER = :1 AND
@@ -367,6 +368,7 @@ class OracleSdeTable(object):
             type_without_length = re.match('[A-Z0-9_]+', type_).group()
             length = row[2]
             nullable = row[3]
+            scale = row[4]
             assert type_without_length in FIELD_TYPE_MAP, \
                 '{} not a known field type' .format(type_)
             fields[name] = {
@@ -375,6 +377,9 @@ class OracleSdeTable(object):
                 'length': length,
                 'nullable': nullable == 'Y',
             }
+            # Use scale to identiry intetger numeric types
+            if type_without_length == 'NUMBER' and scale == 0:
+                fields[name]['type'] = 'integer'
         return fields
 
     @property
