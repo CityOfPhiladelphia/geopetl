@@ -568,6 +568,16 @@ class OracleSdeTable(object):
             # raise LookupError('SRID could not be found. Please provide a value '
             #                   'for `to_srid`.')
             srid = None
+        if not srid:
+            stmt = '''
+                select distinct sde.st_srid({geom_field}) as srid from {table_account}.{table_name} where sde.st_isempty({geom_field}) != 1
+            '''.format(geom_field=self.geom_field, table_account=self._owner.upper(), table_name=self.name.upper())
+            self.db.cursor.execute(stmt)
+            row = self.db.cursor.fetchone()
+            try:
+                srid = row[0]
+            except TypeError:
+                srid = None
         return srid
 
     def _get_max_num_points_in_geom(self):
