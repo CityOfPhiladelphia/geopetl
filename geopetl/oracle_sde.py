@@ -347,7 +347,8 @@ class OracleSdeTable(object):
                 COLUMN_NAME,
                 DATA_TYPE,
                 DATA_LENGTH,
-                NULLABLE
+                NULLABLE,
+                DATA_SCALE
             FROM ALL_TAB_COLS
             WHERE
                 OWNER = :1 AND
@@ -362,11 +363,12 @@ class OracleSdeTable(object):
         fields = OrderedDict()
 
         for row in rows:
-            name = row[0].lower()
+            name = row[0].lower().replace(' ', '_')
             type_ = row[1]
             type_without_length = re.match('[A-Z0-9_]+', type_).group()
             length = row[2]
             nullable = row[3]
+            scale = row[4]
             assert type_without_length in FIELD_TYPE_MAP, \
                 '{} not a known field type' .format(type_)
             fields[name] = {
@@ -375,6 +377,9 @@ class OracleSdeTable(object):
                 'length': length,
                 'nullable': nullable == 'Y',
             }
+            # Use scale to identiry intetger numeric types
+            if type_without_length == 'NUMBER' and scale == 0:
+                fields[name]['type'] = 'integer'
         return fields
 
     @property
@@ -563,6 +568,16 @@ class OracleSdeTable(object):
             # raise LookupError('SRID could not be found. Please provide a value '
             #                   'for `to_srid`.')
             srid = None
+        if not srid:
+            stmt = '''
+                select distinct sde.st_srid({geom_field}) as srid from {table_account}.{table_name} where sde.st_isempty({geom_field}) != 1
+            '''.format(geom_field=self.geom_field, table_account=self._owner.upper(), table_name=self.name.upper())
+            self.db.cursor.execute(stmt)
+            row = self.db.cursor.fetchone()
+            try:
+                srid = row[0]
+            except TypeError:
+                srid = None
         return srid
 
     def _get_max_num_points_in_geom(self):
@@ -649,6 +664,8 @@ class OracleSdeTable(object):
         if type_ == 'text':
             pass
         elif type_ == 'num':
+            pass
+        elif type_ == 'integer':
             pass
         elif type_ == 'geom':
             pass
