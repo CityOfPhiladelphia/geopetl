@@ -665,6 +665,8 @@ class OracleSdeTable(object):
             pass
         elif type_ == 'num':
             pass
+        elif type_ == 'integer':
+            pass
         elif type_ == 'geom':
             pass
         elif type_ == 'date':
