@@ -970,7 +970,7 @@ class OracleSdeTable(object):
 
 class OracleSdeQuery(SpatialQuery):
     def __init__(self,  db, table, fields=None, return_geom=True, to_srid=None,
-                 where=None, limit=None, timestamp=False):
+                 where=None, limit=None, timestamp=False, geom_with_srid=False):
         self.db = db
         self.table = table
         self.fields = fields
@@ -979,6 +979,7 @@ class OracleSdeQuery(SpatialQuery):
         self.where = where
         self.limit = limit
         self.timestamp = timestamp
+        self.geom_with_srid = geom_with_srid
 
 
     def __iter__(self):
@@ -996,6 +997,8 @@ class OracleSdeQuery(SpatialQuery):
         if self.geom_field and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             db_view = db_view.convert(self.geom_field.upper(), 'read')
 
+        if self.geom_with_srid:
+            db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.table.srid, g=g))
 
         # lowercase headers
         headers = db_view.header()
