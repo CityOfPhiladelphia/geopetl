@@ -991,14 +991,12 @@ class OracleSdeQuery(SpatialQuery):
         # get petl iterator
         dbo = self.db.dbo
         db_view = etl.fromdb(dbo, stmt)
-
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
-        geom_field = self.table.geom_field
         if self.geom_field and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             db_view = db_view.convert(self.geom_field.upper(), 'read')
 
-        if self.geom_with_srid:
-            db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.table.srid, g=g))
+        if self.geom_with_srid and self.geom_field and self.srid:
+            db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g))
 
         # lowercase headers
         headers = db_view.header()
@@ -1010,6 +1008,10 @@ class OracleSdeQuery(SpatialQuery):
     @property
     def geom_field(self):
         return self.table.geom_field
+
+    @property
+    def srid(self):
+        return self.table.srid
 
     def stmt(self):
         # handle fields
