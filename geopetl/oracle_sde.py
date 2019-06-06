@@ -279,9 +279,8 @@ FIELD_TYPE_MAP = {
     'ROWID':        'text',
 
     # date
-    'DATETIME':     'date',
     'DATE':         'date',
-    'TIMESTAMP':    'date',
+    'TIMESTAMP':    'timestamp without time zone',
 
     # clob
     # TODO clean these up - how will they get used?
@@ -443,12 +442,21 @@ class OracleSdeTable(object):
             geom_type = metadata[key].get('geom_type', '')
             srid = metadata[key].get('srid', '')
             nullable = metadata[key].get('nullable', '')
-            if geom_type:
+            if md_type == 'date':
+                # Check if has time:
+                stmt = '''
+                SELECT count(*) from {table_name_with_schema} where TO_CHAR({key}, 'hh24:mi:ss') != '00:00:00' and rownum < 2               
+                '''.format(table_name_with_schema=self._name_with_schema, key=key)
+                self.db.cursor.execute(stmt)
+                has_time = self.db.cursor.fetchone()[0]
+                if has_time > 0:
+                    kv_fmt['type'] = 'timestamp without time zone'
+            elif geom_type:
                 kv_fmt['geometry_type'] = geom_type.lower()
-            if srid:
-                if str(srid)[:4] == '3000':
-                    srid = 2272
-                kv_fmt['srid'] = srid
+                if srid:
+                    if str(srid)[:4] == '3000':
+                        srid = 2272
+                    kv_fmt['srid'] = srid
             if not nullable:
                 if not 'constraints' in kv_fmt:
                     kv_fmt['constraints'] = {}
@@ -503,14 +511,22 @@ class OracleSdeTable(object):
             geom_type_response = self.db.cursor.execute(stmt)
             geom_types = []
             for geom_type in geom_type_response.fetchall()[0]:
-                geom_types.append(geom_type.replace('ST_', '').replace('MULTI', '')) # remove 'ST_' & 'MULTI' prefix
-                geom_types = list(set(geom_types))
+                # geom_types.append(geom_type.replace('ST_', '').replace('MULTI', '')) # remove 'ST_' & 'MULTI' prefix
+                geom_types.append(geom_type.replace('ST_', '')) # remove 'ST_' prefix
+            geom_types = list(set(geom_types))
             if not geom_types:
                 return None
+            # if unique geom_type, use that:
             elif len(geom_types) == 1:
                geom_type = geom_types[0]
+            # if not unique geom_type, check if different base type or just some rows are multi of same type:
             else:
-                geom_type = geom_types[0] # TODO: handle > 1 geom type and multi nuances
+                # if different base types use 'geometry' as type:
+                if len([t.upper().replace('MULTI', '') for t in geom_types]) > 1:
+                    geom_type = 'geometry'
+                else:
+                    # if same base type with some as multi types, use multi type:
+                    geom_type = [f for f in geom_types if 'MULTI' in f.upper()][0]
 
             return geom_type
 
