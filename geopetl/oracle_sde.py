@@ -1012,7 +1012,7 @@ class OracleSdeQuery(SpatialQuery):
             db_view = db_view.convert(self.geom_field.upper(), 'read')
 
         if self.geom_with_srid and self.geom_field and self.srid:
-            db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g))
+            db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
 
         # lowercase headers
         headers = db_view.header()
