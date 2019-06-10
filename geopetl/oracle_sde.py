@@ -454,8 +454,8 @@ class OracleSdeTable(object):
             elif geom_type:
                 kv_fmt['geometry_type'] = geom_type.lower()
                 if srid:
-                    if str(srid)[:4] == '3000':
-                        srid = 2272
+                    # if str(srid)[:4] == '3000':
+                    #     srid = 2272
                     kv_fmt['srid'] = srid
             if not nullable:
                 if not 'constraints' in kv_fmt:
@@ -594,6 +594,9 @@ class OracleSdeTable(object):
                 srid = row[0]
             except TypeError:
                 srid = None
+        if srid:
+            if str(srid)[:4] == '3000':
+                srid = 2272
         return srid
 
     def _get_max_num_points_in_geom(self):
