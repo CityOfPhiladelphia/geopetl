@@ -1003,8 +1003,10 @@ class OracleSdeQuery(SpatialQuery):
 
     def __iter__(self):
         """Proxy iteration to core petl."""
+
         # form sql statement
         stmt = self.stmt()
+
         # get petl iterator
         dbo = self.db.dbo
         db_view = etl.fromdb(dbo, stmt)
@@ -1012,13 +1014,8 @@ class OracleSdeQuery(SpatialQuery):
         if self.geom_field and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             db_view = db_view.convert(self.geom_field.upper(), 'read')
 
-        # Replace St_astext geom_type with table geom_type:
-        if self.geom_field:
-            db_view = db_view.convert(self.geom_field.upper(), lambda g: g.replace(re.match('^[^\(]+', g).group(), self.geom_type.upper()))
-
-            # If geom_with_srid flag, insert SRID as EWKT:
-            if self.geom_with_srid and self.srid:
-                db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
+        if self.geom_with_srid and self.geom_field and self.srid:
+            db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
 
         # lowercase headers
         headers = db_view.header()
@@ -1030,10 +1027,6 @@ class OracleSdeQuery(SpatialQuery):
     @property
     def geom_field(self):
         return self.table.geom_field
-
-    @property
-    def geom_type(self):
-        return self.table.geom_type
 
     @property
     def srid(self):
