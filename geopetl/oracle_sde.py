@@ -521,12 +521,13 @@ class OracleSdeTable(object):
                geom_type = geom_types[0]
             # if not unique geom_type, check if different base type or just some rows are multi of same type:
             else:
-                # if different base types use 'geometry' as type:
-                if len([t.upper().replace('MULTI', '') for t in geom_types]) > 1:
-                    geom_type = 'geometry'
-                else:
-                    # if same base type with some as multi types, use multi type:
-                    geom_type = [f for f in geom_types if 'MULTI' in f.upper()][0]
+                # if different types use 'geometry' as type:
+                geom_type = 'geometry'
+                # if len([t.upper().replace('MULTI', '') for t in geom_types]) > 1:
+                #     geom_type = 'geometry'
+                # else:
+                #     # if same base type with some as multi types, use multi type:
+                #     geom_type = [f for f in geom_types if 'MULTI' in f.upper()][0]
 
             return geom_type
 
