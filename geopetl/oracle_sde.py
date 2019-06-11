@@ -507,27 +507,22 @@ class OracleSdeTable(object):
         row_count = self.db.cursor.fetchone()[0]
         # If the table isn't empty, get geom types from sde.st_geometrytype()
         if row_count > 0:
-            stmt = '''select distinct sde.st_geometrytype({}) from {}.{} WHERE SDE.ST_ISEMPTY(SHAPE) = 0 '''.format(self.geom_field, self._owner.upper(), self.name.upper())
+            stmt = '''select distinct sde.st_geometrytype({geom_field}) from {owner}.{table_name} WHERE SDE.ST_ISEMPTY({geom_field}) = 0 '''.format(geom_field=self.geom_field, owner=self._owner.upper(), table_name=self.name.upper())
             geom_type_response = self.db.cursor.execute(stmt)
             geom_types = []
-            for geom_type in geom_type_response.fetchall()[0]:
+            for geom_type in geom_type_response.fetchall():
                 # geom_types.append(geom_type.replace('ST_', '').replace('MULTI', '')) # remove 'ST_' & 'MULTI' prefix
-                geom_types.append(geom_type.replace('ST_', '')) # remove 'ST_' prefix
+                geom_types.append(geom_type[0].replace('ST_', '')) # remove 'ST_' prefix
             geom_types = list(set(geom_types))
             if not geom_types:
                 return None
             # if unique geom_type, use that:
             elif len(geom_types) == 1:
-               geom_type = geom_types[0]
+                geom_type = geom_types[0]
             # if not unique geom_type, check if different base type or just some rows are multi of same type:
             else:
                 # if different types use 'geometry' as type:
                 geom_type = 'geometry'
-                # if len([t.upper().replace('MULTI', '') for t in geom_types]) > 1:
-                #     geom_type = 'geometry'
-                # else:
-                #     # if same base type with some as multi types, use multi type:
-                #     geom_type = [f for f in geom_types if 'MULTI' in f.upper()][0]
 
             return geom_type
 
