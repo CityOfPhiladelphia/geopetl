@@ -45,7 +45,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_B
     """
     # create db wrappers
     db = PostgisDatabase(dbo)
-
+    # print(48, table_name)
     # do we need to create the table?
     create = table_name not in db.tables
     # sample = 0 if create else None # sample whole table
@@ -243,6 +243,7 @@ class PostgisTable(object):
         """.format(self.schema, self.name)
         fields = self.db.fetch(stmt)
         for field in fields:
+            # print(field, field['type'])
             field['type'] = FIELD_TYPE_MAP[field['type']]
         return fields
 
@@ -304,6 +305,8 @@ class PostgisTable(object):
 
     def prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
+        print('val',val,type_,'type')
+        # print(type_,'type')
         if type_ == 'text':
             if val:
                 val = str(val)
@@ -327,7 +330,8 @@ class PostgisTable(object):
         elif type_ == 'geometry':
             val = str(val)
         elif type_ == 'timestamp':
-            if not val:
+            val=str(val)
+            if not val or val in('None', ''):
                 val = 'NULL'
             elif 'timestamp' not in val.lower():
                 val = '''TIMESTAMP '{}' '''.format(val)
