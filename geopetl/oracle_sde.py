@@ -692,6 +692,8 @@ class OracleSdeTable(object):
                 val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
         elif type_ == 'nclob':
             pass
+        elif 'timestamp' in type_:
+            pass
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
             # var = self._c.var(cx_Oracle.NCLOB)
             # var.setvalue(0, val)
@@ -803,7 +805,10 @@ class OracleSdeTable(object):
 
         # Get fields from the row because some fields from self.fields may be
         # optional, such as an autoincrementing PK.
-        fields = rows.header()
+        try:
+            fields = rows.header()
+        except:
+            fields = rows[0]
         # Sort so LOB fields are at the end
         # TODO this will raise an error if the rows being passed in have
         # different fields from the destination table. We should do this more
