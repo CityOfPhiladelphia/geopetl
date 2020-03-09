@@ -45,7 +45,10 @@ def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
 
     # do we need to create the table?
     table_name_no_schema = table.name
-    create = table_name_no_schema.upper() not in db.table_names
+#    create = table_name_no_schema.upper() not in db.table_names
+    owner_name_lookup_dict = {'owner': table.schema.upper(), 'table_name': table.name.upper()}
+    create = owner_name_lookup_dict not in db.all_tables
+
     # sample = 0 if create else None # sample whole table
 
     if create:
@@ -928,13 +931,13 @@ class OracleSdeTable(object):
         # get input sizes so cx_Oracle what field types to expect on executemany
         # execute this later
         c = self.db.cursor
-        c.execute('select * from {} where rownum = 1'.format(self.name))
+        c.execute('select * from {} where rownum = 1'.format(self._name_with_schema))
         db_types = {d[0]: d[1] for d in self.db.cursor.description}
 
         # Prepare statement
         placeholders_joined = ', '.join(placeholders)
         stmt_fields_joined = ', '.join(stmt_fields)
-        stmt = "INSERT INTO {} ({}) VALUES ({})".format(self.name, \
+        stmt = "INSERT INTO {} ({}) VALUES ({})".format(self._name_with_schema, \
             stmt_fields_joined, placeholders_joined)
         self.db.cursor.prepare(stmt)
 
@@ -1002,7 +1005,7 @@ class OracleSdeTable(object):
 
 class OracleSdeQuery(SpatialQuery):
     def __init__(self,  db, table, fields=None, return_geom=True, to_srid=None,
-                 where=None, limit=None, timestamp=False, geom_with_srid=False):
+                 where=None, limit=None, timestamp=False, geom_with_srid=False, sql=None):
         self.db = db
         self.table = table
         self.fields = fields
@@ -1012,14 +1015,14 @@ class OracleSdeQuery(SpatialQuery):
         self.limit = limit
         self.timestamp = timestamp
         self.geom_with_srid = geom_with_srid
-
+        self.sql = sql
 
     def __iter__(self):
         """Proxy iteration to core petl."""
-
-        # form sql statement
+        # form sql statement if sql isn't provided on fct call
         stmt = self.stmt()
-
+        if self.sql:
+            stmt = self.sql
         # get petl iterator
         dbo = self.db.dbo
         db_view = etl.fromdb(dbo, stmt)
