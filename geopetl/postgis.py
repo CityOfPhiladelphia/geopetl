@@ -327,7 +327,7 @@ class PostgisTable(object):
         elif type_ == 'geometry':
             val = str(val)
         elif type_ == 'timestamp':
-            if not val:
+            if not val or val == 'None':
                 val = 'NULL'
             elif 'timestamp' not in val.lower():
                 val = '''TIMESTAMP '{}' '''.format(val)
@@ -335,6 +335,9 @@ class PostgisTable(object):
                 val = val
         elif type_ == 'boolean':
             val = val
+        elif type_ == 'money':
+            if not val:
+                val = 'NULL'
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
