@@ -335,6 +335,13 @@ class PostgisTable(object):
                 val = val
         elif type_ == 'boolean':
             val = val
+        elif type_ == 'money':
+            if not val:# or val.strip() == '0':
+                val = 'NULL'
+            else:
+                val = str(val)
+        elif type_ == 'uuid':
+            val = val
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -454,7 +461,6 @@ class PostgisTable(object):
                 try:
                     execute(cur_stmt)
                 except psycopg2.ProgrammingError:
-                    print(self.db.cursor.query)
                     raise
                 commit()
 
@@ -545,5 +551,4 @@ class PostgisQuery(Table):
         limit = self.limit
         if limit:
             stmt += ' LIMIT {}'.format(limit)
-
         return stmt
