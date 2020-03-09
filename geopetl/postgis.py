@@ -336,12 +336,12 @@ class PostgisTable(object):
         elif type_ == 'boolean':
             val = val
         elif type_ == 'money':
-            if not val:# or val.strip() == '0':
+            if not val or val.strip() == '0':
                 val = 'NULL'
             else:
                 val = str(val)
         elif type_ == 'uuid':
-            val = val
+            pass
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
