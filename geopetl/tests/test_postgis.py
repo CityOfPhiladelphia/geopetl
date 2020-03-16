@@ -3,14 +3,12 @@ import petl as etl
 from geopetl.postgis import PostgisDatabase
 import psycopg2
 from geopetl.tests.db_config import postgis_creds
-from geopetl.tests.utils import format_schema, create_table
-#from utils.postgis import format_schema
 import csv
 import os
-#from geopetl.tests.create_table import get_fields, create_tablepy
 
 
 ############################################# FIXTURES ################################################################
+
 table_name = ''
 
 # return postgis database object
@@ -43,7 +41,7 @@ def table_name(schema_dir):
     elif 'polygon' in head_tail[1]:
         table = 'polygon'
     # define table
-    table_name = table + '_table'
+    table_name = table + '_table3'
     return table_name
 
 
@@ -60,9 +58,6 @@ def csv_dir(schema_dir):
     elif 'polygon' in head_tail[1]:
         table = 'polygon'
 
-    #define postgis table name
-    table_name = table+'_table'
-
     csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\new_' + table + '.csv'
     return csv_dir
 
@@ -71,14 +66,20 @@ def csv_dir(schema_dir):
 @pytest.fixture
 def create_test_tables(postgis, schema_dir, table_name,csv_dir):
     # get fields from schmema file
-    myfields = get_fields(schema_dir)
+    #myfields = get_fields(schema_dir)
     # create a new postgis table with the fields from schema file
-    create_table(conn=postgis.dbo, schema='public', table=table_name, fields= myfields)
+    #postgis.create_table(table_name, myfields)
+    postgis.create_table2(schema_dir, table_name)
+
+
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(csv_dir)
     # write geopetl table to postgis
     rows.topostgis(postgis.dbo, 'public.' + table_name)
     #return postgis.table
+
+
+# create_table(self, name, cols):
 
 
 
@@ -157,3 +158,7 @@ def test_assert_data_2(csv_dir, postgis, table_name):
             # compare values from each key
             assert str(csv_dict.get(key)) == str(etl_dict.get(key))
         i = i+1
+
+
+
+# def test_extract_shema_method(postgis):
