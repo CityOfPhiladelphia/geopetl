@@ -9,7 +9,7 @@ import os
 
 ############################################# FIXTURES ################################################################
 
-table_name = ''
+# table_name = ''
 
 # return postgis database object
 @pytest.fixture
@@ -26,7 +26,7 @@ def postgis():
 # return .json schema file directory
 @pytest.fixture
 def schema_dir():
-    schema_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\schemas\\point3.json'
+    schema_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\schemas\\point.json'
     return schema_dir
 
 
@@ -41,7 +41,7 @@ def table_name(schema_dir):
     elif 'polygon' in head_tail[1]:
         table = 'polygon'
     # define table
-    table_name = table + '_table3'
+    table_name = table + '_table'
     return table_name
 
 
@@ -52,34 +52,28 @@ def csv_dir(schema_dir):
     head_tail = os.path.split(schema_dir)
     table=''
 
-    # define table based on schame file name
+    # define table based on schema file name
     if 'point' in head_tail[1]:
         table = 'point'
     elif 'polygon' in head_tail[1]:
         table = 'polygon'
 
-    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\new_' + table + '.csv'
+    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\' + table + '.csv'
     return csv_dir
 
 
 # create postgisTable object
 @pytest.fixture
 def create_test_tables(postgis, schema_dir, table_name,csv_dir):
-    # get fields from schmema file
-    #myfields = get_fields(schema_dir)
+
     # create a new postgis table with the fields from schema file
     #postgis.create_table(table_name, myfields)
     postgis.create_table2(schema_dir, table_name)
-
 
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(csv_dir)
     # write geopetl table to postgis
     rows.topostgis(postgis.dbo, 'public.' + table_name)
-    #return postgis.table
-
-
-# create_table(self, name, cols):
 
 
 
@@ -158,7 +152,3 @@ def test_assert_data_2(csv_dir, postgis, table_name):
             # compare values from each key
             assert str(csv_dict.get(key)) == str(etl_dict.get(key))
         i = i+1
-
-
-
-# def test_extract_shema_method(postgis):
