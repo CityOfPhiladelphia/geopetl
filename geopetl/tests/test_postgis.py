@@ -9,8 +9,6 @@ import os
 
 ############################################# FIXTURES ################################################################
 
-# table_name = ''
-
 # return postgis database object
 @pytest.fixture
 def postgis():
@@ -23,57 +21,35 @@ def postgis():
     return postgis_db
 
 
-# return .json schema file directory
+# return csv file directory containing staging data
 @pytest.fixture
-def schema_dir():
-    schema_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\schemas\\point.json'
-    return schema_dir
+def csv_dir():
+    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\point.csv'
+    return csv_dir
 
 
 # return table name for postgis table based on json file name
 @pytest.fixture
-def table_name(schema_dir):
-    head_tail = os.path.split(schema_dir)
-    # define table based on schema file name
+def table_name(csv_dir):
+    head_tail = os.path.split(csv_dir)
+    # define which table based on schema file name
     table = ''
     if 'point' in head_tail[1]:
         table = 'point'
     elif 'polygon' in head_tail[1]:
         table = 'polygon'
-    # define table
+    # define table name
     table_name = table + '_table'
     return table_name
 
 
-# return csv directory based on .json
+# create new table and write csv staging data to it
 @pytest.fixture
-def csv_dir(schema_dir):
-    # split schema directory
-    head_tail = os.path.split(schema_dir)
-    table=''
-
-    # define table based on schema file name
-    if 'point' in head_tail[1]:
-        table = 'point'
-    elif 'polygon' in head_tail[1]:
-        table = 'polygon'
-
-    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\' + table + '.csv'
-    return csv_dir
-
-
-# create postgisTable object
-@pytest.fixture
-def create_test_tables(postgis, schema_dir, table_name,csv_dir):
-
-    # create a new postgis table with the fields from schema file
-    #postgis.create_table(table_name, myfields)
-    postgis.create_table2(schema_dir, table_name)
-
+def create_test_tables(postgis, table_name, csv_dir):
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(csv_dir)
     # write geopetl table to postgis
-    rows.topostgis(postgis.dbo, 'public.' + table_name)
+    rows.topostgis(postgis.dbo, table_name)
 
 
 
