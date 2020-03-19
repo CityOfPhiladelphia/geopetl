@@ -6,6 +6,7 @@ from petl.util.base import Table
 from petl.io.db_utils import _quote
 from geopetl.util import parse_db_url
 import json
+from tkinter import filedialog
 
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
@@ -45,7 +46,6 @@ def frompostgis(dbo, table_name, fields=None, return_geom=True, where=None,
                 limit=None):
     """
     Returns an iterable query container.
-
     Params
     ----------------------------------------------------------------------------
     - dbo:          Can be a DB-API object, SQLAlchemy object, URL string, or
@@ -81,12 +81,18 @@ def topostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_B
     create = table_name not in db.tables
     # sample = 0 if create else None # sample whole table
 
+    # make table public?
+    table = db.table(table_name)
+
     if create:
         # TODO create table if it doesn't exist
-        raise NotImplementedError('Autocreate tables for PostGIS not currently implemented.')
+        print('Autocreate tables for PostGIS not currently implemented!!')
+        # request user for json file to create new table
+        column_definition_json = filedialog.askopenfilename(title="Select json file",
+                                        filetypes=(("json files", "*.json"), ("all files", "*.*")))
 
-    # write
-    table = db.table(table_name)
+        db.create_table(column_definition_json, table_name)
+
     if not create:
         table.truncate()
     table.write(rows, from_srid=from_srid)
@@ -198,28 +204,8 @@ class PostgisDatabase(object):
     def table(self, name):
         return PostgisTable(self, name)
 
-    def create_table(self, name, cols):
-        '''
-        Creates a table if it doesn't already exist.
 
-        Args: table name and a list of column dictionaries like:
-            name:   my_table
-            type:   integer
-        '''
-
-        stmt = '''DROP TABLE IF EXISTS {schema}.{table};
-                        CREATE TABLE {schema}.{table}
-                        ({fields});'''.format(
-            schema='public',
-            table=name,
-            fields=cols)
-
-        print('my qry statement ', stmt)
-        self.cursor.execute(stmt)
-        #self.save()
-
-
-    def create_table2(self, schema_dir, table_name):
+    def create_table(self, schema_dir, table_name):
         '''
         Creates a table if it doesn't already exist.
         Args: table_name and a json file directory:
@@ -232,9 +218,9 @@ class PostgisDatabase(object):
         stmt = '''DROP TABLE IF EXISTS {schema}.{table};
                         CREATE TABLE {schema}.{table}
                         ({fields});'''.format(
-            schema='public',
-            table=table_name,
-            fields=fields)
+            schema ='public',
+            table = table_name,
+            fields = fields)
 
         self.cursor.execute(stmt)
 
