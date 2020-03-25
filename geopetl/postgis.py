@@ -264,6 +264,14 @@ class PostgisTable(object):
         return [x['name'] for x in self.metadata]
 
     @property
+    def objectid_field(self):
+        # TODO: don't hardcode name,find way to look up in sde
+        f = [x for x in self.metadata if x['name'] == 'objectid']
+        if len(f) == 0:
+            return None
+        return f[0]['name']
+
+    @property
     def geom_field(self):
         f = [x for x in self.metadata if x['type'] == 'geometry']
         if len(f) == 0:
@@ -280,20 +288,37 @@ class PostgisTable(object):
         return 'ST_AsText({}) AS {}'.format(geom_getter, geom_field)
 
     def get_srid(self):
+
         stmt = "SELECT Find_SRID('{}', '{}', '{}')"\
                     .format(self.schema, self.name, self.geom_field)
         return self.db.fetch(stmt)[0]['find_srid']
 
     @property
     def geom_type(self):
-        stmt = """
-            SELECT type
-            FROM geometry_columns
-            WHERE f_table_schema = '{}'
-            AND f_table_name = '{}'
-            and f_geometry_column = '{}';
-        """.format(self.schema, self.name, self.geom_field)
-        return self.db.fetch(stmt)[0]['type']
+        try:
+            stmt = """
+                SELECT type
+                FROM geometry_columns
+                WHERE f_table_schema = '{}'
+                AND f_table_name = '{}'
+                and f_geometry_column = '{}';
+            """.format(self.schema, self.name, self.geom_field)
+            # return self.db.fetch(stmt)[0]['type']
+            return self.db.fetch(stmt)[0]['type']
+        except:
+            # Handle SDE:
+            stmt = """
+                        SELECT geometry_type
+                        FROM st_geometry_columns
+                        WHERE schema_name = '{}'
+                        AND table_name = '{}'
+                        and column_name = '{}';
+                    """.format(self.schema, self.name, self.geom_field)
+            # http://webhelp.esri.com/arcgisdesktop/9.2/index.cfm?TopicName=System_tables_of_a_geodatabase_stored_in_Oracle
+            code_map = {1: 'point', 2: 'multipoint', 3: 'line', 4: 'polygon'}
+            type_code = self.db.fetch(stmt)[0]['geometry_type']
+            return code_map.get(int(type_code), '')
+
 
     @property
     def non_geom_fields(self):
@@ -305,7 +330,6 @@ class PostgisTable(object):
 
     def prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        print('val',val,type_,'type')
         # print(type_,'type')
         if type_ == 'text':
             if val:
@@ -343,9 +367,17 @@ class PostgisTable(object):
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
 
+    def _prepare_objectid(self):
+        return " sde.next_rowid('{}', '{}')".format(self.schema, self.name)
+
+
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
-        geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
+        if self.geom_type == 'point': # This is quick fix that will break other things - use a check at top to see if SDE is enabled instead and handle holistically.
+            geom = "st_point('{}', {})".format(geom, srid) if geom else "null"
+        else:
+            geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
+        # geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
 
         # Handle 3D geometries
         # TODO: screen these with regex
@@ -378,13 +410,15 @@ class PostgisTable(object):
             - calls to DB functions like ST_GeomFromText end up getting quoted;
               not sure how to disable this.
         """
-
-        # Get fields from the row because some fields from self.fields may be
-        # optional, such as autoincrementing integers.
-        # raise
-        #fields = rows.header()
-        fields = rows[0]
+        # TODO: reactivate this and get objectid from table fields not csv:
+        # # Get fields from the row because some fields from self.fields may be
+        # # optional, such as autoincrementing integers.
+        # # raise
+        # #fields = rows.header()
+        # fields = rows[0]
+        fields = self.fields
         geom_field = self.geom_field
+        objectid_field = self.objectid_field
 
         # convert rows to records (hybrid objects that can behave like dicts)
         rows = etl.records(rows)
@@ -392,7 +426,7 @@ class PostgisTable(object):
         # Get geom metadata
         if geom_field:
             srid = from_srid or self.get_srid()
-            #row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
+            # row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
             #    if geom_field and rows[0][geom_field] else None
             match = re.match('[A-Z]+', rows[0][geom_field])
             row_geom_type = match.group() if match else None
@@ -439,7 +473,11 @@ class PostgisTable(object):
         for i, row in enumerate(rows):
             val_row = []
             for field, type_ in type_map_items:
-                if type_ == 'geometry':
+                if field == 'objectid':
+                    val = self._prepare_objectid()
+                    val_row.append(val)
+
+                elif type_ == 'geometry':
                     geom = row[geom_field]
                     val = self._prepare_geom(geom, srid, multi_geom=multi_geom)
                     val_row.append(val)
