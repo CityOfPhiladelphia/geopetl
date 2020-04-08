@@ -355,7 +355,7 @@ class OracleSdeTable(object):
                 HIDDEN_COLUMN = 'NO'
             ORDER BY COLUMN_ID
         """
-
+        print(self._owner.upper(), self.name.upper())
         cursor = self.db.cursor
         cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
@@ -379,6 +379,7 @@ class OracleSdeTable(object):
             # Use scale to identiry intetger numeric types
             if type_without_length == 'NUMBER' and scale == 0:
                 fields[name]['type'] = 'integer'
+        # print(fields)
         return fields
 
     @property
@@ -507,26 +508,22 @@ class OracleSdeTable(object):
         row_count = self.db.cursor.fetchone()[0]
         # If the table isn't empty, get geom types from sde.st_geometrytype()
         if row_count > 0:
-            stmt = '''select distinct sde.st_geometrytype({}) from {}.{} WHERE SDE.ST_ISEMPTY(SHAPE) = 0 '''.format(self.geom_field, self._owner.upper(), self.name.upper())
+            stmt = '''select distinct sde.st_geometrytype({geom_field}) from {owner}.{table_name} WHERE SDE.ST_ISEMPTY({geom_field}) = 0 '''.format(geom_field=self.geom_field, owner=self._owner.upper(), table_name=self.name.upper())
             geom_type_response = self.db.cursor.execute(stmt)
             geom_types = []
-            for geom_type in geom_type_response.fetchall()[0]:
+            for geom_type in geom_type_response.fetchall():
                 # geom_types.append(geom_type.replace('ST_', '').replace('MULTI', '')) # remove 'ST_' & 'MULTI' prefix
-                geom_types.append(geom_type.replace('ST_', '')) # remove 'ST_' prefix
+                geom_types.append(geom_type[0].replace('ST_', '')) # remove 'ST_' prefix
             geom_types = list(set(geom_types))
             if not geom_types:
                 return None
             # if unique geom_type, use that:
             elif len(geom_types) == 1:
-               geom_type = geom_types[0]
+                geom_type = geom_types[0]
             # if not unique geom_type, check if different base type or just some rows are multi of same type:
             else:
-                # if different base types use 'geometry' as type:
-                if len([t.upper().replace('MULTI', '') for t in geom_types]) > 1:
-                    geom_type = 'geometry'
-                else:
-                    # if same base type with some as multi types, use multi type:
-                    geom_type = [f for f in geom_types if 'MULTI' in f.upper()][0]
+                # if different types use 'geometry' as type:
+                geom_type = 'geometry'
 
             return geom_type
 
@@ -694,6 +691,7 @@ class OracleSdeTable(object):
                 # val = val.isoformat()
                 # Force microsecond output
                 val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
+
         elif type_ == 'nclob':
             pass
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
@@ -819,7 +817,6 @@ class OracleSdeTable(object):
         table_geom_type = self.geom_type if table_geom_field else None
         # row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
         #     if geom_field else None
-
         if table_geom_field:
             # get row geom field
             first_row_view = rows.head(n=1)
@@ -929,7 +926,7 @@ class OracleSdeTable(object):
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in fields}
         # db_types_filtered.pop('ID')
 
-        c.setinputsizes(**db_types_filtered)
+        #c.setinputsizes(**db_types_filtered)
 
         # Make list of value lists
         val_rows = []
@@ -956,12 +953,12 @@ class OracleSdeTable(object):
 
             if i % buffer_size == 0:
                 # execute
-                self.db.cursor.executemany(None, val_rows, batcherrors=True)
+                self.db.cursor.executemany(None, val_rows, batcherrors=False)
                 self.db.dbo.commit()
 
                 val_rows = []
                 cur_stmt = stmt
-        self.db.cursor.executemany(None, val_rows, batcherrors=True)
+        self.db.cursor.executemany(None, val_rows, batcherrors=False)
         er = self.db.cursor.getbatcherrors()
         self.db.dbo.commit()
 
