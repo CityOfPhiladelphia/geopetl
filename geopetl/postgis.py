@@ -78,20 +78,19 @@ def topostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_B
     db = PostgisDatabase(dbo)
 
     # do we need to create the table?
-    create = table_name not in db.tables
-    # sample = 0 if create else None # sample whole table
 
-    # make table public?
     table = db.table(table_name)
+    create = '.'.join([table.schema, table.name]) not in db.tables
+    # sample = 0 if create else None # sample whole table
 
     if create:
         # TODO create table if it doesn't exist
-        print('Autocreate tables for PostGIS not currently implemented!!')
+        #print('Autocreate tables for PostGIS not currently implemented!!')
         # request user for json file to create new table
         column_definition_json = filedialog.askopenfilename(title="Select json file",
                                         filetypes=(("json files", "*.json"), ("all files", "*.*")))
 
-        db.create_table(column_definition_json, table_name)
+        db.create_table(column_definition_json, table) #table_name
 
     if not create:
         table.truncate()
@@ -205,7 +204,7 @@ class PostgisDatabase(object):
         return PostgisTable(self, name)
 
 
-    def create_table(self, schema_dir, table_name):
+    def create_table(self, schema_dir, table):
         '''
         Creates a table if it doesn't already exist.
         Args: table_name and a json file directory:
@@ -218,8 +217,8 @@ class PostgisDatabase(object):
         stmt = '''DROP TABLE IF EXISTS {schema}.{table};
                         CREATE TABLE {schema}.{table}
                         ({fields});'''.format(
-            schema ='public',
-            table = table_name,
+            schema = table.schema,
+            table = table.name,
             fields = fields)
 
         self.cursor.execute(stmt)
