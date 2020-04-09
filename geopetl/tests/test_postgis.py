@@ -5,8 +5,19 @@ import psycopg2
 from geopetl.tests.db_config import postgis_creds
 import csv
 import os
+import re
 
+def remove_whitespace(stringval):
+    shapestring = str(stringval)
+    geom_type = re.findall("[A-Z]{1,12}", shapestring)[0]
+    coordinates = re.findall("\d+\.\d+", shapestring)
+    coordinates= [str(float(coords))for coords in coordinates]
 
+    if geom_type == 'point' or geom_type=="POINT":
+        geom = "{type}({x})".format(type=geom_type, x=" ".join(coordinates))
+    elif geom_type == 'polygon' or geom_type=="POLYGON":
+        geom = "{type}(({x}))".format(type=geom_type, x=" ".join(coordinates))
+    return geom
 ############################################# FIXTURES ################################################################
 
 # return postgis database object
@@ -24,7 +35,7 @@ def postgis():
 # return csv file directory containing staging data
 @pytest.fixture
 def csv_dir():
-    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\point.csv'
+    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\polygon.csv'
     return csv_dir
 
 
@@ -100,11 +111,16 @@ def test_assert_data(csv_dir, postgis, table_name):
         # iterate through each keys
         for key in keys:
             # compare values from each key
-            assert str(csv_dict.get(key)) == str(pg_dict.get(key))
+            if key=='shape':
+                pg_geom = remove_whitespace(str(pg_dict.get('shape')))
+                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                assert csv_geom == pg_geom
+            else:
+                assert str(csv_dict.get(key)) == str(pg_dict.get(key))
         i=i+1
 
 
-# compare csv data with postgres data using geopetl
+#compare csv data with postgres data using geopetl
 def test_assert_data_2(csv_dir, postgis, table_name):
     # read staging data from csv
     with open(csv_dir, newline='') as f:
@@ -125,6 +141,11 @@ def test_assert_data_2(csv_dir, postgis, table_name):
         csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
         # iterate through each keys
         for key in keys:
+            if key=='shape':
+                pg_geom = remove_whitespace(str(etl_dict.get('shape')))
+                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                assert csv_geom == pg_geom
             # compare values from each key
-            assert str(csv_dict.get(key)) == str(etl_dict.get(key))
+            else:
+                assert str(csv_dict.get(key)) == str(etl_dict.get(key))
         i = i+1
