@@ -374,7 +374,7 @@ class PostgisTable(object):
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
         if self.geom_type == 'point': # This is quick fix that will break other things - use a check at top to see if SDE is enabled instead and handle holistically.
-            geom = "st_point('{}', {})".format(geom, srid) if geom else "null"
+            geom = "st_geometry('{}', {})".format(geom, srid) if geom else "null"
         else:
             geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
         # geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
@@ -486,7 +486,6 @@ class PostgisTable(object):
                     val = self.prepare_val(row[field], type_)
                     val_row.append(val)
             val_rows.append(val_row)
-
             # check if it's time to ship a chunk
             if i % buffer_size == 0:
                 # Execute
@@ -506,9 +505,10 @@ class PostgisTable(object):
         # Execute remaining rows (TODO clean this up)
         vals_joined = ['({})'.format(', '.join(vals)) for vals in val_rows]
         rows_joined = ', '.join(vals_joined)
-        cur_stmt += rows_joined
-        execute(cur_stmt)
-        commit()
+        if rows_joined:
+            cur_stmt += rows_joined
+            execute(cur_stmt)
+            commit()
 
     # def truncate(self, cascade=False):
     #     """Drop all rows."""
