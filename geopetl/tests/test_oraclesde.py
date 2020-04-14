@@ -10,7 +10,17 @@ import datetime
 from dateutil import parser as dt_parser
 import re
 
+def remove_whitespace(stringval):
+    shapestring = str(stringval)
+    geom_type = re.findall("[A-Z]{1,12}", shapestring)[0]
+    coordinates = re.findall("\d+\.\d+", shapestring)
+    coordinates= [str(float(coords))for coords in coordinates]
 
+    if geom_type == 'point' or geom_type=="POINT":
+        geom = "{type}({x})".format(type=geom_type, x=" ".join(coordinates))
+    elif geom_type == 'polygon' or geom_type=="POLYGON":
+        geom = "{type}(({x}))".format(type=geom_type, x=" ".join(coordinates))
+    return geom
 ############################################# FIXTURES ################################################################
 
 # return postgis database object
@@ -30,6 +40,7 @@ def oraclesde_db():
 @pytest.fixture
 def csv_dir():
     csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\point.csv'
+    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\polygon.csv'
     return csv_dir
 
 
@@ -89,6 +100,7 @@ def test_all_rows_written(csv_dir,table_name, create_test_tables): #
 
     # get number of rows from query
     oracle_num_rows = len(result)
+    raise
     assert csv_row_count == oracle_num_rows
 
 
@@ -132,16 +144,11 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
             elif key == 'numericfield':
                 nf = int(oracle_dict.get('numericfield'))
                 nf2 = int(csv_dict.get('numericfield'))
-                print(type(nf2), type(nf))
-                print(key + ' ' + str(nf == nf2))
                 assert nf == nf2
             elif key == 'shape':
-                shapestring = str(oracle_dict.get('shape'))
-                coordinates = re.findall("\d+\.\d+", shapestring)
-                if "point" or "POINT" in shapestring:
-                    geom = "POINT({x})".format(x=" ".join(coordinates))
-                print(key + ' ' + str(geom == csv_dict.get('shape')))
-                assert geom == csv_dict.get('shape')
+                pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
+                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                assert csv_geom == pg_geom
             else:
                 val1 = str(oracle_dict.get(key))
                 val2 = str(csv_dict.get(key))
@@ -187,12 +194,9 @@ def test_assert_data_2(csv_dir, oraclesde_db, table_name):
                 print(key + ' ' + str(nf == nf2))
                 assert nf == nf2
             elif key == 'shape':
-                shapestring = str(oracle_dict.get('shape'))
-                coordinates = re.findall("\d+\.\d+", shapestring)
-                if "point" or "POINT" in shapestring:
-                    geom = "POINT({x})".format(x=" ".join(coordinates))
-                print(key + ' ' + str(geom == csv_dict.get('shape')))
-                assert geom == csv_dict.get('shape')
+                pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
+                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                assert csv_geom == pg_geom
             else:
                 val1 = str(oracle_dict.get(key))
                 val2 = str(csv_dict.get(key))
