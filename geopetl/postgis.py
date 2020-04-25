@@ -376,7 +376,7 @@ class PostgisTable(object):
         if self.geom_type == 'point': # This is quick fix that will break other things - use a check at top to see if SDE is enabled instead and handle holistically.
             geom = "st_geometry('{}', {})".format(geom, srid) if geom else "null"
         else:
-            geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
+            geom = "sde.ST_GEOMETRY('{}', {})".format(geom, srid) if geom else "null"
         # geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
 
         # Handle 3D geometries
