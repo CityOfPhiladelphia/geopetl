@@ -90,7 +90,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_B
         column_definition_json = filedialog.askopenfilename(title="Select json file",
                                         filetypes=(("json files", "*.json"), ("all files", "*.*")))
 
-        db.create_table(column_definition_json, table) #table_name
+        db.create_table(column_definition_json, table)
 
     if not create:
         table.truncate()
