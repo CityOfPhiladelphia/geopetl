@@ -17,6 +17,12 @@ jobs:
         # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
         - uses: actions/checkout@v2
 
+        - name: build
+          env:
+            pg_user: ${{secrets.pg_user}}
+            pg_pw: ${{secrets.pg_pw}}
+            pg_db: ${{secrets.pg_db}}
+
         - name: print hw
           run: echo hello world!
 
