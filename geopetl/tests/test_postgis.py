@@ -2,7 +2,7 @@ import pytest
 import petl as etl
 from geopetl.postgis import PostgisDatabase
 import psycopg2
-from geopetl.tests.db_config import postgis_creds
+#from geopetl.tests.db_config import postgis_creds
 import csv
 import os
 import re
@@ -24,9 +24,12 @@ def remove_whitespace(stringval):
 @pytest.fixture
 def postgis():
     # create connection string
-    dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=postgis_creds['dbname'],
-                                                                                       user=postgis_creds['user'],
-                                                                                       passwd=postgis_creds['pw'])
+    # dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=postgis_creds['dbname'],
+    #                                                                                    user=postgis_creds['user'],
+    #                                                                                    passwd=postgis_creds['pw'])
+    dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=os.environ.get('pg_db'),
+                                                                                       user= os.environ.get('pg_user'),
+                                                                                       passwd=os.environ.get('pg_pw'))
     # create & return geopetl postgis object
     postgis_db = PostgisDatabase(dsn)
     return postgis_db
@@ -75,9 +78,9 @@ def test_all_rows_written(csv_dir,create_test_tables,table_name): #
     csv_row_count = len(csv_data[1:])
 
     # connect to postgis DB using psycopg2
-    connection = psycopg2.connect(user=postgis_creds['user'],
-                                  password=postgis_creds['pw'],
-                                  database=postgis_creds['pw'])
+    connection = psycopg2.connect(user=os.environ.get('pg_user'),
+                                  password=os.environ.get('pg_pw'),
+                                  database=os.environ.get('pg_db'))
     cur = connection.cursor()
     # query all data from postgis table
     cur.execute('Select * from public.' + table_name)
