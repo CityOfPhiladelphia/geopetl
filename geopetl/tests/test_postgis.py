@@ -22,14 +22,14 @@ def remove_whitespace(stringval):
 
 # return postgis database object
 @pytest.fixture
-def postgis():
+def postgis(db, user, pw):
     # create connection string
     # dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=postgis_creds['dbname'],
     #                                                                                    user=postgis_creds['user'],
     #                                                                                    passwd=postgis_creds['pw'])
-    dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=os.environ.get('pg_db'),
-                                                                                       user= os.environ.get('pg_user'),
-                                                                                       passwd=os.environ.get('pg_pw'))
+    dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=db,
+                                                                                       user= user,
+                                                                                       passwd=pw)
     # create & return geopetl postgis object
     postgis_db = PostgisDatabase(dsn)
     return postgis_db
@@ -70,7 +70,7 @@ def create_test_tables(postgis, table_name, csv_dir):
 ######################################   TESTS   ####################################################################
 
 # read number of rows
-def test_all_rows_written(csv_dir,create_test_tables,table_name): #
+def test_all_rows_written(db, user, pw, csv_dir,create_test_tables,table_name): #
     # read staging data from csv
     with open(csv_dir, newline='') as f:
         reader = csv.reader(f)
@@ -78,9 +78,9 @@ def test_all_rows_written(csv_dir,create_test_tables,table_name): #
     csv_row_count = len(csv_data[1:])
 
     # connect to postgis DB using psycopg2
-    connection = psycopg2.connect(user=os.environ.get('pg_user'),
-                                  password=os.environ.get('pg_pw'),
-                                  database=os.environ.get('pg_db'))
+    connection = psycopg2.connect(user=user,
+                                  password=pw,
+                                  database=db)
     cur = connection.cursor()
     # query all data from postgis table
     cur.execute('Select * from public.' + table_name)
