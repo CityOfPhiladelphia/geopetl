@@ -54,7 +54,7 @@ jobs:
         pip install pytest-cov
 
     - name: is postgres working
-      run: pg_isready
+      run: pg_isready  -h localhost
         
 
       # Runs a set of commands using the runners shell
