@@ -47,4 +47,4 @@ jobs:
             pip install pytest-cov
             echo $PWD
             ls
-            pytest geopetl/tests/test_postgis.py --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+            pytest geopetl/tests/test_postgis.py --db=pg_db --user=pg_user --pw=pg_pw --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
