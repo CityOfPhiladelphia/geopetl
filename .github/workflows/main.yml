@@ -15,13 +15,13 @@ jobs:
 
     services:
       postgres:
-        image: postgres
+        image: mdillon/postgis:11-alpine
         env:
-          POSTGRES_PASSWORD: postgres
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
-          POSTGRES_USER: postgres
-          POSTGRES_DB: postgres
+          POSTGRES_DB: ${{secrets.pg_db}}
+          POSTGRES_USER: ${{secrets.pg_user}}
+          POSTGRES_PASSWORD: ${{secrets.pg_pw}}
         ports:
         - 5432:5432
         # needed because the postgres container does not provide a healthcheck
