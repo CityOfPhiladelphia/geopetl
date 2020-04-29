@@ -7,45 +7,64 @@ on:
     branches: add_tests
 
 jobs:
-    build:
-        # The type of runner that the job will run on
-        runs-on: ubuntu-16.04
+  container-job:
+    runs-on: ubuntu-latest
+    
+    # runs all of the steps inside the specified container rather than on the VM host.  
+    # Because of this the network configuration changes from host based network to a container network.
 
-        # Steps represent a sequence of tasks that will be executed as part of the job
-        steps:
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports:
+        - 5432:5432
+        # needed because the postgres container does not provide a healthcheck
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
-        # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-        - uses: actions/checkout@v2
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
 
-        - name: print hw
-          run: echo hello world!
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v2
 
-        # Runs a single command using the runners shell
-        - name: Set up Python
-          uses: actions/setup-python@v1
-          with:
-            python-version: '3.7.6'
+    - name: print hw
+      run: echo hello world!
+
+    # Runs a single command using the runners shell
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.7.6'
 
 
-        - name: install dependencies
-            #python setup.py
-          run: |
-            echo $PWD
-            ls
-            pip install --upgrade pip setuptools wheel
-            pip install -r requirements.txt
-            pip install pytest
-            pip install pytest-cov
-            
+    - name: install dependencies
+        #python setup.py
+      run: |
+        echo $PWD
+        ls
+        pip install --upgrade pip setuptools wheel
+        pip install -r requirements.txt
+        pip install pytest
+        pip install pytest-cov
 
-          # Runs a set of commands using the runners shell
-        - name: Test with pytest
-          env:
-            pg_user: ${{secrets.pg_user}}
-            pg_pw: ${{secrets.pg_pw}}
-            pg_db: ${{secrets.pg_db}}
-          run: |
+    - name: is postgres working
+      run: pg_isready
+        
 
-            echo $PWD
-            ls
-            pytest geopetl/tests/test_postgis.py --db=pg_db --user=pg_user --pw=pg_pw --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+      # Runs a set of commands using the runners shell
+    - name: Test with pytest
+      env:
+        pg_user: ${{secrets.pg_user}}
+        pg_pw: ${{secrets.pg_pw}}
+        pg_db: ${{secrets.pg_db}}
+      run: |
+
+        echo $PWD
+        ls
+        pytest geopetl/tests/test_postgis.py --db=pg_db --user=pg_user --pw=pg_pw --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
