@@ -26,15 +26,16 @@ jobs:
           with:
             python-version: '3.7.6'
 
+
         - name: install dependencies
             #python setup.py
           run: |
             echo $PWD
             ls
             pip install --upgrade pip setuptools wheel
-            
             pip install -r requirements.txt
-
+            pip install pytest
+            pip install pytest-cov
             
 
           # Runs a set of commands using the runners shell
@@ -44,8 +45,7 @@ jobs:
             pg_pw: ${{secrets.pg_pw}}
             pg_db: ${{secrets.pg_db}}
           run: |
-            pip install pytest
-            pip install pytest-cov
+
             echo $PWD
             ls
             pytest geopetl/tests/test_postgis.py --db=pg_db --user=pg_user --pw=pg_pw --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
