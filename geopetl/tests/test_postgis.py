@@ -27,9 +27,10 @@ def postgis(db, user, pw):
     # dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=postgis_creds['dbname'],
     #                                                                                    user=postgis_creds['user'],
     #                                                                                    passwd=postgis_creds['pw'])
-    dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=db,
-                                                                                       user= user,
-                                                                                       passwd=pw)
+    dsn = "host={my_host} dbname={my_database} user={user} password={passwd}".format(my_host='localhost',
+                                                                                        my_database=db,
+                                                                                        user= user,
+                                                                                        passwd=pw)
     # create & return geopetl postgis object
     postgis_db = PostgisDatabase(dsn)
     return postgis_db
