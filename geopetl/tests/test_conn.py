@@ -12,4 +12,4 @@ def test_connectToPostgres(db, user, pw):
     except(Exception, psycopg2.Error):
         print("postgres error ", psycopg2.Error)
         c = False
-        assert c == False
+        assert c == True
