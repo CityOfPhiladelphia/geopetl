@@ -55,6 +55,18 @@ jobs:
 
     - name: is postgres working
       run: pg_isready  -h localhost
+    
+    
+    - name: test with psycopg
+      env:
+        pg_user: ${{secrets.pg_user}}
+        pg_pw: ${{secrets.pg_pw}}
+        pg_db: ${{secrets.pg_db}}
+      run:
+        echo $pg_user
+        echo $pg_db
+        echo $pg_pw
+        pytest geopetl/tests/test_conn.py --db=pg_db --user=pg_user --pw=pg_pw
         
 
       # Runs a set of commands using the runners shell
