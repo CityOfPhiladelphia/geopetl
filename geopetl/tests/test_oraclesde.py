@@ -25,12 +25,11 @@ def remove_whitespace(stringval):
 
 # return postgis database object
 @pytest.fixture
-def oraclesde_db():
+def oraclesde_db(host, port, service_name,user, pw):
     # create connection string
-    dsn = cx_Oracle.makedsn(oracleDBcredentials['host'], oracleDBcredentials['port'],
-                            service_name=oracleDBcredentials['serviceName'])
+    dsn = cx_Oracle.makedsn(host, port, service_name=service_name)
     # db connection object
-    connection = cx_Oracle.connect(oracleDBcredentials['user'], oracleDBcredentials['password'], dsn, encoding="UTF-8")
+    connection = cx_Oracle.connect(user, pw, dsn, encoding="UTF-8")
     # create & return OracleSdeDatabase object
     dbo = OracleSdeDatabase(connection)
     return dbo
@@ -40,7 +39,7 @@ def oraclesde_db():
 @pytest.fixture
 def csv_dir():
     csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\point.csv'
-    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\polygon.csv'
+    #csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\polygon.csv'
     return csv_dir
 
 
@@ -76,7 +75,7 @@ def create_test_tables(oraclesde_db, table_name, csv_dir):
 ######################################   TESTS   ####################################################################
 
 # read number of rows
-def test_all_rows_written(csv_dir,table_name, create_test_tables): #
+def test_all_rows_written(host, port, service_name,user, pw,csv_dir,table_name, create_test_tables): #
     # read staging data from csv
     with open(csv_dir, newline='') as f:
         reader = csv.reader(f)
@@ -84,10 +83,9 @@ def test_all_rows_written(csv_dir,table_name, create_test_tables): #
 
     csv_row_count = len(csv_data[1:])
 
-    dsn = cx_Oracle.makedsn(oracleDBcredentials['host'], oracleDBcredentials['port'],
-                            service_name=oracleDBcredentials['serviceName'])
+    dsn = cx_Oracle.makedsn(host, port, service_name=service_name)
+    connection = cx_Oracle.connect(user, pw, dsn, encoding="UTF-8")
 
-    connection = cx_Oracle.connect(oracleDBcredentials['user'], oracleDBcredentials['password'], dsn, encoding="UTF-8")
     try:
         with connection.cursor() as cursor:
             # execute the insert statement
@@ -100,7 +98,6 @@ def test_all_rows_written(csv_dir,table_name, create_test_tables): #
 
     # get number of rows from query
     oracle_num_rows = len(result)
-    raise
     assert csv_row_count == oracle_num_rows
 
 
