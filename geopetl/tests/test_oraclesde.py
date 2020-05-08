@@ -37,8 +37,10 @@ def oraclesde_db(host, port, service_name,user, pw):
 # return csv file directory containing staging data
 @pytest.fixture
 def csv_dir():
-    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\point.csv'
-    #csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\polygon.csv'
+    #csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\point.csv'
+    csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\polygon.csv'
+    #csv_dir = '~/work/geopetl/geopetl/tests/fixtures_data/staging/point.csv'
+    csv_dir = '/geopetl/tests/fixtures_data/staging/polygon.csv'
     return csv_dir
 
 
@@ -54,6 +56,7 @@ def table_name(csv_dir):
         table = 'polygon'
     # define table name
     table_name = table + '_table'
+    print('table_name ',table_name)
     #return table_name
     return 'SECOND_TEST'
 
