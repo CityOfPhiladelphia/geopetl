@@ -54,7 +54,9 @@ RUN set -ex \
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
-    && useradd -ms /bin/bash worker \ 
+    && useradd -ms /bin/bash worker \
+
+
     && pip3 install -U setuptools \
     && pip3 install Cython \
        awscli==1.16.140 \
@@ -102,7 +104,6 @@ COPY setup.py /setup.py
 RUN pip3 install --upgrade pip setuptools wheel
 RUN pip3 install -e .
 
-USER worker
-ENTRYPOINT ["/entrypoint.sh"]
-#CMD ["/bin/bash"] 
-
+#USER worker
+#ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]
