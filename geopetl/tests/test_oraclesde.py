@@ -1,8 +1,7 @@
 import pytest
 import petl as etl
 import cx_Oracle
-from geopetl.postgis import PostgisDatabase
-from geopetl.tests.db_config import oracleDBcredentials
+#from geopetl.tests.db_config import oracleDBcredentials
 from geopetl.oracle_sde import OracleSdeDatabase, OracleSdeTable
 import csv
 import os

@@ -55,8 +55,6 @@ RUN set -ex \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash worker \
-
-
     && pip3 install -U setuptools \
     && pip3 install Cython \
        awscli==1.16.140 \
@@ -100,9 +98,12 @@ ENV updated-adds-on 5-1-2019_5
 #COPY databridge_etl_tools /databridge_etl_tools
 COPY geopetl /geopetl
 COPY setup.py /setup.py
+COPY requirements.txt .
 
 RUN pip3 install --upgrade pip setuptools wheel
 RUN pip3 install -e .
+RUN pip3 install -r requirements.txt
+RUN pip3 install pytest
 
 #USER worker
 #ENTRYPOINT ["/entrypoint.sh"]
