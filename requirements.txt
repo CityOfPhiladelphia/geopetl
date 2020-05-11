@@ -1,6 +1,6 @@
 cx-Oracle==7.3.0
 docker==4.2.0
--e git+https://github.com/CityOfPhiladelphia/geopetl.git@ccb1d2032a9bcceb12267890aed2a21c875055f0#egg=geopetl
+-e git+https://github.com/CityOfPhiladelphia/geopetl.git@a36e4e10361169bd0892d3060e1677ebab5425e9#egg=geopetl-add_tests \
 psycopg2-binary==2.8.4
 numpy==1.18.1
 petl==1.1.1
