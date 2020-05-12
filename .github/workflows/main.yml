@@ -43,32 +43,54 @@ jobs:
       with:
         python-version: '3.7.7'
 
-
-    - name: install dependencies
-        #python setup.py
-      run: |
-        echo $PWD
-        ls
-        pip install --upgrade pip setuptools wheel
-        pip install -r requirements.txt
-        pip install pytest
-        pip install pytest-cov
-
-    - name: test with Oracle
+    - name: Docker Stuff
+      description: build and run image
       env:
         oracle_user: ${{secrets.oracle_user}}
         oracle_pw: ${{secrets.oracle_pw}}
         oracle_host: ${{secrets.oracle_host}}
         oracle_service_name: ${{secrets.oracle_service_name}}
         oracle_port: ${{secrets.oracle_port}}
-      run: |
-        echo $oracle_user
-        echo $oracle_pw
-        echo $oracle_host
-        echo $oracle_port
-        echo oracle_service_name
-        pytest geopetl/tests/test_oraclesde.py --host=oracle_host --port=oracle_port  --user=oracle_user --pw=oracle_pw --service_name=oracle_service_name
+      inputs:
+        oracle_user:
+          description: 'user'
+          required: true
+          default: 'World'
+      runs:
+        using: 'docker'
+        image: 'Dockerfile'
+        args:
+          - ${{ inputs.oracle_user }}
 
+##########################################################################################################
+
+#    - name: install dependencies
+#        #python setup.py
+#      run: |
+#        echo $PWD
+#        ls
+#        pip install --upgrade pip setuptools wheel
+#        pip install -r requirements.txt
+#        pip install pytest
+#        pip install pytest-cov
+#
+#    - name: test with Oracle
+#      env:
+#        oracle_user: ${{secrets.oracle_user}}
+#        oracle_pw: ${{secrets.oracle_pw}}
+#        oracle_host: ${{secrets.oracle_host}}
+#        oracle_service_name: ${{secrets.oracle_service_name}}
+#        oracle_port: ${{secrets.oracle_port}}
+#      run: |
+#        echo $oracle_user
+#        echo $oracle_pw
+#        echo $oracle_host
+#        echo $oracle_port
+#        echo oracle_service_name
+#        pytest geopetl/tests/test_oraclesde.py --host=oracle_host --port=oracle_port  --user=oracle_user --pw=oracle_pw --service_name=oracle_service_name
+
+
+##########################################################################################################
 
 #    - name: is postgres working
 #      run: pg_isready  -h localhost

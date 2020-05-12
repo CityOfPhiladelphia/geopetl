@@ -106,5 +106,5 @@ RUN pip3 install -r requirements.txt
 RUN pip3 install pytest
 
 #USER worker
-#ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/bash"]
