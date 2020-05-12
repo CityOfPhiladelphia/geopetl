@@ -6,7 +6,7 @@ from petl.util.base import Table
 from petl.io.db_utils import _quote
 from geopetl.util import parse_db_url
 import json
-from tkinter import filedialog
+#from tkinter import filedialog
 
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
@@ -70,7 +70,7 @@ def frompostgis(dbo, table_name, fields=None, return_geom=True, where=None,
 etl.frompostgis = frompostgis
 
 
-def topostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
     """
     Writes rows to database.
     """
@@ -85,12 +85,12 @@ def topostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_B
 
     if create:
         # TODO create table if it doesn't exist
-        #print('Autocreate tables for PostGIS not currently implemented!!')
+        print('Autocreate tables for PostGIS not currently implemented!!')
         # request user for json file to create new table
-        column_definition_json = filedialog.askopenfilename(title="Select json file",
-                                        filetypes=(("json files", "*.json"), ("all files", "*.*")))
-
-        db.create_table(column_definition_json, table)
+        # column_definition_json = filedialog.askopenfilename(title="Select json file",
+        #                                 filetypes=(("json files", "*.json"), ("all files", "*.*")))
+        #
+        # db.create_table(column_definition_json, table)
 
     if not create:
         table.truncate()
