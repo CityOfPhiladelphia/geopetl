@@ -27,6 +27,7 @@ jobs:
         # needed because the postgres container does not provide a healthcheck
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
 
+
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
 
@@ -53,30 +54,45 @@ jobs:
         pip install pytest
         pip install pytest-cov
 
-    - name: is postgres working
-      run: pg_isready  -h localhost
-    
-    
-    - name: test with psycopg
+    - name: test with Oracle
       env:
-        pg_user: ${{secrets.pg_user}}
-        pg_pw: ${{secrets.pg_pw}}
-        pg_db: ${{secrets.pg_db}}
-      run:
-        echo $pg_user
-        echo $pg_db
-        echo $pg_pw
-        pytest geopetl/tests/test_conn.py --db=pg_db --user=pg_user --pw=pg_pw
-        
-
-      # Runs a set of commands using the runners shell
-    - name: Test with pytest
-      env:
-        pg_user: ${{secrets.pg_user}}
-        pg_pw: ${{secrets.pg_pw}}
-        pg_db: ${{secrets.pg_db}}
+        oracle_user: ${{secrets.oracle_user}}
+        oracle_pw: ${{secrets.oracle_pw}}
+        oracle_host: ${{secrets.oracle_host}}
+        oracle_service_name: ${{secrets.oracle_service_name}}
+        oracle_port: ${{secrets.oracle_port}}
       run: |
+        echo $oracle_user
+        echo $oracle_pw
+        echo $oracle_host
+        echo $oracle_port
+        echo oracle_service_name
+        pytest geopetl/tests/test_oraclesde.py --host=oracle_host --port=oracle_port  --user=oracle_user --pw=oracle_pw --service_name=oracle_service_name
 
-        echo $PWD
-        ls
-        pytest geopetl/tests/test_postgis.py --db=pg_db --user=pg_user --pw=pg_pw --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+
+#    - name: is postgres working
+#      run: pg_isready  -h localhost
+#
+#
+#    - name: test with psycopg
+#      env:
+#        pg_user: ${{secrets.pg_user}}
+#        pg_pw: ${{secrets.pg_pw}}
+#        pg_db: ${{secrets.pg_db}}
+#      run: |
+#        echo $pg_user
+#        echo $pg_db
+#        echo $pg_pw
+#        pytest geopetl/tests/test_conn.py --db=pg_db --user=pg_user --pw=pg_pw
+#
+#
+#      # Runs a set of commands using the runners shell
+#    - name: Test with pytest
+#      env:
+#        pg_user: ${{secrets.pg_user}}
+#        pg_pw: ${{secrets.pg_pw}}
+#        pg_db: ${{secrets.pg_db}}
+#      run: |
+#        echo $PWD
+#        ls
+#        pytest geopetl/tests/test_postgis.py --db=pg_db --user=pg_user --pw=pg_pw --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
