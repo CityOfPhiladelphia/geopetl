@@ -13,19 +13,20 @@ jobs:
     # runs all of the steps inside the specified container rather than on the VM host.  
     # Because of this the network configuration changes from host based network to a container network.
 
-    services:
-      postgres:
-        image: mdillon/postgis:11-alpine
-        env:
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5432
-          POSTGRES_DB: ${{secrets.pg_db}}
-          POSTGRES_USER: ${{secrets.pg_user}}
-          POSTGRES_PASSWORD: ${{secrets.pg_pw}}
-        ports:
-        - 5432:5432
-        # needed because the postgres container does not provide a healthcheck
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+#    services:
+#      postgres:
+#        image: mdillon/postgis:11-alpine
+#        env:
+#          POSTGRES_HOST: localhost
+#          POSTGRES_PORT: 5432
+#          POSTGRES_DB: ${{secrets.pg_db}}
+#          POSTGRES_USER: ${{secrets.pg_user}}
+#          POSTGRES_PASSWORD: ${{secrets.pg_pw}}
+#        ports:
+#        - 5432:5432
+#        # needed because the postgres container does not provide a healthcheck
+#        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
 
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -34,14 +35,6 @@ jobs:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
 
-    - name: print hw
-      run: echo hello world!
-
-    # Runs a single command using the runners shell
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: '3.7.7'
 
     - name: Docker Stuff
       description: build and run image
@@ -54,13 +47,26 @@ jobs:
       inputs:
         oracle_user:
           description: 'user'
-          required: true
+          required: false
           default: 'World'
       runs:
         using: 'docker'
         image: 'Dockerfile'
         args:
-          - ${{ inputs.oracle_user }}
+          - ${{ $oracle_user }}
+
+
+    - name: print hw
+      run: echo hello world!
+
+
+    # Runs a single command using the runners shell
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.7.7'
+
+
 
 ##########################################################################################################
 
