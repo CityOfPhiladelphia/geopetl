@@ -32,6 +32,7 @@ RUN set -ex \
     && apt-get update -yqq \
     && apt-get install -yqq --no-install-recommends \
         $buildDeps \
+	gcc \
         libpq-dev \
         python3 \
         python3-pip \
@@ -100,6 +101,7 @@ COPY geopetl /geopetl
 COPY setup.py /setup.py
 COPY requirements.txt .
 
+RUN pip3 install cython
 RUN pip3 install --upgrade pip setuptools wheel
 RUN pip3 install -e .
 RUN pip3 install -r requirements.txt

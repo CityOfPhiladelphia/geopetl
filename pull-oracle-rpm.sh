@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
-# If these two variables exist..
+# config.sh is where you should put the sensitive S3 creds so that we can download the required rpm files.
+if [[ -f "config.sh" ]]; then
+  source ./config.sh
+fi
+
+# Make sure the variables were declared properly.
 if [[ -z "$AWS_ACCESS_KEY_ID" && -z "$AWS_SECRET_ACCESS_KEY" ]]; then
     echo "Error, S3 credentials not declared! Please set them."
     return 1

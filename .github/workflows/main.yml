@@ -26,8 +26,7 @@ jobs:
 
     - name: Pull Oracle Instant Client rpm from S3
       id: pull-oracle-rpm 
-      run: |
-        source ./pull-oracle-rpm.sh
+      run: bash ./pull-oracle-rpm.sh
       env: 
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
