@@ -33,9 +33,11 @@ RUN set -ex \
     && apt-get install -yqq --no-install-recommends \
         $buildDeps \
 	gcc \
+	libopenblas-dev \
         libpq-dev \
         python3 \
         python3-pip \
+        python3-dev \
         netbase \
         apt-utils \
         unzip \
@@ -57,19 +59,8 @@ RUN set -ex \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash worker \
     && pip3 install -U setuptools \
-    && pip3 install Cython \
-       awscli==1.16.140 \
-       boto3==1.7.84 \
-       carto==1.4.0 \
-       click==7.0 \
-       cryptography==2.6.1 \
-       cx-Oracle==7.0.0 \
-       -e git+https://github.com/CityOfPhiladelphia/geopetl.git@4bda24e3ac4d6ec81f09248c51625acdbce417da#egg=geopetl-add_tests \
-       petl==1.2.0 \
-       psycopg2==2.8.1 \
-       pyasn1==0.4.5 \
-       pyodbc==4.0.26 \
-       pytz==2015.7 \
+    && pip3 install -U wheel \
+    && pip3 install awscli==1.16.140 \
     && apt-get remove --purge -yqq $buildDeps \
     && apt-get clean \
     && rm -rf \
@@ -101,12 +92,15 @@ COPY geopetl /geopetl
 COPY setup.py /setup.py
 COPY requirements.txt .
 
-RUN pip3 install cython
 RUN pip3 install --upgrade pip setuptools wheel
 RUN pip3 install -e .
-RUN pip3 install -r requirements.txt
+#RUN pip3 install -r requirements.txt
 RUN pip3 install pytest
 
 #USER worker
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["/bin/bash"]
+#CMD ["/bin/bash"]
+
+
+
+

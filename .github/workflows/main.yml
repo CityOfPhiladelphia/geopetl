@@ -1,5 +1,5 @@
 # .github/workflows/main.yml
-name: CI
+name: geopetl_pytest
 
 # Controls when the action will run. Triggers the workflow on push or pull request events but only for the master branch.
 on:
@@ -18,7 +18,11 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    # This is a github function? Ref doc: https://github.com/actions/checkout#checkout-a-different-branch
     - uses: actions/checkout@v2
+      with:
+        ref: add_tests
+    #- uses: actions/geopetl_pytest@add_tests
 
     # Runs a single command using the runners shell
     - name: print hw
@@ -37,7 +41,24 @@ jobs:
        docker build -t geo_image .
 
     - name: run container
-      run: docker run geo_image
+      run: docker run --name geopetl_container -itd geo_image
+
+    - name: Check running containers
+      run: sleep 5; docker ps
+
+    - name: Run pytest in container
+      run: |
+        docker exec -it geopetl_container \
+          pytest geopetl/tests/test_oraclesde.py \
+          --host=${{ secrets.oracle_host }} \
+          --port=${{ secrets.oracle_port }} \
+          --user=${{ secrets.oracle_user }} \
+          --pw=${{ secrets.oracle_pw }} \
+          --service_name=${{ secrets.oracle_service_name }} \
+          || docker logs --tail 100 geopetl_container
+
+    - name: Check docker logs 
+      run:  docker logs --tail 100 geopetl_container
 
 #    # RUN
 #    - name: Docker Action Stuff
