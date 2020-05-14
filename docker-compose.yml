@@ -1,0 +1,23 @@
+version: '3.7'
+services:
+
+
+  postgis:
+    image: mdillon/postgis:11
+    restart: always
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+    ports:
+      - 5432:5432
+
+  geopetl:
+    depends_on:
+      - "postgis"
+    build:
+      context: .
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PW
+      - POSTGRES_DB

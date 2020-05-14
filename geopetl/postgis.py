@@ -5,47 +5,16 @@ from petl.compat import string_types
 from petl.util.base import Table
 from petl.io.db_utils import _quote
 from geopetl.util import parse_db_url
-import json
-#from tkinter import filedialog
 
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
-
-DATA_TYPE_MAP = {
-    'string':                       'text',
-    'number':                       'numeric',
-    'float':                        'numeric',
-    'double precision':             'numeric',
-    'integer':                      'integer',
-    'boolean':                      'boolean',
-    'object':                       'jsonb',
-    'array':                        'jsonb',
-    'date':                         'date',
-    'time':                         'time',
-    'timestamp':                    'timestamp without time zone',
-    'timestamp without time zone':  'timestamp without time zone',
-    'timestamp with time zone':     'timestamp with time zone',
-    'datetime':                     'date',
-    'geom':                         'geometry',
-    'geometry':                     'geometry'
-}
-
-GEOM_TYPE_MAP = {
-    'point':           'Point',
-    'line':            'Linestring',
-    'linestring':      'Linestring',
-    'polygon':         'Polygon',
-    'multipoint':      'MultiPoint',
-    'multipolygon':    'MultiPolygon',
-    'multilinestring': 'MultiLineString',
-    'geometry':        'Geometry',
-}
 
 
 def frompostgis(dbo, table_name, fields=None, return_geom=True, where=None,
                 limit=None):
     """
     Returns an iterable query container.
+
     Params
     ----------------------------------------------------------------------------
     - dbo:          Can be a DB-API object, SQLAlchemy object, URL string, or
@@ -70,7 +39,7 @@ def frompostgis(dbo, table_name, fields=None, return_geom=True, where=None,
 etl.frompostgis = frompostgis
 
 
-def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+def topostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
     """
     Writes rows to database.
     """
@@ -78,20 +47,15 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     db = PostgisDatabase(dbo)
 
     # do we need to create the table?
-
-    table = db.table(table_name)
-    create = '.'.join([table.schema, table.name]) not in db.tables
+    create = table_name not in db.tables
     # sample = 0 if create else None # sample whole table
 
     if create:
         # TODO create table if it doesn't exist
-        print('Autocreate tables for PostGIS not currently implemented!!')
-        # request user for json file to create new table
-        # column_definition_json = filedialog.askopenfilename(title="Select json file",
-        #                                 filetypes=(("json files", "*.json"), ("all files", "*.*")))
-        #
-        # db.create_table(column_definition_json, table)
+        raise NotImplementedError('Autocreate tables for PostGIS not currently implemented.')
 
+    # write
+    table = db.table(table_name)
     if not create:
         table.truncate()
     table.write(rows, from_srid=from_srid)
@@ -203,60 +167,30 @@ class PostgisDatabase(object):
     def table(self, name):
         return PostgisTable(self, name)
 
-
-    def create_table(self, schema_dir, table):
+    def create_table(self, name, cols):
         '''
         Creates a table if it doesn't already exist.
-        Args: table_name and a json file directory:
-            table_name:   string of new table name
-            schema_dir:   string of json file direcotry and name
+
+        Args: table name and a list of column dictionaries like:
+            name:   my_table
+            type:   integer
         '''
+        field_map = {
+            'num':      'numeric',
+            'text':     'text',
+            'date':     'date',
+            'geom':     'text',
+        }
 
-        fields = self.get_fields_from_jsonfile(schema_dir)
+        # Make concatenated string of columns, datatypes
+        col_string_list = ['id serial']
+        col_string_list += ['{} {}'.format(x['name'], field_map[x['type']]) for x in cols]
+        col_string_list.append('PRIMARY KEY(id)')
+        col_string = ', '.join(col_string_list)
 
-        stmt = '''DROP TABLE IF EXISTS {schema}.{table};
-                        CREATE TABLE {schema}.{table}
-                        ({fields});'''.format(
-            schema = table.schema,
-            table = table.name,
-            fields = fields)
-
+        stmt = 'CREATE TABLE IF NOT EXISTS {} ({})'.format(name, col_string)
         self.cursor.execute(stmt)
-
-
-    def get_fields_from_jsonfile(self, json_schema_dir):  # def get_fields(json_schema_file: str) -> str:
-        '''Takes in a json schema file and returns a comma separated string of fields
-        and their data types.
-        '''
-        global logger
-
-        with open(json_schema_dir) as json_file:
-            fields = json.load(json_file).get('fields', '')
-            if not fields:
-                logger.error('Json schema malformatted...')
-                raise
-            num_fields = len(fields)
-            _fields_fmt = ''
-            for i, scheme in enumerate(fields):
-                scheme_type = DATA_TYPE_MAP.get(scheme['type'].lower(), scheme['type'])
-                constraint = scheme.get('constraints', None)
-                if scheme_type == 'geometry':
-                    scheme_srid = scheme.get('srid', '')
-                    scheme_geometry_type = GEOM_TYPE_MAP.get(scheme.get('geometry_type', '').lower(), '')
-                    if scheme_srid and scheme_geometry_type:
-                        scheme_type = 'geometry({}, {}) '.format(scheme_geometry_type, scheme_srid)
-                    else:
-                        logger.error('Srid and geometry_type must be provided with geometry field...')
-                        raise
-                _fields_fmt += ' {} {}'.format(scheme['name'], scheme_type)
-                if constraint:
-                    _fields_fmt += ' NOT NULL'
-
-                if i < num_fields - 1:
-                    _fields_fmt += ','
-        return _fields_fmt
-
-
+        self.save()
 
 ################################################################################
 # TABLE
@@ -401,6 +335,13 @@ class PostgisTable(object):
                 val = val
         elif type_ == 'boolean':
             val = val
+        elif type_ == 'money':
+            if not val or val.strip() == '0':
+                val = 'NULL'
+            else:
+                val = str(val)
+        elif type_ == 'uuid':
+            pass
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -520,7 +461,6 @@ class PostgisTable(object):
                 try:
                     execute(cur_stmt)
                 except psycopg2.ProgrammingError:
-                    print(self.db.cursor.query)
                     raise
                 commit()
 
@@ -611,5 +551,5 @@ class PostgisQuery(Table):
         limit = self.limit
         if limit:
             stmt += ' LIMIT {}'.format(limit)
-
         return stmt
+

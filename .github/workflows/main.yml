@@ -1,5 +1,5 @@
 # .github/workflows/main.yml
-name: CI
+name: geopetl_pytest
 
 # Controls when the action will run. Triggers the workflow on push or pull request events but only for the master branch.
 on:
@@ -13,12 +13,16 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-18.04
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    # This is a github function? Ref doc: https://github.com/actions/checkout#checkout-a-different-branch
     - uses: actions/checkout@v2
+      with:
+        ref: add_tests
+    #- uses: actions/geopetl_pytest@add_tests
 
     # Runs a single command using the runners shell
     - name: print hw
@@ -37,7 +41,25 @@ jobs:
        docker build -t geo_image .
 
     - name: run container
-      run: docker run geo_image
+      run: docker run --name geopetl_container -itd geo_image; docker logs --tail 50 geopetl_container
+
+    - name: Check running containers
+      run: sleep 5; docker ps
+
+    - name: Run pytest in container
+      run: |
+        docker exec -it geopetl_container \
+          pytest geopetl/tests/test_oraclesde.py \
+          --host=${{ secrets.oracle_host }} \
+          --port=${{ secrets.oracle_port }} \
+          --user=${{ secrets.oracle_user }} \
+          --pw=${{ secrets.oracle_pw }} \
+          --service_name=${{ secrets.oracle_service_name }} \
+          >> ~/exec-log.txt 2>&1
+
+    - name: Check docker logs 
+      #run:  docker logs --tail 100 geopetl_container
+      run: cat ~/exec-log.txt
 
 #    # RUN
 #    - name: Docker Action Stuff
@@ -48,29 +70,6 @@ jobs:
 #        oracle_host: ${{secrets.oracle_host}}
 #        oracle_service_name: ${{secrets.oracle_service_name}}
 #        oracle_port: ${{secrets.oracle_port}}
-#      inputs:
-#        oracle_user:
-#          description: 'user'
-#          required: false
-#          default: 'World'
-#      runs:
-#        using: 'docker'
-#        image: 'Dockerfile'
-#        args:
-#          - ${{ $oracle_user }}
-#
-#
-#
-#    #### docker main stuff
-#    - name: Hello world action step
-#        id: hello
-#        uses: actions/hello-world-docker-action@v1
-#        with:
-#          who-to-greet: 'Mona the Octocat'
-#          # Use the output from the `hello` step
-#
-#    - name: Get the output time
-#      run: echo "The time was ${{ steps.hello.outputs.time }}"
 
 
 
