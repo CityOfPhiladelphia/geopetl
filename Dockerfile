@@ -21,39 +21,17 @@ ENV HOSTALIASES=/tmp/HOSTALIASES
 RUN set -ex \
     && buildDeps=' \
         python3-dev \
-        libkrb5-dev \
-        libsasl2-dev \
-        libssl-dev \
-        libffi-dev \
         build-essential \
-        libblas-dev \
-        liblapack-dev \
     ' \
     && apt-get update -yqq \
     && apt-get install -yqq --no-install-recommends \
         $buildDeps \
-	gcc \
-	libopenblas-dev \
-        libpq-dev \
-        python3 \
-        python3-pip \
-        python3-dev \
-        netbase \
-        apt-utils \
-        unzip \
-        curl \
-        netcat \
-        locales \
-        git \
         alien \
-        libgdal-dev \
-        libgeos-dev \
-        binutils \
-        libproj-dev \
-        gdal-bin \
-        libspatialindex-dev \
-        libaio1 \
-        freetds-dev \
+        python3 \
+        python3-dev \
+        python3-pip \
+        locales \
+        libaio1 \ 
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
@@ -81,26 +59,20 @@ RUN alien -i oracle-instantclient12.1-basiclite-12.1.0.2.0-1.x86_64.rpm \
 RUN alien -i oracle-instantclient12.1-devel-12.1.0.2.0-1.x86_64.rpm \
     && rm oracle-instantclient12.1-devel-12.1.0.2.0-1.x86_64.rpm
 
-COPY scripts/entrypoint.sh /entrypoint.sh
-
-RUN chmod +x /entrypoint.sh
 
 # Cache bust
 ENV updated-adds-on 5-1-2019_5
-#COPY databridge_etl_tools /databridge_etl_tools
+
 COPY geopetl /geopetl
 COPY setup.py /setup.py
 COPY requirements.txt .
 
 RUN pip3 install --upgrade pip setuptools wheel
+
 RUN pip3 install -e .
-#RUN pip3 install -r requirements.txt
 RUN pip3 install pytest
 
-#USER worker
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-#CMD ["/bin/bash"]
-
-
-
 
