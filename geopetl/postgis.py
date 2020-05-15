@@ -89,8 +89,8 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
         # request user for json file to create new table
         # column_definition_json = filedialog.askopenfilename(title="Select json file",
         #                                 filetypes=(("json files", "*.json"), ("all files", "*.*")))
-        #
-        # db.create_table(column_definition_json, table)
+        
+        db.create_table(column_definition_json, table)
 
     if not create:
         table.truncate()

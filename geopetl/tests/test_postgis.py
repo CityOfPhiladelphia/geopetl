@@ -39,7 +39,7 @@ def postgis(db, user, pw):
 # return csv file directory containing staging data
 @pytest.fixture
 def csv_dir():
-    csv_dir = '~/work/geopetl/geopetl/tests/fixtures_data/staging/point.csv'
+    csv_dir = '/geopetl/tests/fixtures_data/staging/point.csv'
     return csv_dir
 
 
