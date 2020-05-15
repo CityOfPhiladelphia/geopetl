@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 # Never prompts the user for choices on installation/configuration of packages
 ENV DEBIAN_FRONTEND noninteractive
@@ -18,19 +18,22 @@ ENV LD_LIBRARY_PATH=$ORACLE_HOME/lib
 ENV PATH=$ORACLE_HOME/bin:$PATH
 ENV HOSTALIASES=/tmp/HOSTALIASES
 
+#RUN set -ex \
+#    && apt-get update -yqq \
+#    && apt-get install -yqq --no-install-recommends \
+#    locales
+
 RUN set -ex \
+    && apt-get update -yqq \
     && buildDeps=' \
         python3-dev \
-        build-essential \
+        locales \
     ' \
-    && apt-get update -yqq \
     && apt-get install -yqq --no-install-recommends \
         $buildDeps \
         alien \
         python3 \
-        python3-dev \
         python3-pip \
-        locales \
         libaio1 \ 
     && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
     && locale-gen \
