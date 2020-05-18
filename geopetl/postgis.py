@@ -6,7 +6,6 @@ from petl.util.base import Table
 from petl.io.db_utils import _quote
 from geopetl.util import parse_db_url
 import json
-#from tkinter import filedialog
 
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
@@ -89,7 +88,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
         # request user for json file to create new table
         # column_definition_json = filedialog.askopenfilename(title="Select json file",
         #                                 filetypes=(("json files", "*.json"), ("all files", "*.*")))
-        
+
         db.create_table(column_definition_json, table)
 
     if not create:
@@ -98,12 +97,12 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
 
 etl.topostgis = topostgis
 
-def _topostgis(self, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+def _topostgis(self, dbo, table_name, from_srid=None, column_definition_json=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
     """
     This wraps topostgis and adds a `self` arg so it can be attached to
     the Table class. This enables functional-style chaining.
     """
-    return topostgis(self, dbo, table_name, from_srid=from_srid, buffer_size=buffer_size)
+    return topostgis(self, dbo, table_name, from_srid=from_srid,column_definition_json=column_definition_json, buffer_size=buffer_size)
 
 Table.topostgis = _topostgis
 

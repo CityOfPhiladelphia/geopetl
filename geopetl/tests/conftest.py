@@ -9,6 +9,7 @@ def pytest_addoption(parser):
     parser.addoption("--host", action="store", default="default name")
     parser.addoption("--port", action="store", default="default name")
     parser.addoption("--service_name", action="store", default="default name")
+    parser.addoption("--schema", action="store", default="default name")
 
 def pytest_generate_tests(metafunc):
     # This is called for every test. Only get/set command line arguments
@@ -38,3 +39,7 @@ def pytest_generate_tests(metafunc):
     option_value6 = metafunc.config.option.service_name
     if 'service_name' in metafunc.fixturenames and option_value6 is not None:
         metafunc.parametrize("service_name", [option_value6])
+
+    option_value7 = metafunc.config.option.schema
+    if 'schema' in metafunc.fixturenames and option_value7 is not None:
+        metafunc.parametrize("schema", [option_value7])

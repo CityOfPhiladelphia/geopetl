@@ -39,7 +39,7 @@ def postgis(db, user, pw):
 # return csv file directory containing staging data
 @pytest.fixture
 def csv_dir():
-    csv_dir = '/geopetl/tests/fixtures_data/staging/point.csv'
+    csv_dir = 'geopetl/tests/fixtures_data/staging/point.csv'
     return csv_dir
 
 
@@ -60,11 +60,11 @@ def table_name(csv_dir):
 
 # create new table and write csv staging data to it
 @pytest.fixture
-def create_test_tables(postgis, table_name, csv_dir):
+def create_test_tables(postgis, table_name, csv_dir, schema):
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(csv_dir)
     # write geopetl table to postgis
-    rows.topostgis(postgis.dbo, table_name)
+    rows.topostgis(postgis.dbo, table_name, column_definition_json=schema)
 
 
 
