@@ -7,11 +7,10 @@ A [petl](https://github.com/alimanfoo/petl) extension for spatial data
 
     To run the tests locally via docker compose, pull this version and place it in your path:
 
-    ```
+```
 sudo wget https://github.com/docker/compose/releases/download/1.26.0-rc4/docker-compose-Linux-x86_64
-sudo mv docker-compose-Linux-x86_64 /usr/bin/docker-compose && sudo chmod +x /usr/bin/docker-compose 
-
-    ```
+sudo mv docker-compose-Linux-x86_64 /usr/bin/docker-compose && sudo chmod +x /usr/bin/docker-compose
+```
 
     The docker container requires oracle rpms which we have stored in S3. To get them, rename config.sh.example
     to config.sh, and populate the S3 creds into the appropriate environment variables.
