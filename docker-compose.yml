@@ -19,5 +19,5 @@ services:
       context: .
     environment:
       - POSTGRES_USER
-      - POSTGRES_PW
+      - POSTGRES_PASSWORD
       - POSTGRES_DB

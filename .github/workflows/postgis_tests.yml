@@ -3,7 +3,7 @@ name: geopetl_pytest_v2
 # Controls when the action will run. Triggers the workflow on push or pull request events but only for the master branch.
 on:
   push:
-    branches: roland-testin1
+    branches: master
 
 jobs:
   build:
@@ -27,7 +27,7 @@ jobs:
       run: docker-compose up
       env:
         POSTGRES_USER: ${{ secrets.pg_user }}
-        POSTGRES_PW: ${{ secrets.pg_pw }}
+        POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
         POSTGRES_DB: ${{ secrets.pg_db }}
 
     - name: Login to postgres
@@ -37,20 +37,11 @@ jobs:
       run: sleep 5; docker ps
       # docker health check?
 
-    - name: Postgis pytest command
-      run: |
-        docker exec -it geopetl \
-          pytest geopetl/tests/test_postgis.py \
-          --user=${{ secrets.pg_user }} \
-          --pw=${{ secrets.pg_pw }} \
-          --db=${{ secrets.pg_db }} \
-          --schema="geopetl/tests/fixtures_data/schemas/point.json"
-
-          #    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
-          #      env: 
-          #        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          #        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          #        REPOSITORY_URL: 102658671810.dkr.ecr.us-east-1.amazonaws.com/vulcan
+#    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
+#      env: 
+#        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#        REPOSITORY_URL: 102658671810.dkr.ecr.us-east-1.amazonaws.com/vulcan
 
 
 
