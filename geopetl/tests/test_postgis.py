@@ -22,15 +22,12 @@ def remove_whitespace(stringval):
 
 # return postgis database object
 @pytest.fixture
-def postgis(db, user, pw):
+def postgis(db, user, pw, host):
     # create connection string
     # dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=postgis_creds['dbname'],
     #                                                                                    user=postgis_creds['user'],
     #                                                                                    passwd=postgis_creds['pw'])
-    dsn = "host={my_host} dbname={my_database} user={user} password={passwd}".format(my_host='localhost',
-                                                                                        my_database=db,
-                                                                                        user= user,
-                                                                                        passwd=pw)
+    dsn = "host={0} dbname={1} user={2} password={3}".format(host,db,user,pw)
     # create & return geopetl postgis object
     postgis_db = PostgisDatabase(dsn)
     return postgis_db
@@ -71,7 +68,7 @@ def create_test_tables(postgis, table_name, csv_dir, schema):
 ######################################   TESTS   ####################################################################
 
 # read number of rows
-def test_all_rows_written(db, user, pw, csv_dir,create_test_tables,table_name): #
+def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_name): #
     # read staging data from csv
     with open(csv_dir, newline='') as f:
         reader = csv.reader(f)
@@ -80,6 +77,7 @@ def test_all_rows_written(db, user, pw, csv_dir,create_test_tables,table_name): 
 
     # connect to postgis DB using psycopg2
     connection = psycopg2.connect(user=user,
+                                  host=host,
                                   password=pw,
                                   database=db)
     cur = connection.cursor()

@@ -1,4 +1,3 @@
-
 FROM ubuntu:18.04
 
 # Never prompts the user for choices on installation/configuration of packages
@@ -14,7 +13,7 @@ ENV LC_CTYPE en_US.UTF-8
 ENV LC_MESSAGES en_US.UTF-8
 ENV LC_ALL  en_US.UTF-8
 
-# Oracle
+# Oracle environment variables
 ENV ORACLE_HOME=/usr/lib/oracle/12.1/client64
 ENV LD_LIBRARY_PATH=$ORACLE_HOME/lib
 ENV PATH=$ORACLE_HOME/bin:$PATH
@@ -43,7 +42,7 @@ RUN set -ex \
     && useradd -ms /bin/bash worker \
     && pip3 install -U setuptools \
     && pip3 install -U wheel \
-    && pip3 install awscli==1.16.140 \
+    && pip3 install --upgrade pip setuptools wheel \
     && apt-get remove --purge -yqq $buildDeps \
     && apt-get clean \
     && rm -rf \
@@ -64,15 +63,20 @@ RUN alien -i oracle-instantclient12.1-basiclite-12.1.0.2.0-1.x86_64.rpm \
 RUN alien -i oracle-instantclient12.1-devel-12.1.0.2.0-1.x86_64.rpm \
     && rm oracle-instantclient12.1-devel-12.1.0.2.0-1.x86_64.rpm
 
+# Install necessary modules for our pytest functions
+# that will test geopetl
+COPY pytest-requirements.txt /pytest-requirements.txt
+RUN pip3 install pytest
+RUN pip3 install -r pytest-requirements.txt
+
+# Setup and install geopetl
 COPY geopetl /geopetl
 COPY setup.py /setup.py
 
-# Upgrade pip stuff so wheel doesn't complain
-RUN pip3 install --upgrade pip setuptools wheel
 # Install geopetl via setup.py
 RUN pip3 install -e .
-RUN pip3 install pytest
 
-COPY scripts/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh", "$POSTGRES_USER", "$POSTGRES_PW", "$POSTGRES_DB"]
+#COPY scripts/entrypoint.sh /entrypoint.sh
+#RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh", "$POSTGRES_USER", "$POSTGRES_PW", "$POSTGRES_DB", "$POSTGRES_HOST"]
+#CMD ["sleep", "9000"]

@@ -4,6 +4,7 @@ services:
 
   postgis:
     image: mdillon/postgis:11
+    container_name: postgis
     restart: always
     environment:
       - POSTGRES_USER
@@ -17,7 +18,9 @@ services:
       - "postgis"
     build:
       context: .
+    container_name: geopetl
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
+      - POSTGRES_HOST
