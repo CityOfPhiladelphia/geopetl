@@ -1,10 +1,13 @@
 # .github/workflows/main.yml
+
 name: geopetl_pytest
 
 # Controls when the action will run. Triggers the workflow on push or pull request events but only for the master branch.
+
 on:
   push:
     branches: add_tests
+
 
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -70,6 +73,3 @@ jobs:
 #        oracle_host: ${{secrets.oracle_host}}
 #        oracle_service_name: ${{secrets.oracle_service_name}}
 #        oracle_port: ${{secrets.oracle_port}}
-
-
-
