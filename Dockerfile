@@ -1,3 +1,4 @@
+
 FROM ubuntu:18.04
 
 # Never prompts the user for choices on installation/configuration of packages
@@ -75,5 +76,3 @@ RUN pip3 install pytest
 COPY scripts/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh", "$POSTGRES_USER", "$POSTGRES_PW", "$POSTGRES_DB"]
-
-

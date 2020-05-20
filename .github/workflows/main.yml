@@ -44,7 +44,8 @@ jobs:
        docker build -t geo_image .
 
     - name: run container
-      run: docker run --name geopetl_container -itd geo_image; docker logs --tail 50 geopetl_container
+      run: docker run --name geopetl_container -itd geo_image
+
 
     - name: Check running containers
       run: sleep 5; docker ps
@@ -58,11 +59,7 @@ jobs:
           --user=${{ secrets.oracle_user }} \
           --pw=${{ secrets.oracle_pw }} \
           --service_name=${{ secrets.oracle_service_name }} \
-          >> ~/exec-log.txt 2>&1
 
-    - name: Check docker logs 
-      #run:  docker logs --tail 100 geopetl_container
-      run: cat ~/exec-log.txt
 
 #    # RUN
 #    - name: Docker Action Stuff

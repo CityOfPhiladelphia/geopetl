@@ -1,5 +1,6 @@
 #!/bin/sh -l 
 
+
 pytest geopetl/tests/test_postgis.py \
   --user=$POSTGRES_USER \
   --pw=$POSTGRES_PW \
