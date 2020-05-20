@@ -355,7 +355,7 @@ class OracleSdeTable(object):
                 HIDDEN_COLUMN = 'NO'
             ORDER BY COLUMN_ID
         """
-
+        print(self._owner.upper(), self.name.upper())
         cursor = self.db.cursor
         cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
@@ -379,6 +379,7 @@ class OracleSdeTable(object):
             # Use scale to identiry intetger numeric types
             if type_without_length == 'NUMBER' and scale == 0:
                 fields[name]['type'] = 'integer'
+        # print(fields)
         return fields
 
     @property
@@ -690,6 +691,7 @@ class OracleSdeTable(object):
                 # val = val.isoformat()
                 # Force microsecond output
                 val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
+
         elif type_ == 'nclob':
             pass
         elif 'timestamp' in type_:
@@ -820,7 +822,6 @@ class OracleSdeTable(object):
         table_geom_type = self.geom_type if table_geom_field else None
         # row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
         #     if geom_field else None
-
         if table_geom_field:
             # get row geom field
             first_row_view = rows.head(n=1)
@@ -930,11 +931,8 @@ class OracleSdeTable(object):
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in fields}
         # db_types_filtered.pop('ID')
 
-        # error handling for later versions of cx_oracle update
-        try:
-            c.setinputsizes(**db_types_filtered)
-        except Exception:
-            pass
+
+        #c.setinputsizes(**db_types_filtered)
 
         # Make list of value lists
         val_rows = []
@@ -961,12 +959,12 @@ class OracleSdeTable(object):
 
             if i % buffer_size == 0:
                 # execute
-                self.db.cursor.executemany(None, val_rows, batcherrors=True)
+                self.db.cursor.executemany(None, val_rows, batcherrors=False)
                 self.db.dbo.commit()
 
                 val_rows = []
                 cur_stmt = stmt
-        self.db.cursor.executemany(None, val_rows, batcherrors=True)
+        self.db.cursor.executemany(None, val_rows, batcherrors=False)
         er = self.db.cursor.getbatcherrors()
         self.db.dbo.commit()
 

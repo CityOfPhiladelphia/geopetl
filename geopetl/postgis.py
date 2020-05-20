@@ -552,3 +552,4 @@ class PostgisQuery(Table):
         if limit:
             stmt += ' LIMIT {}'.format(limit)
         return stmt
+
