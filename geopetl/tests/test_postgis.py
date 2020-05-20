@@ -153,3 +153,4 @@ def test_assert_data_2(csv_dir, postgis, table_name):
             else:
                 assert str(csv_dict.get(key)) == str(etl_dict.get(key))
         i = i+1
+

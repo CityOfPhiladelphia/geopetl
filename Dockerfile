@@ -1,8 +1,10 @@
+
 FROM ubuntu:18.04
 
 # Never prompts the user for choices on installation/configuration of packages
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
+
 
 # Define en_US.
 ENV LANGUAGE en_US.UTF-8
@@ -62,20 +64,15 @@ RUN alien -i oracle-instantclient12.1-basiclite-12.1.0.2.0-1.x86_64.rpm \
 RUN alien -i oracle-instantclient12.1-devel-12.1.0.2.0-1.x86_64.rpm \
     && rm oracle-instantclient12.1-devel-12.1.0.2.0-1.x86_64.rpm
 
-
-# Cache bust
-ENV updated-adds-on 5-1-2019_5
-
 COPY geopetl /geopetl
 COPY setup.py /setup.py
-COPY requirements.txt .
 
+# Upgrade pip stuff so wheel doesn't complain
 RUN pip3 install --upgrade pip setuptools wheel
-
+# Install geopetl via setup.py
 RUN pip3 install -e .
 RUN pip3 install pytest
 
 COPY scripts/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
-
+ENTRYPOINT ["/entrypoint.sh", "$POSTGRES_USER", "$POSTGRES_PW", "$POSTGRES_DB"]

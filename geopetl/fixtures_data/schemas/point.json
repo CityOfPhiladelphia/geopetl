@@ -1,0 +1,33 @@
+{
+  "primaryKey": [
+    "objectid"
+  ],
+  "fields": [
+    {
+      "name": "objectid",
+      "constraints": {
+        "required": true
+      },
+      "type": "numeric"
+    },
+    {
+      "name": "textfield",
+      "type": "text"
+    },
+    {
+      "name": "datefield",
+      "type": "timestamp without time zone"
+    },
+    {
+      "name": "numericfield",
+      "type": "numeric"
+    },
+    {
+      "name": "shape",
+      "type": "geometry",
+      "geometry_type": "point",
+      "srid": 2272
+    }
+	
+  ]
+}
