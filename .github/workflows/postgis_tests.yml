@@ -1,66 +1,51 @@
-name: geopetl_pytest_v2
+# .github/workflows/postgis_tests.yml
 
-# Controls when the action will run. Triggers the workflow on push or pull request events but only for the master branch.
+name: test_postgis.py
+
+# Controls when the action will run. Triggers the workflow on push requests to certain files.
 on:
   push:
+    # Reference: https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#onpushpull_requestpaths
+    # Filter reference: https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
     paths:
-      - './geopetl/tests/test_postgis.py'
+      # Trigger on changes to geopetl code-base
+      - './geopetl/**'
+      # changes to this workflow file itself.
+      - './.github/workflows/postgis_tests.yml'
+      # changes to the geopetl setup.py
+      - 'setup.py'
+      # changes to postgis-specific docker stuff
+      - 'postgis-docker-compose.yml'
+      - 'postgis_Dockerfile'
+      # changes to the docker entrypoint.sh script that runs our pytest commands
+      - './scripts/*'
 
 
 jobs:
   build:
-    name: Build and Deploy
+    name: Build and Test Geopetl against PostGIS db
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
     steps: 
 
     - uses: actions/checkout@v1
 
-    - name: Pull Oracle Instant Client rpm from S3 for Geopetl container
-      id: pull-oracle-rpm 
-      run: bash ./pull-oracle-rpm.sh
-      env: 
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-    - name: Check resources
-      run:  less /proc/cpuinfo
-
-    - name: Check resources 2
-      run: free -h
-
     - name: Build and bring up the Docker image using docker-compose
-      run: docker-compose up --build --abort-on-container-exit --exit-code-from geopetl
+      # Abort when any coontainer exits, and return the exit code from geopetl.
+      # Otherwise docker-compose won't stop because postgis doesn't exit.
+      run: docker-compose -f postgis-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
       env:
         POSTGRES_USER: ${{ secrets.pg_user }}
         POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
         POSTGRES_DB: ${{ secrets.pg_db }}
         POSTGRES_HOST: postgis
 
-    # TODO: replace with docker health check
-    #- name: Check running containers
-    #  run: sleep 5; docker ps
-
-    #- name: Run pytest in geopetl container
-    #  run: |
-    #    docker exec -it geopetl \
-    #      pytest geopetl/tests/test_postgis.py \
-    #      --host=postgis \
-    #      --port=5432 \
-    #      --user=${{ secrets.pg_user }} \
-    #      --pw=${{ secrets.pg_pw }} \
-    #      --schema="geopetl/tests/fixtures_data/schemas/point.json" \
-    #      &> pytest-output.txt; \
-    #      cat pytest-output.txt
-
-#      - name: Login to postgres
-#      run: psql "host=localhost port=5432 dbname=${{ secrets.pg_db }} user=${{ secrets.pg_user }}password=${{ secrets.pg_pw }}" -c "SELECT version()"
-
-
+# TODO: push image to ECR?
 #    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
 #      env: 
 #        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
 #        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#        REPOSITORY_URL: 102658671810.dkr.ecr.us-east-1.amazonaws.com/vulcan
+#        REPOSITORY_URL: 
 
 
 

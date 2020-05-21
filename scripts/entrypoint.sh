@@ -10,13 +10,13 @@ export LANG=C.UTF-8
 
 pg_ready=$(python_pg_isready.py --host $POSTGRES_HOST --user $POSTGRES_USER --password $POSTGRES_PASSWORD --dbname $POSTGRES_DB; echo $?)
 
-max_retry=6
+max_retry=10
 counter=0
 while [[ $pg_ready -ne 0 ]]
 do
   [[ counter -eq $max_retry ]] && echo "Failed!" && exit 1
   echo "PostGIS database is not ready yet!!"
-  sleep 2
+  sleep 3
   pg_ready=$(python_pg_isready.py --host $POSTGRES_HOST --user $POSTGRES_USER --password $POSTGRES_PASSWORD --dbname $POSTGRES_DB; echo $?)
   ((counter++))
 done

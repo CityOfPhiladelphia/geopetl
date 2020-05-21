@@ -1,6 +1,7 @@
 version: '3.7'
 services:
 
+# Docker-compose for testing postgis geopetl tests against postgresql with postgis
 
   postgis:
     image: mdillon/postgis:11
@@ -17,6 +18,7 @@ services:
       - 'postgis'
     build:
       context: .
+      dockerfile: postgis_Dockerfile
     container_name: geopetl
     environment:
       - POSTGRES_USER

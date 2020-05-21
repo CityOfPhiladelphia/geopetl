@@ -1,20 +1,20 @@
-# .github/workflows/main.yml
+# .github/workflows/oracle_tests.yml
 
-name: oraclesde_pytest
+name: test_oracle.py
 
 # Controls when the action will run. Triggers the workflow on push or pull request events but only for the master branch.
 
 on:
   push:
-    branches: master
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+    paths:
+      - './geopetl/tests/test_oracle.py'
 
 jobs:
   # This workflow contains a single job called "build"
   build:
+    name: Build and Deploy
     # The type of runner that the job will run on
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -24,10 +24,6 @@ jobs:
       with:
         ref: add_tests
     #- uses: actions/geopetl_pytest@add_tests
-
-    # Runs a single command using the runners shell
-    - name: print hw
-      run: echo Hello, world!
 
     - name: Pull Oracle Instant Client rpm from S3
       id: pull-oracle-rpm 
@@ -43,7 +39,6 @@ jobs:
 
     - name: run container
       run: docker run --name geopetl_container -itd geo_image
-
 
     - name: Check running containers
       run: sleep 5; docker ps
