@@ -32,12 +32,16 @@ RUN set -ex \
     ' \
     && apt-get install -yqq --no-install-recommends \
         $buildDeps \
+        locales  \
         alien \
         python3 \
         python3-pip \
         libaio1 \ 
-    && sed -i 's/^# en_US.UTF-8 UTF-8$/en_US.UTF-8 UTF-8/g' /etc/locale.gen \
-    && locale-gen \
+    && echo "LC_ALL=en_US.UTF-8" >> /etc/environment \
+    && echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
+    && echo "LANG=en_US.UTF-8" > /etc/locale.conf \
+    && locale-gen en_US.UTF-8 \
+    && dpkg-reconfigure locales \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
     && useradd -ms /bin/bash worker \
     && pip3 install -U setuptools \
@@ -66,7 +70,6 @@ RUN alien -i oracle-instantclient12.1-devel-12.1.0.2.0-1.x86_64.rpm \
 # Install necessary modules for our pytest functions
 # that will test geopetl
 COPY pytest-requirements.txt /pytest-requirements.txt
-RUN pip3 install pytest
 RUN pip3 install -r pytest-requirements.txt
 
 # Setup and install geopetl
@@ -76,7 +79,11 @@ COPY setup.py /setup.py
 # Install geopetl via setup.py
 RUN pip3 install -e .
 
-COPY scripts/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh", "$POSTGRES_USER", "$POSTGRES_PW", "$POSTGRES_DB", "$POSTGRES_HOST"]
+COPY scripts/python_pg_isready.py /usr/local/bin/python_pg_isready.py
+RUN chmod +x  /usr/local/bin/python_pg_isready.py
+
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh", "$POSTGRES_USER", "$POSTGRES_PW", "$POSTGRES_DB", "$POSTGRES_HOST"]
 #CMD ["sleep", "9000"]
