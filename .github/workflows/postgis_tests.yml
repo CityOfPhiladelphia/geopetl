@@ -3,10 +3,8 @@ name: geopetl_pytest_v2
 # Controls when the action will run. Triggers the workflow on push or pull request events but only for the master branch.
 on:
   push:
-    branches:
-      - roland_testing_5-20-19
-#    paths:
-#      - './geopetl/tests/test_postgis.py'
+    paths:
+      - './geopetl/tests/test_postgis.py'
 
 
 jobs:
