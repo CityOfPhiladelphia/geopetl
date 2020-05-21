@@ -5,9 +5,8 @@ on:
   push:
     branches:
       - roland_testing_5-20-19
-    paths:
-      - './geopetl/tests/test_postgis.py'
-      - './geopetl/postgis_tests/*'
+#    paths:
+#      - './geopetl/tests/test_postgis.py'
 
 
 jobs:
@@ -29,7 +28,7 @@ jobs:
       run: ls ~; ls /home/runner/work/; ls ~/work/geopetl; ls ~/work/geopetl/geopetl
 
     - name: Build and bring up the Docker image using docker-compose
-      run: docker-compose build
+      run: docker-compose up --build
       env:
         POSTGRES_USER: ${{ secrets.pg_user }}
         POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
