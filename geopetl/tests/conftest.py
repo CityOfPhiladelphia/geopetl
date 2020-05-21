@@ -2,14 +2,14 @@ import pytest
 ##########################################################################################
 
 def pytest_addoption(parser):
-    parser.addoption("--db", action="store", default="default name")
-    parser.addoption("--user", action="store", default="default name")
-    parser.addoption("--pw", action="store", default="default pw")
+    parser.addoption("--db", action="store", default="default_value")
+    parser.addoption("--user", action="store", default="defaukt_value")
+    parser.addoption("--pw", action="store", default="default_value")
 
-    parser.addoption("--host", action="store", default="default name")
-    parser.addoption("--port", action="store", default="default name")
-    parser.addoption("--service_name", action="store", default="default name")
-    parser.addoption("--schema", action="store", default="default name")
+    parser.addoption("--host", action="store", default="default_value")
+    parser.addoption("--port", action="store", default="default_value")
+    parser.addoption("--service_name", action="store", default="default_value")
+    parser.addoption("--schema", action="store", default="default_value")
 
 def pytest_generate_tests(metafunc):
     # This is called for every test. Only get/set command line arguments

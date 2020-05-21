@@ -4,7 +4,7 @@ services:
 
   postgis:
     image: mdillon/postgis:11
-    restart: always
+    container_name: postgis
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
@@ -14,10 +14,15 @@ services:
 
   geopetl:
     depends_on:
-      - "postgis"
+      - 'postgis'
     build:
       context: .
+    container_name: geopetl
     environment:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
+      - POSTGRES_HOST
+    healthcheck:
+      test: "pg_isready -U postgres -h localhost"
+      start_period: 5s
