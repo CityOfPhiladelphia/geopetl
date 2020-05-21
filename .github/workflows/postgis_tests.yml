@@ -31,15 +31,12 @@ jobs:
       run: free -h
 
     - name: Build and bring up the Docker image using docker-compose
-      run: docker-compose up -d --build; docker logs geopetl
+      run: docker-compose up --build --abort-on-container-exit --exit-code-from geopetl
       env:
         POSTGRES_USER: ${{ secrets.pg_user }}
         POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
         POSTGRES_DB: ${{ secrets.pg_db }}
         POSTGRES_HOST: postgis
-
-    - name: Check docker logs from geopetl
-      run: docker logs geopetl
 
     # TODO: replace with docker health check
     #- name: Check running containers
