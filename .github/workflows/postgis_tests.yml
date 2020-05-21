@@ -24,11 +24,14 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-    - name: troubleshooting
-      run: ls ~; ls /home/runner/work/; ls ~/work/geopetl; ls ~/work/geopetl/geopetl
+    - name: Check resources
+      run:  less /proc/cpuinfo
+
+    - name: Check resources 2
+      run: free -h
 
     - name: Build and bring up the Docker image using docker-compose
-      run: docker-compose up --build
+      run: docker-compose up -d --build
       env:
         POSTGRES_USER: ${{ secrets.pg_user }}
         POSTGRES_PASSWORD: ${{ secrets.pg_pw }}

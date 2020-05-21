@@ -10,3 +10,4 @@ export POSTGRES_DB=postgres
 
 export POSTGRES_PASSWORD=postgres
 export POSTGRES_PW=postgres
+export POSTGRES_HOST=postgis

@@ -76,7 +76,7 @@ COPY setup.py /setup.py
 # Install geopetl via setup.py
 RUN pip3 install -e .
 
-#COPY scripts/entrypoint.sh /entrypoint.sh
-#RUN chmod +x /entrypoint.sh
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh", "$POSTGRES_USER", "$POSTGRES_PW", "$POSTGRES_DB", "$POSTGRES_HOST"]
 #CMD ["sleep", "9000"]
