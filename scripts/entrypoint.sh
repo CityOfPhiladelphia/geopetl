@@ -4,10 +4,15 @@
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
 
+# check to make sure all environment variables that we'll need were declared.
+# I don't know why but only a second 'echo' shows up in docker-compose output.
+[ -z $POSTGRES_HOST ] && echo ""; echo "ERROR! POSTGRES_HOST env var is undeclared! Exiting unsuccessfully.."; exit 1
+[ -z $POSTGRES_USER ] && echo ""; echo "ERROR! POSTGRES_USER env var is undeclared! Exiting unsuccessfully.."; exit 1
+[ -z $POSTGRES_PASSWORD ] && echo ""; echo "ERROR! POSTGRES_PASSWORD env var is undeclared! Exiting unsuccessfully.."; exit 1
+[ -z $POSTGRES_DB ] && echo ""; echo "ERROR! POSTGRES_DB env var is undeclared! Exiting unsuccessfully.."; exit 1
 
 # Not installing postgres client package to keep docker container small
 # So here's a python script to use psycopg2 to see if the databse is up and ready for connections
-
 pg_ready=$(python_pg_isready.py --host $POSTGRES_HOST --user $POSTGRES_USER --password $POSTGRES_PASSWORD --dbname $POSTGRES_DB; echo $?)
 
 max_retry=10

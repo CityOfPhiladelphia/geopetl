@@ -68,5 +68,5 @@ RUN chmod +x  /usr/local/bin/python_pg_isready.py
 COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-ENTRYPOINT ["entrypoint.sh", "$POSTGRES_USER", "$POSTGRES_PW", "$POSTGRES_DB", "$POSTGRES_HOST"]
+ENTRYPOINT ["entrypoint.sh", "$POSTGRES_USER", "$POSTGRES_PASSWORD", "$POSTGRES_DB", "$POSTGRES_HOST"]
 #CMD ["sleep", "9000"]
