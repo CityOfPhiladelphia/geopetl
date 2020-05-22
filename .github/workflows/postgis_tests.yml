@@ -36,7 +36,7 @@ jobs:
         POSTGRES_DB: ${{ secrets.pg_db }}
         POSTGRES_HOST: postgis
     
-    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }$
+    - name: Docker Push to ECR
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
