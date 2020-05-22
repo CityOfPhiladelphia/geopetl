@@ -47,7 +47,6 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         REPOSITORY_URL: 880708401960.dkr.ecr.us-east-1.amazonaws.com/geopetl
       run:  |
-	echo pushing to ECR! 
         $(aws ecr get-login --no-include-email --region us-east-1)
         docker tag test_tag:latest $REPOSITORY_URL:-latest
         docker push $REPOSITORY_URL:-latest
