@@ -40,6 +40,20 @@ jobs:
         POSTGRES_DB: ${{ secrets.pg_db }}
         POSTGRES_HOST: postgis
 
+
+    - name: Docker Push to ECR
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        REPOSITORY_URL: 880708401960.dkr.ecr.us-east-1.amazonaws.com/geopetl
+      run:  |
+	echo pushing to ECR! 
+        $(aws ecr get-login --no-include-email --region us-east-1)
+        docker tag test_tag:latest $REPOSITORY_URL:-latest
+        docker push $REPOSITORY_URL:-latest
+
+
+
 # TODO: push image to ECR?
 #    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
 #      env: 
