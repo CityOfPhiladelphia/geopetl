@@ -41,6 +41,10 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         REPOSITORY_URL: 880708401960.dkr.ecr.us-east-1.amazonaws.com/geopetl
+      run:  | 
+        $(aws ecr get-login --no-include-email --region us-east-1)
+        docker tag api_api:latest $REPOSITORY_URL:-latest
+        docker push $REPOSITORY_URL:-latest
 
 
     # TODO: replace with docker health check
@@ -62,12 +66,6 @@ jobs:
 #      - name: Login to postgres
 #      run: psql "host=localhost port=5432 dbname=${{ secrets.pg_db }} user=${{ secrets.pg_user }}password=${{ secrets.pg_pw }}" -c "SELECT version()"
 
-
-#    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
-#      env: 
-#        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#        REPOSITORY_URL: 102658671810.dkr.ecr.us-east-1.amazonaws.com/vulcan
 
 
 
