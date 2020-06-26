@@ -155,8 +155,29 @@ class PostgisDatabase(object):
             except ValueError:
                 dbo = psycopg2.connect(dbo)
 
-        # TODO use petl dbo check/validation
 
+            # Check if DB is sde register
+            try:
+                cursor = dbo.cursor()
+                cursor.execute('select description from sde.sde_version')
+                sde = cursor.fetchall()
+                self.sde_version = sde[0][0]
+            except:
+                self.sde_version = ''
+                print('DB not SDE enabled')
+
+                # Check if DB is postgis is enabled
+            try:
+                cursor = dbo.cursor()
+                cursor.execute('select Postgis_version()')
+                res = cursor.fetchall()
+                self.postgis_version = res[0][0]
+            except:
+                self.postgis_version = ''
+                print('DB not Postgis enabled')
+
+
+        # TODO use petl dbo check/validation
         self.dbo = dbo
 
         # make a cursor for introspecting the db. not used to read/write data.
