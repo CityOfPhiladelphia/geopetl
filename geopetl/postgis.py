@@ -4,7 +4,7 @@ import petl as etl
 from petl.compat import string_types
 from petl.util.base import Table
 from petl.io.db_utils import _quote
-from geopetl.util import parse_db_url
+from util import parse_db_url
 import json
 
 
@@ -201,6 +201,7 @@ class PostgisDatabase(object):
 
     def fetch(self, stmt):
         """Run a SQL statement and fetch all rows."""
+        print('204 stmt ',stmt)
         self.cursor.execute(stmt)
         # try:
             # rows = self.cursor.fetchall()
@@ -377,6 +378,8 @@ class PostgisTable(object):
 
     @property
     def geom_type(self):
+
+        print('geom_type')
         stmt = """
             SELECT type
             FROM geometry_columns
@@ -384,7 +387,17 @@ class PostgisTable(object):
             AND f_table_name = '{}'
             and f_geometry_column = '{}';
         """.format(self.schema, self.name, self.geom_field)
-        return self.db.fetch(stmt)[0]['type']
+
+        stmt2 = """
+            SELECT type
+            FROM sde.geometry_columns
+            WHERE f_table_schema = '{}'
+            AND f_table_name = '{}'
+            and f_geometry_column = '{}';
+        """.format(self.schema, self.name, self.geom_field)
+        geomty = self.db.fetch(stmt2)[0]['type']
+        print('399 ',geomty)
+        return geomty
 
     @property
     def non_geom_fields(self):
@@ -434,6 +447,8 @@ class PostgisTable(object):
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
         geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
+        print('prepare geom')
+        geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom else "null"
 
         # Handle 3D geometries
         # TODO: screen these with regex
