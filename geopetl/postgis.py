@@ -157,32 +157,33 @@ class PostgisDatabase(object):
 
 
             # Check if DB is sde register
-            try:
-                cursor = dbo.cursor()
-                cursor.execute('select description from sde.sde_version')
-                sde = cursor.fetchall()
-                sde_version = sde[0][0]
-                self.sde_version = sde_version.split(' ')[0]
-                print('self.sde_version ', self.sde_version)
-            except:
-                self.sde_version = ''
-                cursor.execute('rollback;')
-                print('DB not SDE enabled')
+        try:
+            cursor = dbo.cursor()
+            cursor.execute('select description from sde.sde_version')
+            sde = cursor.fetchall()
+            sde_version = sde[0][0]
+            self.sde_version = sde_version.split(' ')[0]
+            print('self.sde_version ', self.sde_version)
+        except:
+            self.sde_version = ''
+            cursor.execute('rollback;')
+            print('DB not SDE enabled')
 
             # Check if DB is postgis is enabled
-            try:
-                # still need to test this
-                cursor = dbo.cursor()
-                cursor.execute('select Postgis_version()')
-                res = cursor.fetchall()
-                postgis_version = res[0][0]
-                self.postgis_version = postgis_version.split(' ')[0]
-            except:
-                self.postgis_version = ''
-                cursor.execute('rollback;')
-                print('DB not Postgis enabled')
+        try:
+            # still need to test this
+            cursor = dbo.cursor()
+            cursor.execute('select Postgis_version()')
+            res = cursor.fetchall()
+            postgis_version = res[0][0]
+            self.postgis_version = postgis_version.split(' ')[0]
+        except:
+            self.postgis_version = ''
+            cursor.execute('rollback;')
+            print('DB not Postgis enabled')
 
-
+        print('185 self.postgis_version ',self.postgis_version)
+        print('186 self.sde_version ',self.sde_version)
         # TODO use petl dbo check/validation
         self.dbo = dbo
 
@@ -378,26 +379,26 @@ class PostgisTable(object):
 
     @property
     def geom_type(self):
-
-        print('geom_type')
-        stmt = """
-            SELECT type
-            FROM geometry_columns
-            WHERE f_table_schema = '{}'
-            AND f_table_name = '{}'
-            and f_geometry_column = '{}';
-        """.format(self.schema, self.name, self.geom_field)
-
-        stmt2 = """
-            SELECT type
-            FROM sde.geometry_columns
-            WHERE f_table_schema = '{}'
-            AND f_table_name = '{}'
-            and f_geometry_column = '{}';
-        """.format(self.schema, self.name, self.geom_field)
-        geomty = self.db.fetch(stmt2)[0]['type']
-        print('399 ',geomty)
-        return geomty
+        # if not sde enabled
+        if self.db.sde_version == '':
+            stmt = """
+                SELECT type
+                FROM geometry_columns
+                WHERE f_table_schema = '{}'
+                AND f_table_name = '{}'
+                and f_geometry_column = '{}';
+                """.format(self.schema, self.name, self.geom_field)
+            return self.db.fetch(stmt)[0]['type']
+        else: # sde enabled
+            stmt = """
+                SELECT geometry_type
+                FROM st_geometry_columns
+                WHERE schema_name = '{}'
+                AND table_name = '{}'
+                and column_name = '{}';
+                """.format(self.schema, self.name, self.geom_field)
+            geomtype = self.db.fetch(stmt)[0]['geometry_type'] # this returns an int value which represents a geom type
+            return geomtype
 
     @property
     def non_geom_fields(self):
