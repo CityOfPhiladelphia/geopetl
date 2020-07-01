@@ -202,7 +202,6 @@ class PostgisDatabase(object):
 
     def fetch(self, stmt):
         """Run a SQL statement and fetch all rows."""
-        print('204 stmt ',stmt)
         self.cursor.execute(stmt)
         # try:
             # rows = self.cursor.fetchall()
@@ -447,9 +446,12 @@ class PostgisTable(object):
 
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
-        geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
-        print('prepare geom')
-        geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom else "null"
+
+        # if DB is postgis enabled
+        if self.db.postgis_version != '':
+            geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
+        else: # if DB is not Postgis enabled
+            geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom else "null"
 
         # Handle 3D geometries
         # TODO: screen these with regex
