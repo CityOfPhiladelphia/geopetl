@@ -389,6 +389,7 @@ class PostgisTable(object):
                 """.format(self.schema, self.name, self.geom_field)
             return self.db.fetch(stmt)[0]['type']
         else: # sde enabled
+            geom_dict = {1:"POINT", 13:"LINE",4:"POLYGON"}
             stmt = """
                 SELECT geometry_type
                 FROM st_geometry_columns
@@ -397,6 +398,7 @@ class PostgisTable(object):
                 and column_name = '{}';
                 """.format(self.schema, self.name, self.geom_field)
             geomtype = self.db.fetch(stmt)[0]['geometry_type'] # this returns an int value which represents a geom type
+            geomtype = geom_dict[geomtype]
             return geomtype
 
     @property
