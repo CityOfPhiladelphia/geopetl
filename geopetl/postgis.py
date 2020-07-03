@@ -4,7 +4,7 @@ import petl as etl
 from petl.compat import string_types
 from petl.util.base import Table
 from petl.io.db_utils import _quote
-from geopetl.util import parse_db_url
+from util import parse_db_url
 import json
 
 
@@ -155,8 +155,31 @@ class PostgisDatabase(object):
             except ValueError:
                 dbo = psycopg2.connect(dbo)
 
-        # TODO use petl dbo check/validation
+        cursor = dbo.cursor()
+        # Check if DB is sde registered
+        try:
+            cursor.execute('select description from sde.sde_version')
+            sde = cursor.fetchall()
+            sde_version = sde[0][0]
+            self.sde_version = sde_version.split(' ')[0]
+            print('self.sde_version ', self.sde_version)
+        except:
+            self.sde_version = ''
+            cursor.execute('rollback;') # abort failed transaction
+            print('DB not SDE enabled')
 
+        # Check if DB is postgis is enabled
+        try:
+            cursor.execute('select Postgis_version()')
+            res = cursor.fetchall()
+            postgis_version = res[0][0]
+            self.postgis_version = postgis_version.split(' ')[0]
+        except:
+            self.postgis_version = ''
+            cursor.execute('rollback;') # abort failed transaction
+            print('DB not Postgis enabled')
+
+        # TODO use petl dbo check/validation
         self.dbo = dbo
 
         # make a cursor for introspecting the db. not used to read/write data.
@@ -336,6 +359,18 @@ class PostgisTable(object):
             raise LookupError('Multiple geometry fields')
         return f[0]['name']
 
+    @property
+    def objectid_field(self):
+        f = [x['name'].lower() for x in self.metadata if 'objectid' in x['name']]
+        if len(f) == 0:
+            return None
+        elif len(f) > 1:
+            if 'objectid' in f:
+                return 'objectid'
+            else:
+                raise LookupError('Multiple objectid fields')
+        return f[0]
+
     def wkt_getter(self, geom_field, to_srid):
         assert geom_field is not None
         geom_getter = geom_field
@@ -350,14 +385,28 @@ class PostgisTable(object):
 
     @property
     def geom_type(self):
-        stmt = """
-            SELECT type
-            FROM geometry_columns
-            WHERE f_table_schema = '{}'
-            AND f_table_name = '{}'
-            and f_geometry_column = '{}';
-        """.format(self.schema, self.name, self.geom_field)
-        return self.db.fetch(stmt)[0]['type']
+        # if not sde enabled
+        if self.db.sde_version == '':
+            stmt = """
+                SELECT type
+                FROM geometry_columns
+                WHERE f_table_schema = '{}'
+                AND f_table_name = '{}'
+                and f_geometry_column = '{}';
+                """.format(self.schema, self.name, self.geom_field)
+            return self.db.fetch(stmt)[0]['type']
+        else: # sde enabled
+            geom_dict = {1:"POINT", 13:"LINE",4:"POLYGON"}
+            stmt = """
+                SELECT geometry_type
+                FROM sde_geometry_columns
+                WHERE f_table_schema = '{}'
+                AND f_table_name = '{}'
+                and f_geometry_column = '{}';
+                """.format(self.schema, self.name, self.geom_field)
+            geomtype = self.db.fetch(stmt)[0]['geometry_type'] # this returns an int value which represents a geom type
+            geomtype = geom_dict[geomtype]
+            return geomtype
 
     @property
     def non_geom_fields(self):
@@ -406,7 +455,12 @@ class PostgisTable(object):
 
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
-        geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
+
+        # if DB is postgis enabled
+        if self.db.postgis_version != '':
+            geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
+        else: # if DB is not Postgis enabled
+            geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom else "null"
 
         # Handle 3D geometries
         # TODO: screen these with regex
@@ -446,6 +500,7 @@ class PostgisTable(object):
         #fields = rows.header()
         fields = rows[0]
         geom_field = self.geom_field
+        objectid_field = self.objectid_field
 
         # convert rows to records (hybrid objects that can behave like dicts)
         rows = etl.records(rows)
@@ -467,6 +522,9 @@ class PostgisTable(object):
                 multi_geom = True
             else:
                 multi_geom = False
+        # add objectid_field if not in fields
+        if objectid_field and objectid_field not in fields:
+            fields = fields + (objectid_field,)
 
         # Make a map of non geom field name => type
         type_map = OrderedDict()
@@ -504,7 +562,10 @@ class PostgisTable(object):
                     geom = row[geom_field]
                     val = self._prepare_geom(geom, srid, multi_geom=multi_geom)
                     val_row.append(val)
-
+                # if no object id and sde enabled, use sde index to append
+                elif objectid_field and self.db.sde_version and field  == objectid_field:
+                    val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
+                    val_row.append(val)
                 else:
                     val = self.prepare_val(row[field], type_)
                     val_row.append(val)
