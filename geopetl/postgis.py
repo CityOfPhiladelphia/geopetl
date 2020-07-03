@@ -364,6 +364,18 @@ class PostgisTable(object):
             raise LookupError('Multiple geometry fields')
         return f[0]['name']
 
+    @property
+    def objectid_field(self):
+        f = [x['name'].lower() for x in self.metadata if 'objectid' in x['name']]
+        if len(f) == 0:
+            return None
+        elif len(f) > 1:
+            if 'objectid' in f:
+                return 'objectid'
+            else:
+                raise LookupError('Multiple objectid fields')
+        return f[0]
+
     def wkt_getter(self, geom_field, to_srid):
         assert geom_field is not None
         geom_getter = geom_field
@@ -391,11 +403,11 @@ class PostgisTable(object):
         else: # sde enabled
             geom_dict = {1:"POINT", 13:"LINE",4:"POLYGON"}
             stmt = """
-                SELECT sde_geometry_type
-                FROM st_geometry_columns
-                WHERE f_schema_name = '{}'
+                SELECT geometry_type
+                FROM sde_geometry_columns
+                WHERE f_table_schema = '{}'
                 AND f_table_name = '{}'
-                and f_column_name = '{}';
+                and f_geometry_column = '{}';
                 """.format(self.schema, self.name, self.geom_field)
             geomtype = self.db.fetch(stmt)[0]['geometry_type'] # this returns an int value which represents a geom type
             geomtype = geom_dict[geomtype]
@@ -493,6 +505,7 @@ class PostgisTable(object):
         #fields = rows.header()
         fields = rows[0]
         geom_field = self.geom_field
+        objectid_field = self.objectid_field
 
         # convert rows to records (hybrid objects that can behave like dicts)
         rows = etl.records(rows)
@@ -514,6 +527,9 @@ class PostgisTable(object):
                 multi_geom = True
             else:
                 multi_geom = False
+        # add objectid_field if not in fields
+        if objectid_field and objectid_field not in fields:
+            fields = fields + (objectid_field,)
 
         # Make a map of non geom field name => type
         type_map = OrderedDict()
@@ -551,7 +567,10 @@ class PostgisTable(object):
                     geom = row[geom_field]
                     val = self._prepare_geom(geom, srid, multi_geom=multi_geom)
                     val_row.append(val)
-
+                # if no object id and sde enabled, use sde index to append
+                elif objectid_field and self.db.sde_version and field  == objectid_field:
+                    val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
+                    val_row.append(val)
                 else:
                     val = self.prepare_val(row[field], type_)
                     val_row.append(val)
