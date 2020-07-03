@@ -155,10 +155,9 @@ class PostgisDatabase(object):
             except ValueError:
                 dbo = psycopg2.connect(dbo)
 
-
-            # Check if DB is sde register
+        cursor = dbo.cursor()
+        # Check if DB is sde registered
         try:
-            cursor = dbo.cursor()
             cursor.execute('select description from sde.sde_version')
             sde = cursor.fetchall()
             sde_version = sde[0][0]
@@ -166,24 +165,20 @@ class PostgisDatabase(object):
             print('self.sde_version ', self.sde_version)
         except:
             self.sde_version = ''
-            cursor.execute('rollback;')
+            cursor.execute('rollback;') # abort failed transaction
             print('DB not SDE enabled')
 
-            # Check if DB is postgis is enabled
+        # Check if DB is postgis is enabled
         try:
-            # still need to test this
-            cursor = dbo.cursor()
             cursor.execute('select Postgis_version()')
             res = cursor.fetchall()
             postgis_version = res[0][0]
             self.postgis_version = postgis_version.split(' ')[0]
         except:
             self.postgis_version = ''
-            cursor.execute('rollback;')
+            cursor.execute('rollback;') # abort failed transaction
             print('DB not Postgis enabled')
 
-        print('185 self.postgis_version ',self.postgis_version)
-        print('186 self.sde_version ',self.sde_version)
         # TODO use petl dbo check/validation
         self.dbo = dbo
 
