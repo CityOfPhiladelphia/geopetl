@@ -13,6 +13,17 @@ services:
     ports:
       - 5432:5432
 
+  # docker pull point image from ecr
+  postgres_sde:
+    image: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point
+    container_name: postgres-sde
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+    ports:
+      - 5433:5432
+
   geopetl:
     depends_on:
       - 'postgis'

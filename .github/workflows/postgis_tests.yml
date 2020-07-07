@@ -33,12 +33,18 @@ jobs:
     - name: Build and bring up the Docker image using docker-compose
       # Abort when any coontainer exits, and return the exit code from geopetl.
       # Otherwise docker-compose won't stop because postgis doesn't exit.
-      run: docker-compose -f postgis-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
+      run: |
+        $(aws ecr get-login --no-include-email --region us-east-1)
+        docker-compose -f postgis-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
       env:
         POSTGRES_USER: ${{ secrets.pg_user }}
         POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
         POSTGRES_DB: ${{ secrets.pg_db }}
         POSTGRES_HOST: postgis
+
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        REPOSITORY_URL: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point
 
 # TODO: push image to ECR?
 #    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
