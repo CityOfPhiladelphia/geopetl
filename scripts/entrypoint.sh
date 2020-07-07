@@ -5,7 +5,7 @@
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
 
-POSTGRES_SDE_HOST = 'postgres-sde'
+POSTGRES_SDE_HOST='postgres-sde'
 
 # check to make sure all environment variables that we'll need were declared.
 # Check if variable does not exist or is zero-length
@@ -44,7 +44,7 @@ pytest geopetl/tests/test_postgis.py \
 # test for postgres-sde
 pytest geopetl/tests/test_postgis.py \
   --user=$POSTGRES_USER \
-  --pw=$POSTGRES_PASSWORD \
+  --pw='secretpassword' \
   --db='geodatabase_testing' \
   --host='postgres-sde' \
   --port=5433 \

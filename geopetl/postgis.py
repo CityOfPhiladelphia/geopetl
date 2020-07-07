@@ -4,7 +4,7 @@ import petl as etl
 from petl.compat import string_types
 from petl.util.base import Table
 from petl.io.db_utils import _quote
-from util import parse_db_url
+from geopetl.util import parse_db_url
 import json
 
 
@@ -263,13 +263,16 @@ class PostgisDatabase(object):
                 scheme_type = DATA_TYPE_MAP.get(scheme['type'].lower(), scheme['type'])
                 constraint = scheme.get('constraints', None)
                 if scheme_type == 'geometry':
-                    scheme_srid = scheme.get('srid', '')
-                    scheme_geometry_type = GEOM_TYPE_MAP.get(scheme.get('geometry_type', '').lower(), '')
-                    if scheme_srid and scheme_geometry_type:
-                        scheme_type = 'geometry({}, {}) '.format(scheme_geometry_type, scheme_srid)
+                    if self.sde_version:
+                        scheme_type= 'st_geometry'
                     else:
-                        logger.error('Srid and geometry_type must be provided with geometry field...')
-                        raise
+                        scheme_srid = scheme.get('srid', '')
+                        scheme_geometry_type = GEOM_TYPE_MAP.get(scheme.get('geometry_type', '').lower(), '')
+                        if scheme_srid and scheme_geometry_type:
+                            scheme_type = 'geometry({}, {}) '.format(scheme_geometry_type, scheme_srid)
+                        else:
+                            logger.error('Srid and geometry_type must be provided with geometry field...')
+                            raise
                 _fields_fmt += ' {} {}'.format(scheme['name'], scheme_type)
                 if constraint:
                     _fields_fmt += ' NOT NULL'
@@ -277,7 +280,6 @@ class PostgisDatabase(object):
                 if i < num_fields - 1:
                     _fields_fmt += ','
         return _fields_fmt
-
 
 
 ################################################################################

@@ -15,7 +15,7 @@ services:
 
   # docker pull point image from ecr
   postgres_sde:
-    image: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point
+    image: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-registered
     container_name: postgres-sde
     environment:
       - POSTGRES_USER
