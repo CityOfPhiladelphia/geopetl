@@ -24,8 +24,8 @@ counter=0
 while [[ $pg_ready -ne 0 && $pg_sde_ready -ne 0 ]]
 do
   [[ counter -eq $max_retry ]] && echo "Failed!" && exit 1
-  echo "PostGIS database is not ready yet!!"
-  sleep 3
+  echo "PostGIS or postgres-sde database is not ready yet!!"
+  sleep 35
   pg_ready=$(python_pg_isready.py --host $POSTGRES_HOST --user $POSTGRES_USER --password $POSTGRES_PASSWORD --dbname $POSTGRES_DB --port 5432; echo $?)
   pg_sde_ready=$(python_pg_isready.py --host $POSTGRES_SDE_HOST --user $POSTGRES_USER --password $POSTGRES_PASSWORD --dbname $POSTGRES_DB --port 5433; echo $?)
   ((counter++))
@@ -43,7 +43,7 @@ pytest geopetl/tests/test_postgis.py \
 
 # test for postgres-sde
 pytest geopetl/tests/test_postgis.py \
-  --user=$POSTGRES_USER \
+  --user='test_user' \
   --pw='secretpassword' \
   --db='geodatabase_testing' \
   --host='postgres-sde' \
