@@ -11,17 +11,15 @@ import sys
 @click.option('--password', required=True)
 @click.option('--port', required=True)
 def main(host,user,dbname,password,port):
-	try:
-	    conn = psycopg2.connect(user=user,
+        try:
+            conn = psycopg2.connect(user=user,
                                 host=host,
                                 password=password,
                                 database=dbname,
-								port= port,
+                                port= port,
                                 connect_timeout=2)
-	    sys.exit(0)
-	except Exception as e:
-	    error_message = str(e)
-	    sys.exit(1)
-
-
+            sys.exit(0)
+        except Exception as e:
+            #error_message = str(e)
+            exit(1)
 main()

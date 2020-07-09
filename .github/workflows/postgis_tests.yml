@@ -15,7 +15,7 @@ on:
       # changes to the geopetl setup.py
       - 'setup.py'
       # changes to postgis-specific docker stuff
-      - 'postgis-docker-compose.yml'
+      - 'docker-compose.yml'
       - 'postgis_Dockerfile'
       # changes to the docker entrypoint.sh script that runs our pytest commands
       - './scripts/*'
@@ -35,16 +35,13 @@ jobs:
       # Otherwise docker-compose won't stop because postgis doesn't exit.
       run: |
         $(aws ecr get-login --no-include-email --region us-east-1)
-        docker-compose -f postgis-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
+        docker-compose -f docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
       env:
-        POSTGRES_USER: ${{ secrets.pg_user }}
         POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
-        POSTGRES_DB: ${{ secrets.pg_db }}
-        POSTGRES_HOST: postgis
 
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        REPOSITORY_URL: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point
+        REPOSITORY_URL: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v3
 
 # TODO: push image to ECR?
 #    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})

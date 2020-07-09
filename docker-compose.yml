@@ -7,18 +7,19 @@ services:
     image: mdillon/postgis:11
     container_name: postgis
     environment:
-      - POSTGRES_USER
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD
-      - POSTGRES_DB
-    ports:
-      - 5432:5432
+      - POSTGRES_DB=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+        #    ports:
+        #      - 5432:5432
 
   # docker pull point image from ecr
   postgres_sde:
     image: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v3
     container_name: postgres-sde
-    ports:
-      - 5433:5432
+    #    ports:
+    #      - 5433:5432
 
   geopetl:
     depends_on:
@@ -29,7 +30,10 @@ services:
       dockerfile: postgis_Dockerfile
     container_name: geopetl
     environment:
-      - POSTGRES_USER
       - POSTGRES_PASSWORD
-      - POSTGRES_DB
-      - POSTGRES_HOST
+      - POSTGIS_HOST=postgis
+      - POSTGIS_USER=postgres
+      - POSTGIS_DB=postgres
+      - SDE_HOST=postgres-sde
+      - SDE_USER=test_user
+      - SDE_DB=geodatabase_testing
