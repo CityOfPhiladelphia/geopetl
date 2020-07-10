@@ -39,6 +39,7 @@ echo "Both databases are ready and accepting conections."
 
 # Note: the hostname postgis is a docker-made DNS record
 # When you specify the container name in docker-compose.yml
+echo ""
 echo "#########################################"
 echo "Running tests against PostGIS database..."
 pytest geopetl/tests/test_postgis.py \
@@ -48,9 +49,10 @@ pytest geopetl/tests/test_postgis.py \
   --host=$POSTGIS_HOST \
   --port=5432 \
   --schema="geopetl/tests/fixtures_data/schemas/point.json"
+POSTGIS_EXIT_CODE=$?
 echo "Done."
 echo "#########################################"
-
+echo ""
 echo "##########################################"
 echo "Running tests against Esri SDE database..."
 # test for postgres-sde
@@ -61,5 +63,16 @@ pytest geopetl/tests/test_postgis.py \
   --host=$SDE_HOST \
   --port=5432 \
   --schema="geopetl/tests/fixtures_data/schemas/point.json"
+SDE_EXIT_CODE=$?
 echo "Done."
 echo "##########################################"
+echo ""
+
+if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
+    echo "Errors encountered in tests."
+    exit 1
+else
+    echo "All tests passed!"
+    exit 0
+fi
+

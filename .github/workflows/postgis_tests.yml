@@ -9,16 +9,16 @@ on:
     # Filter reference: https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
     paths:
       # Trigger on changes to geopetl code-base
-      - './geopetl/**'
+      - 'geopetl/**'
       # changes to this workflow file itself.
-      - './.github/workflows/postgis_tests.yml'
+      - '.github/workflows/postgis_tests.yml'
       # changes to the geopetl setup.py
       - 'setup.py'
       # changes to postgis-specific docker stuff
       - 'docker-compose.yml'
       - 'postgis_Dockerfile'
       # changes to the docker entrypoint.sh script that runs our pytest commands
-      - './scripts/*'
+      - 'scripts/entrypoint.sh'
 
 
 jobs:
