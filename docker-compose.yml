@@ -3,6 +3,7 @@ services:
 
 # Docker-compose for testing postgis geopetl tests against postgresql with postgis
 
+  # Postgres database with postgis configured
   postgis:
     image: mdillon/postgis:11
     container_name: postgis
@@ -11,15 +12,12 @@ services:
       - POSTGRES_PASSWORD
       - POSTGRES_DB=postgres
       - POSTGRES_HOST_AUTH_METHOD=trust
-        #    ports:
-        #      - 5432:5432
 
-  # docker pull point image from ecr
+  # Postgres database with Esri SDE enabled on a database, "geodatabase_testing".
+  # docker will pull the image from ecr
   postgres_sde:
     image: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v3
     container_name: postgres-sde
-    #    ports:
-    #      - 5433:5432
 
   geopetl:
     depends_on:
@@ -27,8 +25,10 @@ services:
       - 'postgres_sde'
     build:
       context: .
-      dockerfile: postgis_Dockerfile
+      dockerfile: geopetl_Dockerfile
     container_name: geopetl
+    # Pass connection parameters for both databases to geopetl
+    # so our pytest scripts can connect to both.
     environment:
       - POSTGRES_PASSWORD
       - POSTGIS_HOST=postgis
