@@ -35,7 +35,7 @@ jobs:
       # Otherwise docker-compose won't stop because postgis doesn't exit.
       run: |
         $(aws ecr get-login --no-include-email --region us-east-1)
-        docker-compose -f docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
+        docker-compose up --build --abort-on-container-exit --exit-code-from geopetl
       env:
         POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
 
