@@ -51,7 +51,7 @@ def table_name(csv_dir, schema):
     elif 'polygon' in head_tail[1]:
         table = 'polygon'
     # define table name
-    table_name = schema + table + '_table'
+    table_name = schema+'.'+ table + '_table'
     return table_name
 
 
