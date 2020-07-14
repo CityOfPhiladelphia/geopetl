@@ -1,9 +1,6 @@
 import pytest
 import petl as etl
-#from .postgis import PostgisDatabase
-from . import postgis
-#from postgis import PostgisDatabase
-#from .. import postgis
+from geopetl.postgis import postgis
 import psycopg2
 #from geopetl.tests.db_config import postgis_creds
 import csv

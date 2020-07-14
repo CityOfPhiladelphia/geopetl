@@ -48,7 +48,8 @@ pytest geopetl/tests/test_postgis.py \
   --db=$POSTGIS_DB \
   --host=$POSTGIS_HOST \
   --port=5432 \
-  --schema="geopetl/tests/fixtures_data/schemas/point.json"
+  --schema="public" \
+  --column_definition="geopetl/tests/fixtures_data/schemas/point.json"
 POSTGIS_EXIT_CODE=$?
 echo "Done."
 echo "#########################################"
@@ -62,7 +63,9 @@ pytest geopetl/tests/test_postgis.py \
   --db=$SDE_DB \
   --host=$SDE_HOST \
   --port=5432 \
-  --schema="geopetl/tests/fixtures_data/schemas/point.json"
+  --schema="test_user" \
+  --column_definition="geopetl/tests/fixtures_data/schemas/point.json"
+
 SDE_EXIT_CODE=$?
 echo "Done."
 echo "##########################################"
