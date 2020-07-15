@@ -332,6 +332,8 @@ class PostgisTable(object):
             where table_schema = '{}' and table_name = '{}'
         """.format(self.schema, self.name)
         fields = self.db.fetch(stmt)
+        print('stmt ', stmt)
+        print('fields ', fields)
         for field in fields:
             field['type'] = FIELD_TYPE_MAP[field['type']]
         return fields
@@ -406,7 +408,10 @@ class PostgisTable(object):
                 AND f_table_name = '{}'
                 and f_geometry_column = '{}';
                 """.format(self.schema, self.name, self.geom_field)
-            geomtype = self.db.fetch(stmt)[0]['geometry_type'] # this returns an int value which represents a geom type
+            print('stmt ',stmt)
+            a = self.db.fetch(stmt)
+            print('a ',a)
+            geomtype = a[0]['geometry_type'] # this returns an int value which represents a geom type
             geomtype = geom_dict[geomtype]
             return geomtype
 
@@ -560,12 +565,15 @@ class PostgisTable(object):
         for i, row in enumerate(rows):
             val_row = []
             for field, type_ in type_map_items:
+                print(objectid_field, self.db.sde_version, objectid_field)
+                print(bool(objectid_field) and bool(self.db.sde_version) and bool(objectid_field))
                 if type_ == 'geometry':
                     geom = row[geom_field]
                     val = self._prepare_geom(geom, srid, multi_geom=multi_geom)
                     val_row.append(val)
                 # if no object id and sde enabled, use sde index to append
-                elif objectid_field and self.db.sde_version and field  == objectid_field:
+
+                elif objectid_field and self.db.sde_version and field == objectid_field:
                     val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
                     val_row.append(val)
                 else:
