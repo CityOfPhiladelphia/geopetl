@@ -1,6 +1,7 @@
 import pytest
 import petl as etl
-from geopetl.postgis import postgis
+from geopetl.postgis import PostgisDatabase
+#from geopetl.postgis import postgis
 import psycopg2
 #from geopetl.tests.db_config import postgis_creds
 import csv
@@ -58,10 +59,14 @@ def table_name(csv_dir, schema):
 # create new table and write csv staging data to it
 @pytest.fixture
 def create_test_tables(postgis, table_name, csv_dir, column_definition):
+    data = etl.frompostgis(postgis.dbo, table_name=table_name)
+    print('etl.look(data)')
+    print(etl.look(data)) 
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(csv_dir)
     # write geopetl table to postgis
-    rows.topostgis(postgis.dbo, table_name, column_definition_json=column_definition)
+    rows.topostgis(postgis.dbo, table_name, column_definition_json=column_definition, from_srid=2272)
+    print('wrote to DB!!')
 
 
 
@@ -82,7 +87,7 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
                                   database=db)
     cur = connection.cursor()
     # query all data from postgis table
-    cur.execute('Select * from {schema}.{table}'.format(schema=schema,table= table_name))
+    cur.execute('Select * from {table}'.format(table= table_name))
     result = cur.fetchall()
 
     # get number of rows from query
@@ -91,7 +96,7 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
 
 
 # compare csv data with postgres data using psycopg2
-def test_assert_data(csv_dir, postgis, table_names, schema):
+def test_assert_data(csv_dir, postgis, table_name, schema):
     # read staging data from csv
     with open(csv_dir, newline='') as f:
         reader = csv.reader(f)
@@ -101,7 +106,7 @@ def test_assert_data(csv_dir, postgis, table_names, schema):
 
     # read data using postgis
     cur = postgis.dbo.cursor()
-    cur.execute('select objectid,textfield,datefield,numericfield,st_astext(shape) from {schema}.{table}'.format(schema=schema,table= table_name))
+    cur.execute('select objectid,textfield,datefield,numericfield,st_astext(shape) from {table}'.format(table= table_name))
     rows = cur.fetchall()
 
     i=1
