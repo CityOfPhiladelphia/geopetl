@@ -11,6 +11,7 @@ import json
 DEFAULT_WRITE_BUFFER_SIZE = 1000
 
 DATA_TYPE_MAP = {
+    'smallint':                     'numeric',
     'string':                       'text',
     'number':                       'numeric',
     'float':                        'numeric',
@@ -77,19 +78,20 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     db = PostgisDatabase(dbo)
 
     # do we need to create the table?
-
     table = db.table(table_name)
-    create = '.'.join([table.schema, table.name]) not in db.tables
     # sample = 0 if create else None # sample whole table
+    create = '.'.join([table.schema, table.name]) not in db.tables
 
+    # Create table if it doesn't exist
     if create:
-        # TODO create table if it doesn't exist
-        print('Autocreate tables for PostGIS not currently implemented!!')
-        # request user for json file to create new table
-        # column_definition_json = filedialog.askopenfilename(title="Select json file",
-        #                                 filetypes=(("json files", "*.json"), ("all files", "*.*")))
-
-        db.create_table(column_definition_json, table)
+        # Disable autocreate new postgres table
+        if db.sde_version:
+            print('Autocreate tables for Postgres not currently implemented!!')
+            raise
+        # create new postgis table
+        else:
+            print('Autocreating PostGIS table ')
+            db.create_table(column_definition_json, table)
 
     if not create:
         table.truncate()
@@ -234,6 +236,11 @@ class PostgisDatabase(object):
             schema_dir:   string of json file direcotry and name
         '''
 
+        # if schema dir = None
+        if not schema_dir:
+            # raise error
+            print("Create new Postgis table feature requires column definition json file.")
+            raise
         fields = self.get_fields_from_jsonfile(schema_dir)
 
         stmt = '''DROP TABLE IF EXISTS {schema}.{table};
@@ -288,6 +295,7 @@ class PostgisDatabase(object):
 
 # maps db field types to more generic internal ones
 FIELD_TYPE_MAP = {
+    'smallint':                 'num',
     'integer':                  'num',
     'numeric':                  'num',
     'double precision':         'num',
@@ -336,6 +344,8 @@ class PostgisTable(object):
         print('fields ', fields)
         for field in fields:
             field['type'] = FIELD_TYPE_MAP[field['type']]
+        print('fields ', fields)
+        raise
         return fields
 
     @property
@@ -365,7 +375,9 @@ class PostgisTable(object):
 
     @property
     def objectid_field(self):
+        #
         f = [x['name'].lower() for x in self.metadata if 'objectid' in x['name']]
+        print('f from objectid_field ', f)
         if len(f) == 0:
             return None
         elif len(f) > 1:
@@ -373,6 +385,8 @@ class PostgisTable(object):
                 return 'objectid'
             else:
                 raise LookupError('Multiple objectid fields')
+
+        raise
         return f[0]
 
     def wkt_getter(self, geom_field, to_srid):
@@ -530,8 +544,16 @@ class PostgisTable(object):
             else:
                 multi_geom = False
         # add objectid_field if not in fields
+        print('objectid_field ',objectid_field)
+
         if objectid_field and objectid_field not in fields:
+            print('objectid_field not in fields!!')
             fields = fields + (objectid_field,)
+        else:
+            print('we have an object field already!!')
+
+        print('fields ', fields)
+
 
         # Make a map of non geom field name => type
         type_map = OrderedDict()
@@ -565,18 +587,23 @@ class PostgisTable(object):
         for i, row in enumerate(rows):
             val_row = []
             for field, type_ in type_map_items:
-                print(objectid_field, self.db.sde_version, objectid_field)
-                print(bool(objectid_field) and bool(self.db.sde_version) and bool(objectid_field))
+                print('objectid_field ',objectid_field, ' ', bool(objectid_field))
+                print('self.db.sde_version ',self.db.sde_version, ' ',bool(self.db.sde_version))
+                print('field ',field, ' ', bool(field))
+                print(bool(objectid_field) and bool(self.db.sde_version) and bool(field))
                 if type_ == 'geometry':
                     geom = row[geom_field]
                     val = self._prepare_geom(geom, srid, multi_geom=multi_geom)
                     val_row.append(val)
                 # if no object id and sde enabled, use sde index to append
 
-                elif objectid_field and self.db.sde_version and field == objectid_field:
+                elif not objectid_field and self.db.sde_version and field == objectid_field:
                     val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
+                    print('val ', val)
                     val_row.append(val)
                 else:
+                    print("not objectid_field and self.db.sde_version and field == objectid_field")
+                    print('bool ',bool(not objectid_field and self.db.sde_version and field == objectid_field))
                     val = self.prepare_val(row[field], type_)
                     val_row.append(val)
             val_rows.append(val_row)
