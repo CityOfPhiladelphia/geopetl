@@ -6,7 +6,7 @@ def pytest_addoption(parser):
     parser.addoption("--user", action="store", default="defaukt_value")
     parser.addoption("--pw", action="store", default="default_value")
 
-    parser.addoption("--host", action="store", default="default_value")
+    parser.addoption("--host", action="store", default="localhost")
     parser.addoption("--port", action="store", default="default_value")
     parser.addoption("--service_name", action="store", default="default_value")
     parser.addoption("--schema", action="store", default="public")

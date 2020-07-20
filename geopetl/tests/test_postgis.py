@@ -12,7 +12,10 @@ def remove_whitespace(stringval):
     shapestring = str(stringval)
     geom_type = re.findall("[A-Z]{1,12}", shapestring)[0]
     coordinates = re.findall("\d+\.\d+", shapestring)
-    coordinates= [str(float(coords))for coords in coordinates]
+    print('coordinates ', coordinates)
+    #coordinates= [str(round(float(coords),3))for coords in coordinates]
+    coordinates= [str(round(float(coords),4))for coords in coordinates]
+    print('coordinates ', coordinates)
 
     if geom_type == 'point' or geom_type=="POINT":
         geom = "{type}({x})".format(type=geom_type, x=" ".join(coordinates))
@@ -25,9 +28,6 @@ def remove_whitespace(stringval):
 @pytest.fixture
 def postgis(db, user, pw, host):
     # create connection string
-    # dsn = "host='localhost' dbname={my_database} user={user} password={passwd}".format(my_database=postgis_creds['dbname'],
-    #                                                                                    user=postgis_creds['user'],
-    #                                                                                    passwd=postgis_creds['pw'])
     dsn = "host={0} dbname={1} user={2} password={3}".format(host,db,user,pw)
     # create & return geopetl postgis object
     postgis_db = PostgisDatabase(dsn)
@@ -108,21 +108,38 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
     cur = postgis.dbo.cursor()
     cur.execute('select objectid,textfield,datefield,numericfield,st_astext(shape) from {table}'.format(table= table_name))
     rows = cur.fetchall()
-
+    # print('rows ')
+    # print(rows)
+    # raise
     i=1
     # iterate through each row of data
     for row in rows:
         # create dictionary for each row of data using same set of keys
         csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
         pg_dict = dict(zip(keys, row))              # dictionary from postgis data
+        print('csv_dict ',csv_dict)
+        print('pg_dict ',pg_dict)
         # iterate through each keys
         for key in keys:
             # compare values from each key
             if key=='shape':
+                print('shape field!')
                 pg_geom = remove_whitespace(str(pg_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                print('csv_geom ', csv_geom)
+                print('pg_geom', pg_geom)
+                if pg_geom== csv_geom:
+                    print('asserted ')
+                else:
+                    print('not asserted ')
                 assert csv_geom == pg_geom
             else:
+                print('csv_val', str(csv_dict.get(key)))
+                print('pg_val', str(pg_dict.get(key)))
+                if str(csv_dict.get(key)) == str(pg_dict.get(key)):
+                    print('asserted!')
+                else:
+                    print('Not asserted')
                 assert str(csv_dict.get(key)) == str(pg_dict.get(key))
         i=i+1
 
@@ -146,14 +163,22 @@ def test_assert_data_2(csv_dir, postgis, table_name):
         # create dictionary for each row of data using same set of keys
         etl_dict = dict(zip(keys, row))          # dictionary from etl data
         csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
+        print('etl_dict')
+        print(etl_dict)
+        print('csv_dict')
+        print(csv_dict)
         # iterate through each keys
         for key in keys:
             if key=='shape':
                 pg_geom = remove_whitespace(str(etl_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                print('pg_geom ',pg_geom)
+                print('csv_geom ',csv_geom)
                 assert csv_geom == pg_geom
             # compare values from each key
             else:
+                print('csv_geom ',str(csv_dict.get(key)))
+                print('pg_geom ',str(etl_dict.get(key)))
                 assert str(csv_dict.get(key)) == str(etl_dict.get(key))
         i = i+1
 
