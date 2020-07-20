@@ -59,9 +59,6 @@ def table_name(csv_dir, schema):
 # create new table and write csv staging data to it
 @pytest.fixture
 def create_test_tables(postgis, table_name, csv_dir, column_definition):
-    data = etl.frompostgis(postgis.dbo, table_name=table_name)
-    print('etl.look(data)')
-    print(etl.look(data)) 
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(csv_dir)
     # write geopetl table to postgis
