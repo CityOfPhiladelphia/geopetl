@@ -340,12 +340,8 @@ class PostgisTable(object):
             where table_schema = '{}' and table_name = '{}'
         """.format(self.schema, self.name)
         fields = self.db.fetch(stmt)
-        print('stmt ', stmt)
-        print('fields ', fields)
         for field in fields:
             field['type'] = FIELD_TYPE_MAP[field['type']]
-        print('fields ', fields)
-        raise
         return fields
 
     @property
@@ -377,7 +373,6 @@ class PostgisTable(object):
     def objectid_field(self):
         #
         f = [x['name'].lower() for x in self.metadata if 'objectid' in x['name']]
-        print('f from objectid_field ', f)
         if len(f) == 0:
             return None
         elif len(f) > 1:
@@ -386,7 +381,6 @@ class PostgisTable(object):
             else:
                 raise LookupError('Multiple objectid fields')
 
-        raise
         return f[0]
 
     def wkt_getter(self, geom_field, to_srid):
@@ -422,9 +416,7 @@ class PostgisTable(object):
                 AND f_table_name = '{}'
                 and f_geometry_column = '{}';
                 """.format(self.schema, self.name, self.geom_field)
-            print('stmt ',stmt)
             a = self.db.fetch(stmt)
-            print('a ',a)
             geomtype = a[0]['geometry_type'] # this returns an int value which represents a geom type
             geomtype = geom_dict[geomtype]
             return geomtype
@@ -519,6 +511,7 @@ class PostgisTable(object):
         # optional, such as autoincrementing integers.
         # raise
         #fields = rows.header()
+        #fields from local data
         fields = rows[0]
         geom_field = self.geom_field
         objectid_field = self.objectid_field
@@ -543,16 +536,18 @@ class PostgisTable(object):
                 multi_geom = True
             else:
                 multi_geom = False
-        # add objectid_field if not in fields
-        print('objectid_field ',objectid_field)
 
+
+        local_objectID_flag = False
+        #if PG objectid_field not in local data fields tuple, append to local data fields
         if objectid_field and objectid_field not in fields:
-            print('objectid_field not in fields!!')
+            print('objectid_field not in local fields!!')
             fields = fields + (objectid_field,)
+            local_objectID_flag = True
         else:
             print('we have an object field already!!')
 
-        print('fields ', fields)
+
 
 
         # Make a map of non geom field name => type
@@ -583,29 +578,37 @@ class PostgisTable(object):
 
         # DEBUG
         import psycopg2
-
+        # for each row
         for i, row in enumerate(rows):
             val_row = []
+            #  for each item in a row
             for field, type_ in type_map_items:
-                print('objectid_field ',objectid_field, ' ', bool(objectid_field))
-                print('self.db.sde_version ',self.db.sde_version, ' ',bool(self.db.sde_version))
-                print('field ',field, ' ', bool(field))
-                print(bool(objectid_field) and bool(self.db.sde_version) and bool(field))
                 if type_ == 'geometry':
                     geom = row[geom_field]
                     val = self._prepare_geom(geom, srid, multi_geom=multi_geom)
                     val_row.append(val)
-                # if no object id and sde enabled, use sde index to append
 
-                elif not objectid_field and self.db.sde_version and field == objectid_field:
+                # if no object id and sde enabled, use sde index to append
+                elif field == objectid_field and self.db.sde_version and local_objectID_flag:
                     val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
-                    print('val ', val)
                     val_row.append(val)
+                    # if self.db.sde_version and my_flag:
+                    #     val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
+                    #     print('object_id val ', val)
+                    #     val_row.append(val)
+                    # else:
+                    #     val = self.prepare_val(row[field], type_)
+                    #     print('object_id val ', val)
+                    #     val_row.append(val)
                 else:
-                    print("not objectid_field and self.db.sde_version and field == objectid_field")
-                    print('bool ',bool(not objectid_field and self.db.sde_version and field == objectid_field))
                     val = self.prepare_val(row[field], type_)
                     val_row.append(val)
+                #     print("not objectid_field and self.db.sde_version and field == objectid_field")
+                #     print('bool ',bool(not objectid_field and self.db.sde_version and field == objectid_field))
+                #     val = self.prepare_val(row[field], type_)
+                #     print('val ', val)
+                #     val_row.append(val)
+
             val_rows.append(val_row)
 
             # check if it's time to ship a chunk
