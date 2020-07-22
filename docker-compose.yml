@@ -16,7 +16,7 @@ services:
   # Postgres database with Esri SDE enabled on a database, "geodatabase_testing".
   # docker will pull the image from ecr
   postgres_sde:
-    image: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v3
+    image: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v4
     container_name: postgres-sde
 
   geopetl:
