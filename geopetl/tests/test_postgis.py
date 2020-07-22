@@ -15,7 +15,7 @@ def remove_whitespace(stringval):
     print('coordinates ', coordinates)
     #coordinates= [str(round(float(coords),3))for coords in coordinates]
     coordinates= [str(round(float(coords),4))for coords in coordinates]
-    print('coordinates ', coordinates)
+    print('Rounded coordinates ', coordinates)
 
     if geom_type == 'point' or geom_type=="POINT":
         geom = "{type}({x})".format(type=geom_type, x=" ".join(coordinates))
@@ -105,8 +105,8 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
     cur = postgis.dbo.cursor()
     cur.execute('select objectid,textfield,datefield,numericfield,st_astext(shape) from {table}'.format(table= table_name))
     rows = cur.fetchall()
-    # print('rows ')
-    # print(rows)
+    print('rows ')
+    print(rows)
     # raise
     i=1
     # iterate through each row of data
@@ -152,7 +152,11 @@ def test_assert_data_2(csv_dir, postgis, table_name):
     keys = csv_data[0]
 
     # read data using petl
-    db_data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name)
+    db_data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name,fields=['objectid','textfield','datefield','numericfield','shape'])
+    print('db_data')
+    print(db_data)
+    print('csv_data')
+    print(csv_data)
 
     i=1
     # iterate through each row of data
@@ -160,10 +164,15 @@ def test_assert_data_2(csv_dir, postgis, table_name):
         # create dictionary for each row of data using same set of keys
         etl_dict = dict(zip(keys, row))          # dictionary from etl data
         csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
-        print('etl_dict')
-        print(etl_dict)
-        print('csv_dict')
-        print(csv_dict)
+        # print('hi new comment')
+        # print('row')
+        # print(row)
+        # print('csv_data[i]')
+        # print(csv_data[i])
+        # print('etl_dict')
+        # print(etl_dict)
+        # print('csv_dict')
+        # print(csv_dict)
         # iterate through each keys
         for key in keys:
             if key=='shape':
