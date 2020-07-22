@@ -30,10 +30,10 @@ services:
     # Pass connection parameters for both databases to geopetl
     # so our pytest scripts can connect to both.
     environment:
-      - POSTGRES_PASSWORD
       - POSTGIS_HOST=postgis
       - POSTGIS_USER=postgres
       - POSTGIS_DB=postgres
+      - POSTGRES_PASSWORD
       - SDE_HOST=postgres-sde
       - SDE_USER=test_user
       - SDE_DB=geodatabase_testing

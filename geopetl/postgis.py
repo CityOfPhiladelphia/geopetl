@@ -696,7 +696,7 @@ class PostgisQuery(Table):
 
         # handle geom
         geom_field = self.table.geom_field
-        print('fields ', fields)
+        print('fields before wkt ', fields)
         # replace geom field with wkt in fields list
         if geom_field and self.return_geom:
             wkt_getter = self.table.wkt_getter(geom_field, self.to_srid)
