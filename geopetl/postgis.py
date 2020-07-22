@@ -429,6 +429,10 @@ class PostgisTable(object):
         return PostgisQuery(self.db, self, fields=fields,
                            return_geom=return_geom, where=where, limit=limit)
 
+    def sde_query(self):
+        retunr
+
+
     def prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
         if type_ == 'text':
@@ -691,13 +695,19 @@ class PostgisQuery(Table):
         if fields is None:
             # default to non geom fields
             fields = self.table.non_geom_fields
+
         fields = [_quote(field) for field in fields]
+        print('fields ',fields)
 
         # handle geom
         geom_field = self.table.geom_field
+
+        # replace geom field with wkt in fields list
         if geom_field and self.return_geom:
             wkt_getter = self.table.wkt_getter(geom_field, self.to_srid)
-            fields.append(wkt_getter)
+            geom_field_index = fields.index('"'+geom_field+'"')
+            fields[geom_field_index] = wkt_getter
+
 
         # form statement
         fields_joined = ', '.join(fields)
