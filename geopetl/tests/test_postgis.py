@@ -110,12 +110,6 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
             if key=='shape':
                 pg_geom = remove_whitespace(str(pg_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
-                # print('csv_geom ', csv_geom)
-                # print('pg_geom', pg_geom)
-                # if pg_geom== csv_geom:
-                #     print('asserted ')
-                # else:
-                #     print('not asserted ')
                 assert csv_geom == pg_geom
             else:
                 assert str(csv_dict.get(key)) == str(pg_dict.get(key))
