@@ -297,6 +297,9 @@ class PostgisDatabase(object):
 FIELD_TYPE_MAP = {
     'smallint':                 'num',
     'integer':                  'num',
+    'smallint':                 'num',
+    'float':                    'num',
+    'double':                   'num',
     'numeric':                  'num',
     'double precision':         'num',
     'text':                     'text',
