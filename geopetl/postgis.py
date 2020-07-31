@@ -199,6 +199,9 @@ class PostgisDatabase(object):
 # maps db field types to more generic internal ones
 FIELD_TYPE_MAP = {
     'integer':                  'num',
+    'smallint':                 'num',
+    'float':                    'num',
+    'double':                   'num',
     'numeric':                  'num',
     'double precision':         'num',
     'text':                     'text',
