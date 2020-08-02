@@ -454,6 +454,7 @@ class PostgisTable(object):
         elif type_ == 'geometry':
             val = str(val)
         elif type_ == 'timestamp':
+            val = str(val)
             if not val:
                 val = 'NULL'
             elif 'timestamp' not in val.lower():
