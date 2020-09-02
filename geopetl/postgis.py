@@ -42,7 +42,7 @@ GEOM_TYPE_MAP = {
 
 
 def frompostgis(dbo, table_name, fields=None, return_geom=True, where=None,
-                limit=None):
+                limit=None, sql=None):
     """
     Returns an iterable query container.
     Params
@@ -64,7 +64,7 @@ def frompostgis(dbo, table_name, fields=None, return_geom=True, where=None,
 
     # return a query container
     return table.query(fields=fields, return_geom=return_geom, where=where,
-                       limit=limit)
+                       limit=limit, sql=sql)
 
 etl.frompostgis = frompostgis
 
@@ -366,9 +366,9 @@ class PostgisTable(object):
     def non_geom_fields(self):
         return [x for x in self.fields if x != self.geom_field]
 
-    def query(self, fields=None, return_geom=None, where=None, limit=None):
+    def query(self, fields=None, return_geom=None, where=None, limit=None, sql=None):
         return PostgisQuery(self.db, self, fields=fields,
-                           return_geom=return_geom, where=where, limit=limit)
+                           return_geom=return_geom, where=where, limit=limit, sql=sql)
 
     def prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
@@ -569,7 +569,7 @@ class PostgisTable(object):
 
 class PostgisQuery(Table):
     def __init__(self, db, table, fields=None, return_geom=True, to_srid=None,
-                 where=None, limit=None):
+                 where=None, limit=None, sql=None):
         self.db = db
         self.table = table
         self.fields = fields
@@ -577,11 +577,14 @@ class PostgisQuery(Table):
         self.to_srid = to_srid
         self.where = where
         self.limit = limit
+        self.sql = sql
 
     def __iter__(self):
         """Proxy iteration to core petl."""
         # form sql statement
         stmt = self.stmt()
+        if self.sql:
+            stmt = self.sql
 
         # get petl iterator
         dbo = self.db.dbo
