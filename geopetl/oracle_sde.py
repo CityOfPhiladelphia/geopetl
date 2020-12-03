@@ -355,7 +355,7 @@ class OracleSdeTable(object):
                 HIDDEN_COLUMN = 'NO'
             ORDER BY COLUMN_ID
         """
-        print(self._owner.upper(), self.name.upper())
+        #print(self._owner.upper(), self.name.upper())
         cursor = self.db.cursor
         cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
