@@ -281,6 +281,7 @@ FIELD_TYPE_MAP = {
     # date
     'DATE':         'date',
     'TIMESTAMP':    'timestamp without time zone',
+    'timestamp with time zone':'timestamp with time zone',
 
     # clob
     # TODO clean these up - how will they get used?
@@ -309,7 +310,9 @@ TODO:
 class OracleSdeTable(object):
     def __init__(self, db, name, srid=None):
         self.db = db
-
+        self.db.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'"
+                               " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
+                               " NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'")
         # Check for a schema
         if '.' in name:
             comps = name.split('.')
@@ -365,6 +368,8 @@ class OracleSdeTable(object):
             name = row[0].lower().replace(' ', '_')
             type_ = row[1]
             type_without_length = re.match('[A-Z0-9_]+', type_).group()
+            if type_ == 'TIMESTAMP(6) WITH TIME ZONE':
+                type_without_length = 'timestamp with time zone'
             length = row[2]
             nullable = row[3]
             scale = row[4]
@@ -694,12 +699,14 @@ class OracleSdeTable(object):
 
         elif type_ == 'nclob':
             pass
-        elif 'timestamp' in type_:
-            pass
+        elif type_ == 'timestamp with time zone':
+            val = val.isoformat()
+
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
             # var = self._c.var(cx_Oracle.NCLOB)
             # var.setvalue(0, val)
             # val = var
+
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -828,6 +835,7 @@ class OracleSdeTable(object):
             first_row_header = first_row_view.header()
             first_row = first_row_view[1]
 
+
             rows_geom_field = None
             for i, val in enumerate(first_row):
                 # TODO make a function to screen for wkt-like text
@@ -902,6 +910,8 @@ class OracleSdeTable(object):
             elif type_ == 'date':
                 # Insert an ISO-8601 timestring
                 placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
+            elif type_ == 'timestamp with time zone':
+                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF TZH:TZM')'''.format(field))
             else:
                 placeholders.append(':' + field)
 
