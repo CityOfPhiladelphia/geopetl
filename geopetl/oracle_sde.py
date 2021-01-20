@@ -911,7 +911,7 @@ class OracleSdeTable(object):
                 # Insert an ISO-8601 timestring
                 placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
             elif type_ == 'timestamp with time zone':
-                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF TZH:TZM')'''.format(field))
+                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH:TZM')'''.format(field))
             else:
                 placeholders.append(':' + field)
 
