@@ -945,6 +945,7 @@ class OracleSdeTable(object):
         # db_types_filtered.pop('ID')
 
         #c.setinputsizes(**db_types_filtered)
+        #Don't fail on setinputsizes error
         try:
             c.setinputsizes(**db_types_filtered)
         except:
