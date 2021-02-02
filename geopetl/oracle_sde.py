@@ -933,7 +933,10 @@ class OracleSdeTable(object):
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in fields}
         # db_types_filtered.pop('ID')
 
-        c.setinputsizes(**db_types_filtered)
+        try:
+            c.setinputsizes(**db_types_filtered)
+        except:
+            pass
 
         # Make list of value lists
         val_rows = []
