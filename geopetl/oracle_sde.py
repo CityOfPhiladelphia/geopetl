@@ -312,6 +312,9 @@ TODO:
 class OracleSdeTable(object):
     def __init__(self, db, name, srid=None):
         self.db = db
+        self.db.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'"
+                               " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
+                               " NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'")
 
         # Check for a schema
         if '.' in name:
@@ -358,7 +361,6 @@ class OracleSdeTable(object):
                 HIDDEN_COLUMN = 'NO'
             ORDER BY COLUMN_ID
         """
-        print(self._owner.upper(), self.name.upper())
         cursor = self.db.cursor
         cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
@@ -690,6 +692,10 @@ class OracleSdeTable(object):
             pass
         elif type_ == 'date':
             # Convert datetimes to ISO-8601
+            if isinstance(val, str):
+                splitval = val.split(' ')
+                if ' ' in val and ':' in splitval[1] and 'T' not in val:
+                    val =splitval[0] + 'T' + splitval[1] 
             if isinstance(val, datetime):
                 # val = val.isoformat()
                 # Force microsecond output
@@ -709,8 +715,7 @@ class OracleSdeTable(object):
 
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
-
-        if geom is None:
+        if geom is None or geom == '':
             # TODO: should this use the `EMPTY` keyword?
             return '{} EMPTY'.format(self.geom_type)
 
@@ -830,7 +835,6 @@ class OracleSdeTable(object):
             first_row_view = rows.head(n=1)
             first_row_header = first_row_view.header()
             first_row = first_row_view[1]
-
             rows_geom_field = None
             for i, val in enumerate(first_row):
                 # TODO make a function to screen for wkt-like text
@@ -929,6 +933,7 @@ class OracleSdeTable(object):
         stmt_fields_joined = ', '.join(stmt_fields)
         stmt = "INSERT INTO {} ({}) VALUES ({})".format(self._name_with_schema, \
             stmt_fields_joined, placeholders_joined)
+#        print(stmt)
         self.db.cursor.prepare(stmt)
 
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in fields}
@@ -949,6 +954,7 @@ class OracleSdeTable(object):
         for i, row in enumerate(rows):
             val_row = {}
             for field, type_ in type_map_items:
+                #print(field, type_)
                 if type_ == 'geom':
                     geom = row[rows_geom_field]
                     val = self._prepare_geom(geom, srid, \
@@ -961,6 +967,7 @@ class OracleSdeTable(object):
                     # val_row.append(val)
                     val_row[field.upper()] = val
             val_rows.append(val_row)
+#            print(val_row)
 
             if i % buffer_size == 0:
                 # execute
