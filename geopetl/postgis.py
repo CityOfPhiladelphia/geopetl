@@ -81,7 +81,6 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
     create = '.'.join([table.schema, table.name]) not in db.tables
-
     # Create table if it doesn't exist
     if create:
         # Disable autocreate new postgres table
@@ -457,6 +456,7 @@ class PostgisTable(object):
         elif type_ == 'geometry':
             val = str(val)
         elif type_ == 'timestamp':
+            val=str(val)
             if not val or val == 'None':
                 val = 'NULL'
             elif 'timestamp' not in val.lower():
@@ -476,7 +476,7 @@ class PostgisTable(object):
         """Prepares WKT geometry by projecting and casting as necessary."""
 
         # if DB is postgis enabled
-        if self.db.postgis_version != '':
+        if self.db.postgis_version != '' and not self.db.sde_version:
             geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
         else: # if DB is not Postgis enabled
             geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom else "null"
@@ -698,21 +698,20 @@ class PostgisQuery(Table):
         # handle fields
         fields = self.fields
         if fields is None:
-            # default to non geom fields
-            fields = self.table.non_geom_fields
+            fields = self.table.fields
+#            # default to non geom fields
+#            fields = self.table.non_geom_fields
 
         fields = [_quote(field) for field in fields]
 
         # handle geom
         geom_field = self.table.geom_field
-        print('fields before wkt ', fields)
+        #print('fields before wkt ', fields)
         # replace geom field with wkt in fields list
         if geom_field and self.return_geom:
             wkt_getter = self.table.wkt_getter(geom_field, self.to_srid)
             geom_field_index = fields.index('"'+geom_field+'"')
             fields[geom_field_index] = wkt_getter
-
-        print('fields after wkt ',fields)
 
         # form statement
         fields_joined = ', '.join(fields)
@@ -728,4 +727,3 @@ class PostgisQuery(Table):
             stmt += ' LIMIT {}'.format(limit)
 
         return stmt
-
