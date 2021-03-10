@@ -7,6 +7,7 @@ import csv
 import os
 import datetime
 from dateutil import parser as dt_parser
+from pytz import timezone
 import re
 
 def remove_whitespace(stringval):
@@ -40,7 +41,7 @@ def csv_dir():
     #csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\point.csv'
     #csv_dir = 'C:\\projects\\geopetl\\geopetl\\tests\\fixtures_data\\staging\\point.csv'
     #csv_dir = '~/work/geopetl/geopetl/tests/fixtures_data/staging/point.csv'
-    csv_dir = '/geopetl/tests/fixtures_data/staging/point.csv'
+    csv_dir = 'geopetl/tests/fixtures_data/staging/point.csv'
     return csv_dir
 
 
@@ -64,11 +65,12 @@ def table_name(csv_dir):
 # write csv staging data to test table
 @pytest.fixture
 def create_test_tables(oraclesde_db, table_name, csv_dir):
+    eastern = timezone('US/Eastern')
     # populate a new geopetl table object with staging data from csv file
     rows1 = etl.fromcsv(csv_dir).convert('numericfield', int)
-    rows = etl.convert(rows1, 'datefield', lambda row: dt_parser.parse(row))
-    print('etl.look(rows)')
-    print(etl.look(rows))
+    rows = etl.convert(rows1, ['datefield','timezone'], lambda row: dt_parser.parse(row))
+    rows = etl.convert(rows, 'timezone', lambda row: row.astimezone(eastern))
+    #print(etl.look(rows))
     # write geopetl table to postgis
     rows.tooraclesde(oraclesde_db.dbo, table_name)
 
@@ -123,9 +125,9 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
                 " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
                 " NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'")
     cur.execute(
-        'select objectid,textfield,datefield,numericfield,sde.st_astext(shape) from ' + table_name)  # sde.st_astext(shape)
+        "select objectid,textfield,datefield,numericfield, to_char(timezone,'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'), sde.st_astext(shape) from " + table_name)  # sde.st_astext(shape)
     rows = cur.fetchall()
-
+    eastern = timezone('US/Eastern')
     i = 1
     # iterate through each row of data
     for row in rows:
@@ -148,6 +150,15 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
                 pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
+            elif key== 'timezone':
+                or_tz = dt_parser.parse(oracle_dict.get(key))
+                csv_tz = dt_parser.parse(csv_dict.get(key)).astimezone(eastern)
+                print('or_tz ',or_tz)
+                print(type(or_tz))
+                print('csv_tz ',csv_tz)
+                print(type(csv_tz))
+                assert csv_tz == or_tz
+                #raise
             else:
                 val1 = str(oracle_dict.get(key))
                 val2 = str(csv_dict.get(key))
@@ -166,7 +177,8 @@ def test_assert_data_2(csv_dir, oraclesde_db, table_name):
 
     csv_data = etl.fromcsv(csv_dir)
     csv_data = etl.fromcsv(csv_dir).convert('numericfield', int)
-    csv_data = etl.convert(csv_data,'datefield', lambda row: dt_parser.parse(row))
+    csv_data = etl.convert(csv_data,['datefield','timezone'], lambda row: dt_parser.parse(row))
+    #csv_data = etl.convert(csv_data,['datefield','timezone'], lambda row: dt_parser.parse(row))
     # list of column names
     keys = csv_data[0]
 
