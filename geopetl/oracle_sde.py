@@ -11,6 +11,7 @@ from petl.io.db_utils import _quote, _is_dbapi_connection
 from petl.util.base import Table
 from geopetl.base import SpatialQuery
 from geopetl.util import parse_db_url
+from dateutil import parser as dt_parser
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
 MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
@@ -322,6 +323,7 @@ class OracleSdeTable(object):
             self.schema = None
             self.name = name
         self.geom_field = self._get_geom_field()
+        self.timestamptz_field = self._get_timestamptz_field()
         self.geom_type = self._get_geom_type()
         self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
 
@@ -384,7 +386,7 @@ class OracleSdeTable(object):
             # Use scale to identiry intetger numeric types
             if type_without_length == 'NUMBER' and scale == 0:
                 fields[name]['type'] = 'integer'
-        # print(fields)
+        print('388 fields ',fields)
         return fields
 
     @property
@@ -448,6 +450,7 @@ class OracleSdeTable(object):
             geom_type = metadata[key].get('geom_type', '')
             srid = metadata[key].get('srid', '')
             nullable = metadata[key].get('nullable', '')
+            print('md_type 452', md_type)
             if md_type == 'date':
                 # Check if has time:
                 stmt = '''
@@ -477,8 +480,22 @@ class OracleSdeTable(object):
             json.dump(metadata_fmt, fp)
 
     def _get_geom_field(self):
-        f = [field for field, desc in self.metadata.items() \
+        print('self.metadata.items() 481 ',self.metadata.items())
+        f = [field for field, desc in self.metadata.items()
                 if desc['type'] == 'geom']
+
+        print('f 483 ', f)
+        if len(f) == 0:
+            return None
+        elif len(f) > 1:
+            raise LookupError('Multiple geometry fields')
+        return f[0].lower()
+
+    def _get_timestamptz_field(self):
+        print('working on timestamptz 491')
+        f = [field for field, desc in self.metadata.items()
+                if desc['type'] == 'timestamp with time zone']
+        print('f 496 ', f)
         if len(f) == 0:
             return None
         elif len(f) > 1:
@@ -655,6 +672,7 @@ class OracleSdeTable(object):
 
     @property
     def _name_with_schema_p(self):
+        print('674 _name_with_schema_p ')
         """Returns the table name prepended with the schema name, prepared
         for a query (quoted)."""
 
@@ -662,7 +680,11 @@ class OracleSdeTable(object):
         # name, but also make them uppercase.
         if self.schema:
             comps = [_quote(self.schema.upper()), self.name.upper()]
+            print('comps 681 ',comps)
             return '.'.join(comps)
+        else:
+            print('no schema')
+        print('684 self.name', self.name)
         return self.name
 
     @property
@@ -671,9 +693,23 @@ class OracleSdeTable(object):
 
     @property
     def non_geom_fields(self):
-        return [x for x in self.fields if x != self.geom_field]
+        ng_fields = []
+        for field in self.fields:
+            if field == self.geom_field or field == self.timestamptz_field:
+                continue
+            else:
+                ng_fields.append(field)
+
+        # test_non_geom_fields = [x for x in self.fields if (x != self.geom_field or x != self.timestamptz_field)]
+        # print('696 test_non_geom_fields ', test_non_geom_fields)
+        # test_non_geom_fields2 = [x for x in self.fields if x != self.timestamptz_field]
+        # print('698 test_non_geom_fields2 ', test_non_geom_fields2)
+        print('707 ng_fields ',ng_fields)
+        return ng_fields
 
     def query(self, **kwargs):
+        print('677 kwargs')
+        print(kwargs)
         return OracleSdeQuery(self.db, self, **kwargs)
 
     def _prepare_val(self, val, type_):
@@ -1012,24 +1048,23 @@ class OracleSdeQuery(SpatialQuery):
         self.limit = limit
         self.timestamp = timestamp
         self.geom_with_srid = geom_with_srid
+        #self.timestamptz = timestamptz
 
 
     def __iter__(self):
         """Proxy iteration to core petl."""
-
         # form sql statement
         stmt = self.stmt()
 
         # get petl iterator
         dbo = self.db.dbo
-        db_view = etl.fromdb(dbo, stmt)
+        db_view = etl.fromdb(dbo, stmt).convert(self.table.timestamptz_field.upper(), lambda row: dt_parser.parse(row))
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
         if self.geom_field and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             db_view = db_view.convert(self.geom_field.upper(), 'read')
-
         if self.geom_with_srid and self.geom_field and self.srid:
             db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
-
+        print('1072')
         # lowercase headers
         headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in headers])
@@ -1048,29 +1083,48 @@ class OracleSdeQuery(SpatialQuery):
     def stmt(self):
         # handle fields
         fields = self.fields
+        print('fields 1077 ',fields)
         if fields is None:
             # default to non geom fields
             fields = self.table.non_geom_fields
+            print('1081 selfnongeom fields ', fields)
         fields = [_quote(field.upper()) for field in fields]
         # if still no fields, try select *: TODO: revisit
         if not fields:
             fields.append('{}.*'.format(self.table._name_with_schema_p))
         # handle timestamp argument
+        print('1087 if timestamp')
         if self.timestamp:
             fields.append('CURRENT_TIMESTAMP as etl_read_timestamp')
 
         # handle geom
         geom_field = self.table.geom_field
+        print('geom_ field 1064 ', geom_field)
+
+        if self.table.timestamptz_field:
+            timestamptz_iso_format = '''to_char({timestamptz},'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM') as {timestamptz}'''.format(
+                timestamptz=self.table.timestamptz_field)
+            print('1110 timestamptz_iso_format ',timestamptz_iso_format)
+            fields.append(timestamptz_iso_format)
+
         if geom_field and self.return_geom:
             wkt_getter = self.table.wkt_getter(self.to_srid)
+            print('wkt_getter ',wkt_getter)
             fields.append(wkt_getter)
+        print('fields 1115', fields)
 
         # form statement
         fields_joined = ', '.join(fields)
+        print('fields_joind ',fields_joined )
+
         if self.timestamp:
+            print('timestamp 1080 ', self.timestamp)
             stmt = 'SELECT {} FROM {}, dual'.format(fields_joined, self.table._name_with_schema_p)
+            print('stmt 1082', stmt)
         else:
+            print('timestamp 1084')
             stmt = 'SELECT {} FROM {}'.format(fields_joined, self.table._name_with_schema_p)
+            print('stmt 1086', stmt)
 
         # where conditions
         wheres = [self.where]
@@ -1089,5 +1143,7 @@ class OracleSdeQuery(SpatialQuery):
 
         if self.limit:
             stmt += ' WHERE ROWNUM < {}'.format(self.limit + 1)
+        print('stmt 1092')
+        print(stmt)
 
         return stmt

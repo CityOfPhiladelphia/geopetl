@@ -151,15 +151,16 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
             elif key== 'timezone':
+                print('########################################################################################')
                 or_tz = dt_parser.parse(oracle_dict.get(key))
                 csv_tz = dt_parser.parse(csv_dict.get(key)).astimezone(eastern)
-                print('or_tz ',or_tz)
+                print('156 or_tz ',or_tz)
                 print(type(or_tz))
-                print('csv_tz ',csv_tz)
+                print('158 csv_tz ',csv_tz)
                 print(type(csv_tz))
                 assert csv_tz == or_tz
-                #raise
             else:
+                print('########################################################################################')
                 val1 = str(oracle_dict.get(key))
                 val2 = str(csv_dict.get(key))
                 print(key + ' ' + str(val1 == val2))
@@ -176,15 +177,18 @@ def test_assert_data_2(csv_dir, oraclesde_db, table_name):
     #     csv_data = list(reader)
 
     csv_data = etl.fromcsv(csv_dir)
-    csv_data = etl.fromcsv(csv_dir).convert('numericfield', int)
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
     csv_data = etl.convert(csv_data,['datefield','timezone'], lambda row: dt_parser.parse(row))
     #csv_data = etl.convert(csv_data,['datefield','timezone'], lambda row: dt_parser.parse(row))
     # list of column names
     keys = csv_data[0]
 
     # written_table = etl.fromdb(dbo.dbo, table_name)
-    rows = etl.fromoraclesde(oraclesde_db.dbo, table_name)
-
+    rows = etl.fromoraclesde(oraclesde_db.dbo, table_name)#.convert('timezone', lambda row: dt_parser.parse(row))
+    #.convert(['datefield','timezone'], lambda row: dt_parser.parse(row))#.convert('numericfield', int)
+    #rows = etl.convert(rows,['datefield','timezone'], lambda row: dt_parser.parse(row))
+    print('189 rows ',rows)
+    print(rows)
     i=1
     # iterate through each row of data
     for row in rows[1:]:
@@ -197,6 +201,8 @@ def test_assert_data_2(csv_dir, oraclesde_db, table_name):
                 df1 = oracle_dict.get('datefield')
                 df2 = csv_dict.get('datefield')
                 df2 = df2.replace(microsecond=0)
+                print('df1 ',df1)
+                print('df2 ',df2)
                 print(key + ' ' + str(df1 == df2))
                 assert df1 ==df2
             elif key == 'numericfield':
@@ -208,9 +214,22 @@ def test_assert_data_2(csv_dir, oraclesde_db, table_name):
                 pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
+            # elif key == 'timezone':
+            #     or_tz = dt_parser.parse(oracle_dict.get(key))
+            #     csv_tz = csv_dict.get(key) #).astimezone(eastern)
+            #     print('or_tz ', or_tz)
+            #     print(type(or_tz))
+            #     print('csv_tz ', csv_tz)
+            #     print(type(csv_tz))
+            #     assert csv_tz == or_tz
             else:
-                val1 = str(oracle_dict.get(key))
-                val2 = str(csv_dict.get(key))
+                print('218 assert ', key)
+                val1 = oracle_dict.get(key) #str(oracle_dict.get(key))
+                val2 = csv_dict.get(key) #str(csv_dict.get(key))
+                print('val1 ',val1)
+                print(type(val1))
+                print('val2 ',val2)
+                print(type(val2))
                 print(key + ' '+ str(val1==val2))
                 assert val1 == val2
             print('\n')
