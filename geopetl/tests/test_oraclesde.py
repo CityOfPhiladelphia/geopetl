@@ -57,9 +57,7 @@ def table_name(csv_dir):
         table = 'polygon'
     # define table name
     table_name = table + '_table'
-    print('table_name ',table_name)
     return table_name
-    #return 'SECOND_TEST'
 
 
 # write csv staging data to test table
@@ -70,7 +68,6 @@ def create_test_tables(oraclesde_db, table_name, csv_dir):
     rows1 = etl.fromcsv(csv_dir).convert('numericfield', int)
     rows = etl.convert(rows1, ['datefield','timezone'], lambda row: dt_parser.parse(row))
     rows = etl.convert(rows, 'timezone', lambda row: row.astimezone(eastern))
-    #print(etl.look(rows))
     # write geopetl table to postgis
     rows.tooraclesde(oraclesde_db.dbo, table_name)
 
@@ -86,7 +83,6 @@ def test_all_rows_written(host, port, service_name,user, pw,csv_dir,table_name, 
         csv_data = list(reader)
 
     csv_row_count = len(csv_data[1:])
-
     dsn = cx_Oracle.makedsn(host, port, service_name=service_name)
     connection = cx_Oracle.connect(user, pw, dsn, encoding="UTF-8")
 
@@ -94,28 +90,24 @@ def test_all_rows_written(host, port, service_name,user, pw,csv_dir,table_name, 
         with connection.cursor() as cursor:
             # execute the insert statement
             cursor.execute("select * from "+ table_name)
-            #connection.commit()??????# commit work
             result = cursor.fetchall()
     except cx_Oracle.Error as error:
         print('Error occurred:')
         print(error)
-
     # get number of rows from query
     oracle_num_rows = len(result)
     assert csv_row_count == oracle_num_rows
 
 
 
-# compare csv data with oracle data using oraclecx
+# compare csv data with oracle data using cxoracle
 def test_assert_data(csv_dir, oraclesde_db, table_name):
+    eastern = timezone('US/Eastern')
     # read staging data from csv
-    # with open(csv_dir, newline='') as f:
-    #     reader = csv.reader(f)
-    #     csv_data = list(reader)
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
+    csv_data = etl.convert(csv_data,'datefield', lambda row: dt_parser.parse(row).replace(microsecond=0))
+    csv_data = etl.convert(csv_data,'timezone', lambda row: dt_parser.parse(row).astimezone(eastern))
 
-    csv_data = etl.fromcsv(csv_dir)
-    csv_data = etl.fromcsv(csv_dir).convert('numericfield', int)
-    csv_data = etl.convert(csv_data, 'datefield', lambda row: dt_parser.parse(row))
     # list of column names
     keys = csv_data[0]
 
@@ -125,9 +117,8 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
                 " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
                 " NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'")
     cur.execute(
-        "select objectid,textfield,datefield,numericfield, to_char(timezone,'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'), sde.st_astext(shape) from " + table_name)  # sde.st_astext(shape)
+        "select objectid,textfield,datefield,numericfield, to_char(timezone,'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'), sde.st_astext(shape) from " + table_name)
     rows = cur.fetchall()
-    eastern = timezone('US/Eastern')
     i = 1
     # iterate through each row of data
     for row in rows:
@@ -136,101 +127,47 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
         oracle_dict = dict(zip(keys, row))  # dictionary from postgis data
 
         for key in keys:
-            if key == 'datefield':
-                df1 = oracle_dict.get('datefield')
-                df2 = csv_dict.get('datefield')
-                df2 = df2.replace(microsecond=0)
-                print(key + ' ' + str(df1 == df2))
-                assert df1 == df2
-            elif key == 'numericfield':
-                nf = int(oracle_dict.get('numericfield'))
-                nf2 = int(csv_dict.get('numericfield'))
-                assert nf == nf2
-            elif key == 'shape':
-                pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
-                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
-                assert csv_geom == pg_geom
-            elif key== 'timezone':
-                print('########################################################################################')
-                or_tz = dt_parser.parse(oracle_dict.get(key))
-                csv_tz = dt_parser.parse(csv_dict.get(key)).astimezone(eastern)
-                print('156 or_tz ',or_tz)
-                print(type(or_tz))
-                print('158 csv_tz ',csv_tz)
-                print(type(csv_tz))
-                assert csv_tz == or_tz
+            if key == 'shape':
+                cx_oracle_val = remove_whitespace(str(oracle_dict.get(key)))
+                csv_val = remove_whitespace(str(csv_dict.get(key)))
+                assert cx_oracle_val == csv_val
+            elif key == 'timezone':
+                cx_oracle_val = dt_parser.parse(oracle_dict.get(key))
+                csv_val = csv_dict.get(key)
+                assert csv_val == cx_oracle_val
             else:
-                print('########################################################################################')
-                val1 = str(oracle_dict.get(key))
-                val2 = str(csv_dict.get(key))
-                print(key + ' ' + str(val1 == val2))
-                assert val1 == val2
-            print('\n')
-        i = i + 1
+                cx_oracle_val = oracle_dict.get(key)
+                csv_val = csv_dict.get(key)
+                assert csv_val == cx_oracle_val
+        i = i+1
 
 
 # # compare csv data with postgres data using geopetl
 def test_assert_data_2(csv_dir, oraclesde_db, table_name):
+    eastern = timezone('US/Eastern')
     # read staging data from csv
-    # with open(csv_dir, newline='') as f:
-    #     reader = csv.reader(f)
-    #     csv_data = list(reader)
-
-    csv_data = etl.fromcsv(csv_dir)
     csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
-    csv_data = etl.convert(csv_data,['datefield','timezone'], lambda row: dt_parser.parse(row))
-    #csv_data = etl.convert(csv_data,['datefield','timezone'], lambda row: dt_parser.parse(row))
+    csv_data = etl.convert(csv_data,'datefield', lambda row: dt_parser.parse(row).replace(microsecond=0))
+    csv_data = etl.convert(csv_data,'timezone', lambda row:  dt_parser.parse(row).astimezone(eastern))
     # list of column names
     keys = csv_data[0]
 
     # written_table = etl.fromdb(dbo.dbo, table_name)
-    rows = etl.fromoraclesde(oraclesde_db.dbo, table_name)#.convert('timezone', lambda row: dt_parser.parse(row))
-    #.convert(['datefield','timezone'], lambda row: dt_parser.parse(row))#.convert('numericfield', int)
-    #rows = etl.convert(rows,['datefield','timezone'], lambda row: dt_parser.parse(row))
-    print('189 rows ',rows)
-    print(rows)
+    rows = etl.fromoraclesde(oraclesde_db.dbo, table_name)
+
     i=1
     # iterate through each row of data
     for row in rows[1:]:
         # create dictionary for each row of data using same set of keys
         csv_dict = dict(zip(keys, csv_data[i]))         # dictionary from csv data
         oracle_dict = dict(zip(keys, row))              # dictionary from postgis data
-
         for key in keys:
-            if key =='datefield':
-                df1 = oracle_dict.get('datefield')
-                df2 = csv_dict.get('datefield')
-                df2 = df2.replace(microsecond=0)
-                print('df1 ',df1)
-                print('df2 ',df2)
-                print(key + ' ' + str(df1 == df2))
-                assert df1 ==df2
-            elif key == 'numericfield':
-                nf = int(oracle_dict.get('numericfield'))
-                nf2 = int(csv_dict.get('numericfield'))
-                print(key + ' ' + str(nf == nf2))
-                assert nf == nf2
-            elif key == 'shape':
-                pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
-                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+            if key == 'shape':
+                pg_geom = remove_whitespace(str(oracle_dict.get(key)))
+                csv_geom = remove_whitespace(str(csv_dict.get(key)))
                 assert csv_geom == pg_geom
-            # elif key == 'timezone':
-            #     or_tz = dt_parser.parse(oracle_dict.get(key))
-            #     csv_tz = csv_dict.get(key) #).astimezone(eastern)
-            #     print('or_tz ', or_tz)
-            #     print(type(or_tz))
-            #     print('csv_tz ', csv_tz)
-            #     print(type(csv_tz))
-            #     assert csv_tz == or_tz
             else:
-                print('218 assert ', key)
-                val1 = oracle_dict.get(key) #str(oracle_dict.get(key))
-                val2 = csv_dict.get(key) #str(csv_dict.get(key))
-                print('val1 ',val1)
-                print(type(val1))
-                print('val2 ',val2)
-                print(type(val2))
-                print(key + ' '+ str(val1==val2))
-                assert val1 == val2
-            print('\n')
+                oracle_val = oracle_dict.get(key)
+                csv_val = csv_dict.get(key)
+                assert oracle_val == csv_val
         i=i+1
