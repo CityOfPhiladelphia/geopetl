@@ -477,6 +477,7 @@ class OracleSdeTable(object):
         with open(table_schema_output_path, 'w') as fp:
             json.dump(metadata_fmt, fp)
 
+    # get list of geometry columns from metadata
     def _get_geom_field(self):
         f = [field for field, desc in self.metadata.items()
                 if desc['type'] == 'geom']
@@ -486,6 +487,7 @@ class OracleSdeTable(object):
             raise LookupError('Multiple geometry fields')
         return f[0].lower()
 
+    # get list of timestamps with time zone columns from metadata
     def _get_timestamptz_field(self):
         f = [field for field, desc in self.metadata.items()
                 if desc['type'] == 'timestamp with time zone']
@@ -680,14 +682,17 @@ class OracleSdeTable(object):
     def fields(self):
         return self.metadata.keys()
 
+    # list of fields that are non geometry or timestamptz fields
     @property
     def non_geom_fields(self):
         ng_fields = []
         for field in self.fields:
+            #exclude geometry or timestamptz field
             if field == self.geom_field or field == self.timestamptz_field:
                 continue
             else:
                 ng_fields.append(field)
+        # need to look into why this logic doesn't work
         # test_non_geom_fields = [x for x in self.fields if (x != self.geom_field or x != self.timestamptz_field)]
         return ng_fields
 
@@ -717,8 +722,10 @@ class OracleSdeTable(object):
 
         elif type_ == 'nclob':
             pass
+        # Timestamptz not writing millisecond data
         elif type_ == 'timestamp with time zone':
             val = val.isoformat()
+            #val = val.strftime('YYYY-MM-DD HH24:MI:SSXFF TZR')
 
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
             # var = self._c.var(cx_Oracle.NCLOB)
@@ -1077,12 +1084,12 @@ class OracleSdeQuery(SpatialQuery):
 
         # handle geom
         geom_field = self.table.geom_field
-
+        # prepare timestamptz field for select query stmt in iso format
         if self.table.timestamptz_field:
             timestamptz_iso_format = '''to_char({timestamptz},'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM') as {timestamptz}'''.format(
                 timestamptz=self.table.timestamptz_field)
             fields.append(timestamptz_iso_format)
-
+        # prepare timestamptz field for select query stmt
         if geom_field and self.return_geom:
             wkt_getter = self.table.wkt_getter(self.to_srid)
             fields.append(wkt_getter)
