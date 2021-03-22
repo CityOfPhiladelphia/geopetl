@@ -104,11 +104,12 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables, table_
 
 # compare csv data with postgres data using psycopg2
 def test_assert_data(csv_dir, postgis, table_name):
+
+    eastern = timezone('US/Eastern')
     # read staging data from csv
-    with open(csv_dir, newline='') as f:
-        reader = csv.reader(f)
-        csv_data = list(reader)
-    # list of column names
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
+    csv_data = etl.convert(csv_data,'datefield', lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
+    csv_data = etl.convert(csv_data,'timezone', lambda row: dt_parser.parse(row).astimezone(eastern))
     keys = csv_data[0]
 
     # read data using postgis
@@ -123,26 +124,45 @@ def test_assert_data(csv_dir, postgis, table_name):
         pg_dict = dict(zip(keys, row))              # dictionary from postgis data
         # iterate through each keys
         for key in keys:
+            print('133 ', key)
             # compare values from each key
             if key=='shape':
                 pg_geom = remove_whitespace(str(pg_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
-            elif key == 'timezone':
-                pg_tz = pg_dict.get('timezone')
-                csv_tz = localize_date_field(csv_dict.get('timezone'))
-                assert pg_tz == csv_tz
+            # elif key == 'timezone':
+            #     pg_tz = pg_dict.get(key)
+            #     #csv_tz = localize_date_field(csv_dict.get('timezone'))
+            #     csv_tz = csv_dict.get(key)
+            #     print('pg_tz ', pg_tz)
+            #     print('csv_tz ', csv_tz)
+            #     print('csv_tz type ', type(csv_tz))
+            #     #tz_localized = timezone('US/Eastern').localize(csv_tz)   #csv_tz
+            #     #tz_astimezone = csv_tz.astimezone(timezone('US/Eastern'))   ####################
+            #     #print('tz_localized ',tz_localized)
+            #     #print('tz_astimezone ',tz_astimezone) #########
+            #     assert pg_tz == csv_tz
             else:
-                assert str(csv_dict.get(key)) == str(pg_dict.get(key))
+                #assert str(csv_dict.get(key)) == str(pg_dict.get(key))
+                a = csv_dict.get(key)
+                b = pg_dict.get(key)
+                print('a ',a)
+                print('b ',b)
+                assert csv_dict.get(key) == pg_dict.get(key)
         i=i+1
 
 
 #compare csv data with postgres data using geopetl
 def test_assert_data_2(csv_dir, postgis, table_name):
     # read staging data from csv
-    with open(csv_dir, newline='') as f:
-        reader = csv.reader(f)
-        csv_data = list(reader)
+    # with open(csv_dir, newline='') as f:
+    #     reader = csv.reader(f)
+    #     csv_data = list(reader)
+    eastern = timezone('US/Eastern')
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
+    csv_data = etl.convert(csv_data,['datefield','timezone'], lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
+    #csv_data = etl.convert(csv_data,'timezone', lambda row: dt_parser.parse(row).astimezone(eastern))
+    #csv_data = etl.convert(csv_data, 'timezone', lambda row: dt_parser.parse(row).astimezone(eastern))
 
     # list of column names
     keys = csv_data[0]
@@ -162,12 +182,16 @@ def test_assert_data_2(csv_dir, postgis, table_name):
                 pg_geom = remove_whitespace(str(etl_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
-            elif key == 'timezone':
-                pg_tz = etl_dict.get('timezone')
-                csv_tz = localize_date_field(csv_dict.get('timezone'))
-                assert pg_tz == csv_tz
+            # elif key == 'timezone':
+            #     pg_tz = etl_dict.get(key)
+            #     # csv_tz = localize_date_field(csv_dict.get('timezone'))
+            #     csv_tz = csv_dict.get(key)
+            #     print('key ', key)
+            #     print('pg_tz ', pg_tz)
+            #     print('csv_tz ',csv_tz)
+            #     assert pg_tz == csv_tz
             # compare values from each key
             else:
-                assert str(csv_dict.get(key)) == str(etl_dict.get(key))
+                assert csv_dict.get(key) == etl_dict.get(key)
         i = i+1
 
