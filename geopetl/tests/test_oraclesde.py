@@ -133,7 +133,7 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
                 cx_oracle_val = remove_whitespace(str(oracle_dict.get(key)))
                 csv_val = remove_whitespace(str(csv_dict.get(key)))
                 assert cx_oracle_val == csv_val
-            # timezone data needs to be queried as a string usingto_char
+            # timezone data needs to be queried as a string using to_char
             elif key == 'timezone':
                 cx_oracle_val = dt_parser.parse(oracle_dict.get(key))
                 csv_val = csv_dict.get(key)
