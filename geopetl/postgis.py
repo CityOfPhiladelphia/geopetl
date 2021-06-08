@@ -471,7 +471,7 @@ class PostgisTable(object):
         """Prepares WKT geometry by projecting and casting as necessary."""
         print('postgis_version 472 ')
         print(self.db.postgis_version)
-        print('self.db.self.sde_version 474 ', self.db.self.sde_version )
+        print('self.sde_version 474 ', self.sde_version )
         # if DB is postgis enabled
         if self.db.postgis_version != '':
             geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
