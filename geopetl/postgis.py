@@ -269,7 +269,7 @@ class PostgisDatabase(object):
                 scheme_type = DATA_TYPE_MAP.get(scheme['type'].lower(), scheme['type'])
                 constraint = scheme.get('constraints', None)
                 if scheme_type == 'geometry':
-                    if self.sde_version:
+                    if self.db.sde_version:
                         scheme_type= 'st_geometry'
                     else:
                         scheme_srid = scheme.get('srid', '')
@@ -475,9 +475,6 @@ class PostgisTable(object):
 
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
-        print('postgis_version 472 ')
-        print(self.db.postgis_version)
-        print('self.sde_version 474 ', self.sde_version )
         # if DB is postgis enabled
         if self.db.postgis_version != '' and not self.db.sde_version:
             geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom else "null"
