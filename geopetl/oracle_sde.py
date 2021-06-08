@@ -45,7 +45,10 @@ def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
 
     # do we need to create the table?
     table_name_no_schema = table.name
-    create = table_name_no_schema.upper() not in db.table_names
+#    create = table_name_no_schema.upper() not in db.table_names
+    owner_name_lookup_dict = {'owner': table.schema.upper(), 'table_name': table.name.upper()}
+    create = owner_name_lookup_dict not in db.all_tables
+
     # sample = 0 if create else None # sample whole table
 
     if create:
@@ -281,6 +284,7 @@ FIELD_TYPE_MAP = {
     # date
     'DATE':         'date',
     'TIMESTAMP':    'timestamp without time zone',
+    'timestamp with time zone':'timestamp with time zone',
 
     # clob
     # TODO clean these up - how will they get used?
@@ -309,6 +313,9 @@ TODO:
 class OracleSdeTable(object):
     def __init__(self, db, name, srid=None):
         self.db = db
+        self.db.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'"
+                               " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
+                               " NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'")
 
         # Check for a schema
         if '.' in name:
@@ -355,7 +362,7 @@ class OracleSdeTable(object):
                 HIDDEN_COLUMN = 'NO'
             ORDER BY COLUMN_ID
         """
-        print(self._owner.upper(), self.name.upper())
+
         cursor = self.db.cursor
         cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
@@ -365,6 +372,8 @@ class OracleSdeTable(object):
             name = row[0].lower().replace(' ', '_')
             type_ = row[1]
             type_without_length = re.match('[A-Z0-9_]+', type_).group()
+            if type_ == 'TIMESTAMP(6) WITH TIME ZONE':
+                type_without_length = 'timestamp with time zone'
             length = row[2]
             nullable = row[3]
             scale = row[4]
@@ -687,6 +696,10 @@ class OracleSdeTable(object):
             pass
         elif type_ == 'date':
             # Convert datetimes to ISO-8601
+            if isinstance(val, str):
+                splitval = val.split(' ')
+                if ' ' in val and ':' in splitval[1] and 'T' not in val:
+                    val =splitval[0] + 'T' + splitval[1] 
             if isinstance(val, datetime):
                 # val = val.isoformat()
                 # Force microsecond output
@@ -694,20 +707,21 @@ class OracleSdeTable(object):
 
         elif type_ == 'nclob':
             pass
-        elif 'timestamp' in type_:
-            pass
+        elif type_ == 'timestamp with time zone':
+            val = val.isoformat()
+
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
             # var = self._c.var(cx_Oracle.NCLOB)
             # var.setvalue(0, val)
             # val = var
+
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
 
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
-
-        if geom is None:
+        if geom is None or geom == '':
             # TODO: should this use the `EMPTY` keyword?
             return '{} EMPTY'.format(self.geom_type)
 
@@ -827,7 +841,6 @@ class OracleSdeTable(object):
             first_row_view = rows.head(n=1)
             first_row_header = first_row_view.header()
             first_row = first_row_view[1]
-
             rows_geom_field = None
             for i, val in enumerate(first_row):
                 # TODO make a function to screen for wkt-like text
@@ -902,6 +915,8 @@ class OracleSdeTable(object):
             elif type_ == 'date':
                 # Insert an ISO-8601 timestring
                 placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
+            elif type_ == 'timestamp with time zone':
+                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH:TZM')'''.format(field))
             else:
                 placeholders.append(':' + field)
 
@@ -918,21 +933,26 @@ class OracleSdeTable(object):
         # get input sizes so cx_Oracle what field types to expect on executemany
         # execute this later
         c = self.db.cursor
-        c.execute('select * from {} where rownum = 1'.format(self.name))
+        c.execute('select * from {} where rownum = 1'.format(self._name_with_schema))
         db_types = {d[0]: d[1] for d in self.db.cursor.description}
 
         # Prepare statement
         placeholders_joined = ', '.join(placeholders)
         stmt_fields_joined = ', '.join(stmt_fields)
-        stmt = "INSERT INTO {} ({}) VALUES ({})".format(self.name, \
+        stmt = "INSERT INTO {} ({}) VALUES ({})".format(self._name_with_schema, \
             stmt_fields_joined, placeholders_joined)
+#        print(stmt)
         self.db.cursor.prepare(stmt)
 
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in fields}
         # db_types_filtered.pop('ID')
 
-
         #c.setinputsizes(**db_types_filtered)
+        #Don't fail on setinputsizes error
+        try:
+            c.setinputsizes(**db_types_filtered)
+        except:
+            pass
 
         # Make list of value lists
         val_rows = []
@@ -944,6 +964,7 @@ class OracleSdeTable(object):
         for i, row in enumerate(rows):
             val_row = {}
             for field, type_ in type_map_items:
+                #print(field, type_)
                 if type_ == 'geom':
                     geom = row[rows_geom_field]
                     val = self._prepare_geom(geom, srid, \
@@ -956,6 +977,7 @@ class OracleSdeTable(object):
                     # val_row.append(val)
                     val_row[field.upper()] = val
             val_rows.append(val_row)
+#            print(val_row)
 
             if i % buffer_size == 0:
                 # execute
@@ -992,7 +1014,7 @@ class OracleSdeTable(object):
 
 class OracleSdeQuery(SpatialQuery):
     def __init__(self,  db, table, fields=None, return_geom=True, to_srid=None,
-                 where=None, limit=None, timestamp=False, geom_with_srid=False):
+                 where=None, limit=None, timestamp=False, geom_with_srid=False, sql=None):
         self.db = db
         self.table = table
         self.fields = fields
@@ -1002,14 +1024,14 @@ class OracleSdeQuery(SpatialQuery):
         self.limit = limit
         self.timestamp = timestamp
         self.geom_with_srid = geom_with_srid
-
+        self.sql = sql
 
     def __iter__(self):
         """Proxy iteration to core petl."""
-
-        # form sql statement
+        # form sql statement if sql isn't provided on fct call
         stmt = self.stmt()
-
+        if self.sql:
+            stmt = self.sql
         # get petl iterator
         dbo = self.db.dbo
         db_view = etl.fromdb(dbo, stmt)
