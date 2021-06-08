@@ -300,6 +300,7 @@ FIELD_TYPE_MAP = {
     'float':                    'num',
     'double':                   'num',
     'numeric':                  'num',
+    'bigint':                   'num',
     'double precision':         'num',
     'text':                     'text',
     'character varying':        'text',
