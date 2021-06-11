@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
 from datetime import datetime
+from dateutil.parser import parser as dt_parser
 from decimal import Decimal
 import re
 import json
@@ -708,7 +709,14 @@ class OracleSdeTable(object):
         elif type_ == 'nclob':
             pass
         elif type_ == 'timestamp with time zone':
-            val = val.isoformat()
+            if isinstance(val, datetime):
+                val = val.isoformat()
+                # Force microsecond output
+                val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
+            elif isinstance(val, str):
+                val=dt_parser().parse(val)
+                val = val.isoformat()
+                #val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
 
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
             # var = self._c.var(cx_Oracle.NCLOB)
@@ -916,7 +924,8 @@ class OracleSdeTable(object):
                 # Insert an ISO-8601 timestring
                 placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
             elif type_ == 'timestamp with time zone':
-                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH:TZM')'''.format(field))
+#                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH')'''.format(field))
+                placeholders.append("TO_TIMESTAMP_TZ(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
             else:
                 placeholders.append(':' + field)
 
@@ -941,7 +950,6 @@ class OracleSdeTable(object):
         stmt_fields_joined = ', '.join(stmt_fields)
         stmt = "INSERT INTO {} ({}) VALUES ({})".format(self._name_with_schema, \
             stmt_fields_joined, placeholders_joined)
-#        print(stmt)
         self.db.cursor.prepare(stmt)
 
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in fields}
@@ -957,14 +965,12 @@ class OracleSdeTable(object):
         # Make list of value lists
         val_rows = []
         cur_stmt = stmt
-
         # use Record object for convenience
         rows = rows.records()
 
         for i, row in enumerate(rows):
             val_row = {}
             for field, type_ in type_map_items:
-                #print(field, type_)
                 if type_ == 'geom':
                     geom = row[rows_geom_field]
                     val = self._prepare_geom(geom, srid, \
@@ -977,7 +983,6 @@ class OracleSdeTable(object):
                     # val_row.append(val)
                     val_row[field.upper()] = val
             val_rows.append(val_row)
-#            print(val_row)
 
             if i % buffer_size == 0:
                 # execute
