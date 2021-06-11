@@ -76,11 +76,11 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     """
     # create db wrappers
     db = PostgisDatabase(dbo)
-
     # do we need to create the table?
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
-    create = '.'.join([table.schema, table.name]) not in db.tables
+#    create = '.'.join([table.schema, table.name]) not in db.tables
+    create = table_name not in db.tables
     # Create table if it doesn't exist
     if create:
         # Disable autocreate new postgres table
@@ -199,12 +199,6 @@ class PostgisDatabase(object):
     def fetch(self, stmt):
         """Run a SQL statement and fetch all rows."""
         self.cursor.execute(stmt)
-        # try:
-            # rows = self.cursor.fetchall()
-        # lib raises an error if no rows returned
-        # except psycopg2.ProgrammingError:
-        #     rows = None
-        # return rows
         return self.cursor.fetchall()
 
     # @property
@@ -217,11 +211,16 @@ class PostgisDatabase(object):
     #     return [x[0] for x in tables]
     @property
     def tables(self):
-        tables = (self.table('information_schema.tables')
-                      .query(fields=['table_schema', 'table_name'],
-                             where="table_type = 'BASE TABLE'")
-                 )
-        return ['.'.join([x[0], x[1]]) for x in tables]
+        stmt = "select table_schema || '.' || table_name as table from information_schema.tables where table_type = 'BASE TABLE'"
+        cur = self.dbo.cursor()
+        cur.execute(stmt)
+        tables = [t[0] for t in cur.fetchall()]
+        return tables
+#        tables = (self.table('information_schema.tables')
+#                      .query(fields=['table_schema', 'table_name'],
+#                             where="table_type = 'BASE TABLE'")
+#                 )
+#        return ['.'.join([x[0], x[1]]) for x in tables]
 
     def table(self, name):
         return PostgisTable(self, name)
@@ -315,14 +314,12 @@ FIELD_TYPE_MAP = {
 class PostgisTable(object):
     def __init__(self, db, name):
         self.db = db
-
         # Check for a schema
         if '.' in name:
             self.schema, self.name = name.split('.')
         else:
             self.schema = 'public'
             self.name = name
-
     def __str__(self):
         return 'PostgisTable: {}'.format(self.name)
 
@@ -331,11 +328,6 @@ class PostgisTable(object):
 
     @property
     def metadata(self):
-        # stmt = """
-        #     select column_name as name, data_type as type
-        #     from information_schema.columns
-        #     where table_name = '{}'
-        # """.format(self.name)
         stmt = """
             select column_name as name, data_type as type
             from information_schema.columns
@@ -350,7 +342,6 @@ class PostgisTable(object):
     def name_with_schema(self):
         """Returns the table name prepended with the schema name, prepared for
         a query."""
-
         if self.schema:
             comps = [self.schema, self.name]
             name_with_schema = '.'.join([_quote(x) for x in comps])
@@ -364,12 +355,16 @@ class PostgisTable(object):
 
     @property
     def geom_field(self):
-        f = [x for x in self.metadata if x['type'] == 'geometry']
-        if len(f) == 0:
-            return None
-        elif len(f) > 1:
-            raise LookupError('Multiple geometry fields')
-        return f[0]['name']
+        if self.db.sde_version != '':
+            stmt = "select column_name from sde.st_geometry_columns where table_name = '{}'".format(self.name)
+            return self.db.fetch(stmt)[0].pop('column_name')
+        else:
+            f = [x for x in self.metadata if x['type'] == 'geometry']
+            if len(f) == 0:
+                return None
+            elif len(f) > 1:
+                raise LookupError('Multiple geometry fields')
+            return f[0]['name']
 
     @property
     def objectid_field(self):
@@ -393,9 +388,14 @@ class PostgisTable(object):
         return 'ST_AsText({}) AS {}'.format(geom_getter, geom_field)
 
     def get_srid(self):
-        stmt = "SELECT Find_SRID('{}', '{}', '{}')"\
+        if self.db.sde_version == '':
+            stmt = "SELECT Find_SRID('{}', '{}', '{}')"\
                     .format(self.schema, self.name, self.geom_field)
-        return self.db.fetch(stmt)[0]['find_srid']
+            return self.db.fetch(stmt)[0]['find_srid']
+        else:
+            stmt = "select srid from sde.st_geometry_columns where schema_name = '{}' and table_name = '{}'" \
+                    .format(self.schema, self.name)
+            return self.db.fetch(stmt)[0]['srid']
 
     @property
     def geom_type(self):
@@ -408,9 +408,9 @@ class PostgisTable(object):
                 AND f_table_name = '{}'
                 and f_geometry_column = '{}';
                 """.format(self.schema, self.name, self.geom_field)
-            return self.db.fetch(stmt)[0]['type']
+            return self.db.fetch(stmt)[0].pop('type')
         else: # sde enabled
-            geom_dict = {1:"POINT", 13:"LINE",4:"POLYGON"}
+            geom_dict = {1:"POINT", 13:"LINE",4:"POLYGON", 11:"MULTIPOLYGON"}
             stmt = """
                 SELECT geometry_type
                 FROM sde_geometry_columns
@@ -419,7 +419,7 @@ class PostgisTable(object):
                 and f_geometry_column = '{}';
                 """.format(self.schema, self.name, self.geom_field)
             a = self.db.fetch(stmt)
-            geomtype = a[0]['geometry_type'] # this returns an int value which represents a geom type
+            geomtype = a[0].pop('geometry_type') # this returns an int value which represents a geom type
             geomtype = geom_dict[geomtype]
             return geomtype
 
@@ -497,7 +497,8 @@ class PostgisTable(object):
         #   geom = "ST_GeomFromText('{}', {})".format(geom, from_srid)
 
         if multi_geom:
-            geom = 'ST_Multi({})'.format(geom)
+            if not self.db.sde_version:
+                geom = 'ST_Multi({})'.format(geom)
 
         return geom
 
