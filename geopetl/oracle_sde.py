@@ -705,7 +705,6 @@ class OracleSdeTable(object):
                 # val = val.isoformat()
                 # Force microsecond output
                 val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
-
         elif type_ == 'nclob':
             pass
         elif type_ == 'timestamp with time zone':
@@ -722,7 +721,8 @@ class OracleSdeTable(object):
             # var = self._c.var(cx_Oracle.NCLOB)
             # var.setvalue(0, val)
             # val = var
-
+        elif type_ == 'timestamp without time zone': 
+            pass
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
