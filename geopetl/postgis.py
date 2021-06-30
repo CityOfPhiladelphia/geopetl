@@ -465,10 +465,12 @@ class PostgisTable(object):
             else:
                 val = val
         elif type_ == 'boolean':
-            val = val
+            val = val if val else 'NULL'
         elif type_ == 'money':
             if not val:
                 val = 'NULL'
+        elif type_ == 'uuid':
+            val=str(val)
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -545,12 +547,12 @@ class PostgisTable(object):
                 multi_geom = False
 
 
-        local_objectID_flag = False
+        #local_objectID_flag = False
         #if PG objectid_field not in local data fields tuple, append to local data fields
         if objectid_field and objectid_field not in fields:
             print('objectid_field not in local fields!!')
             fields = fields + (objectid_field,)
-            local_objectID_flag = True
+            #local_objectID_flag = True
         else:
             print('we have an object field already!!')
 
@@ -596,7 +598,7 @@ class PostgisTable(object):
                     val_row.append(val)
 
                 # if no object id and sde enabled, use sde index to append
-                elif field == objectid_field and self.db.sde_version and local_objectID_flag:
+                elif field == objectid_field and self.db.sde_version: #and local_objectID_flag:
                     val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
                     val_row.append(val)
                     # if self.db.sde_version and my_flag:
@@ -617,7 +619,7 @@ class PostgisTable(object):
                 #     val_row.append(val)
 
             val_rows.append(val_row)
-
+            print(val_row)
             # check if it's time to ship a chunk
             if i % buffer_size == 0:
                 # Execute
