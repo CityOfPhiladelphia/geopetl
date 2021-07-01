@@ -619,7 +619,6 @@ class PostgisTable(object):
                 #     val_row.append(val)
 
             val_rows.append(val_row)
-            print(val_row)
             # check if it's time to ship a chunk
             if i % buffer_size == 0:
                 # Execute
