@@ -358,7 +358,11 @@ class PostgisTable(object):
     def geom_field(self):
         if self.db.sde_version != '':
             stmt = "select column_name from sde.st_geometry_columns where table_name = '{}'".format(self.name)
-            return self.db.fetch(stmt)[0].pop('column_name')
+            r = self.db.fetch(stmt)
+            if r:
+                return r[0].pop('column_name')
+            else:
+                return None
         else:
             f = [x for x in self.metadata if x['type'] == 'geometry']
             if len(f) == 0:
