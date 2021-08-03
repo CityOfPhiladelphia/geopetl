@@ -80,7 +80,6 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
     with open(csv_dir, newline='') as f:
         reader = csv.reader(f)
         csv_data = list(reader)
-    csv_row_count = len(csv_data[1:])
 
     # connect to postgis DB using psycopg2
     connection = psycopg2.connect(user=user,
@@ -92,9 +91,8 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
     cur.execute('Select * from {table}'.format(table= table_name))
     result = cur.fetchall()
 
-    # get number of rows from query
-    postgis_num_rows = len(result)
-    assert csv_row_count == postgis_num_rows
+    # assert number of rows written to pg with test data
+    assert len(csv_data[1:]) == len(result)
 
 
 # compare csv data with postgres data using psycopg2
@@ -107,7 +105,6 @@ def test_assert_data(csv_dir, postgis, table_name):
     csv_data =[]
     # remove object_id from csv_data for now
     for r in csv_data1:
-        print(r[1:])
         csv_data.append(r[1:])
     # list of column names
     csv_header = csv_data[0]
@@ -149,7 +146,6 @@ def test_assert_data_2(csv_dir, postgis, table_name):
     # remove object_id from csv_data for now
     csv_data = []
     for r in csv_data1:
-        print(r[1:])
         csv_data.append(r[1:])
 
     # list of column names
