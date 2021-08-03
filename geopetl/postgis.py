@@ -163,11 +163,9 @@ class PostgisDatabase(object):
             sde = cursor.fetchall()
             sde_version = sde[0][0]
             self.sde_version = sde_version.split(' ')[0]
-            print('self.sde_version ', self.sde_version)
         except:
             self.sde_version = ''
             cursor.execute('rollback;') # abort failed transaction
-            print('DB not SDE enabled')
 
         # Check if DB is postgis is enabled
         try:
@@ -178,7 +176,6 @@ class PostgisDatabase(object):
         except:
             self.postgis_version = ''
             cursor.execute('rollback;') # abort failed transaction
-            print('DB not Postgis enabled')
 
         # TODO use petl dbo check/validation
         self.dbo = dbo
@@ -554,7 +551,6 @@ class PostgisTable(object):
         #local_objectID_flag = False
         #if PG objectid_field not in local data fields tuple, append to local data fields
         if objectid_field and objectid_field not in fields:
-            print('objectid_field not in local fields!!')
             fields = fields + (objectid_field,)
             #local_objectID_flag = True
         else:
@@ -712,7 +708,6 @@ class PostgisQuery(Table):
 
         # handle geom
         geom_field = self.table.geom_field
-        #print('fields before wkt ', fields)
         # replace geom field with wkt in fields list
         if geom_field and self.return_geom:
             wkt_getter = self.table.wkt_getter(geom_field, self.to_srid)
