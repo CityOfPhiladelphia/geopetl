@@ -625,6 +625,9 @@ class PostgisTable(object):
                 val_rows = []
                 cur_stmt = stmt
 
+
+
+
         # Execute remaining rows (TODO clean this up)
         if val_rows:
             vals_joined = ['({})'.format(', '.join(vals)) for vals in val_rows]
