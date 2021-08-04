@@ -16,6 +16,7 @@ def remove_whitespace(stringval):
     elif geom_type == 'polygon' or geom_type=="POLYGON":
         geom = "{type}(({x}))".format(type=geom_type, x=" ".join(coordinates))
     return geom
+
 ############################################# FIXTURES ################################################################
 
 # return postgis database object
@@ -96,7 +97,7 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
 
     # read data using postgis
     cur = postgis.dbo.cursor()
-    cur.execute('select objectid,textfield,datefield,numericfield,st_astext(shape) from {table}'.format(table= table_name))
+    cur.execute('select objectid,textfield,datefield,numericfield, st_astext(shape)  from {table}'.format(table= table_name))
     rows = cur.fetchall()
     i=1
     # iterate through each row of data
@@ -111,6 +112,10 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
                 pg_geom = remove_whitespace(str(pg_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
+            elif key == 'timezone':
+                pg_tz = etl_dict.get(key)
+                csv_tz = dt_parser.parse(csv_dict.get(key))
+                assert pg_tz == csv_tz
             else:
                 assert str(csv_dict.get(key)) == str(pg_dict.get(key))
         i=i+1
@@ -141,6 +146,10 @@ def test_assert_data_2(csv_dir, postgis, table_name):
                 pg_geom = remove_whitespace(str(etl_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
+            elif key == 'timezone':
+                pg_tz = etl_dict.get(key)
+                csv_tz = dt_parser.parse(csv_dict.get(key))
+                assert pg_tz == csv_tz
             # compare values from each key
             else:
                 assert str(csv_dict.get(key)) == str(etl_dict.get(key))
