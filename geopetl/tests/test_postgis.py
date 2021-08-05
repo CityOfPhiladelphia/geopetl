@@ -1,6 +1,7 @@
 import pytest
 import petl as etl
 from geopetl.postgis import PostgisDatabase
+from dateutil import parser as dt_parser
 import psycopg2
 import csv
 import os
@@ -32,7 +33,7 @@ def postgis(db, user, pw, host):
 # return csv file directory containing staging data
 @pytest.fixture
 def csv_dir():
-    csv_dir = 'geopetl/tests/fixtures_data/staging/point.csv'
+    csv_dir = 'geopetl/tests/fixtures_data/staging/some_new_old.csv'
     return csv_dir
 
 
@@ -48,6 +49,7 @@ def table_name(csv_dir, schema):
         table = 'polygon'
     # define table name
     table_name = schema+'.'+ table + '_table'
+    table_name = 'public.point_table'
     return table_name
 
 
@@ -97,7 +99,7 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
 
     # read data using postgis
     cur = postgis.dbo.cursor()
-    cur.execute('select objectid,textfield,datefield,numericfield, st_astext(shape)  from {table}'.format(table= table_name))
+    cur.execute('select objectid,textfield,datefield,numericfield, st_astext(shape), timezone  from {table}'.format(table= table_name))
     rows = cur.fetchall()
     i=1
     # iterate through each row of data
@@ -113,7 +115,7 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
             elif key == 'timezone':
-                pg_tz = etl_dict.get(key)
+                pg_tz = pg_dict.get(key)
                 csv_tz = dt_parser.parse(csv_dict.get(key))
                 assert pg_tz == csv_tz
             else:
@@ -130,7 +132,7 @@ def test_assert_data_2(csv_dir, postgis, table_name):
     # list of column names
     keys = csv_data[0]
     # read data using petl
-    db_data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name,fields=['objectid','textfield','datefield','numericfield','shape'])
+    db_data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name,fields=['objectid','textfield','datefield','numericfield','shape', 'timezone'])
 
     i=1
     # iterate through each row of data

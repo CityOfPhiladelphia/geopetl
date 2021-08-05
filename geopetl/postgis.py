@@ -305,7 +305,7 @@ FIELD_TYPE_MAP = {
     'character varying':        'text',
     'date':                     'date',
     'USER-DEFINED':             'geometry',
-    'timestamp with time zone': 'timestamp',
+    'timestamp with time zone': 'timestamptz',
     'timestamp without time zone': 'timestamp',
     'boolean':                  'boolean',
     'uuid':                     'uuid',
@@ -468,6 +468,12 @@ class PostgisTable(object):
                 val = '''TIMESTAMP '{}' '''.format(val)
             else:
                 val = val
+        elif type_ == 'timestamptz':
+            val = str(val)
+            if not val or val == 'None':
+                val = 'NULL'
+            elif 'timestamp' not in val.lower():
+                val = '''TIMESTAMPTZ '{}' '''.format(val)
         elif type_ == 'boolean':
             val = val if val else 'NULL'
         elif type_ == 'money':
