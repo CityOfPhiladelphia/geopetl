@@ -401,7 +401,7 @@ class PostgisTable(object):
         elif type_ == 'timestamptz':
             if not val:
                 val = 'Null'
-            elif 'timestamptz' not in val.lower():
+            elif 'timestamptz' not in str(val).lower():
                 val = '''TIMESTAMPTZ '{}' '''.format(val)
             else:
                 val=val
