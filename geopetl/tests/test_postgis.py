@@ -49,7 +49,8 @@ def postgis(db, user, pw, host):
 # return csv file directory containing staging data
 @pytest.fixture
 def csv_dir():
-    csv_dir = 'geopetl/tests/fixtures_data/staging/point.csv'
+    csv_dir = 'geopetl/tests/fixtures_data/staging/point_table_date.csv'
+    #csv_dir = 'point_table_date.csv'
     return csv_dir
 
 
@@ -65,6 +66,7 @@ def table_name(csv_dir):
         table = 'polygon'
     # define table name
     table_name = table + '_table'
+    table_name = 'point_table_date'
     return table_name
 
 
@@ -108,13 +110,14 @@ def test_assert_data(csv_dir, postgis, table_name):
     eastern = timezone('US/Eastern')
     # read staging data from csv
     csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
-    csv_data = etl.convert(csv_data,'datefield', lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
+    csv_data = etl.convert(csv_data,['timestamp','datefield'], lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
+    csv_data = etl.convert(csv_data,'datefield', lambda row: row.date())
     csv_data = etl.convert(csv_data,'timezone', lambda row: dt_parser.parse(row).astimezone(eastern))
     keys = csv_data[0]
 
     # read data using postgis
     cur = postgis.dbo.cursor()
-    cur.execute('select objectid,textfield,datefield,numericfield, timezone, st_astext(shape) from ' + table_name)
+    cur.execute('select objectid,textfield,timestamp,numericfield, timezone, st_astext(shape), datefield from ' + table_name)
     rows = cur.fetchall()
     i=1
     # iterate through each row of data
@@ -141,19 +144,20 @@ def test_assert_data_2(csv_dir, postgis, table_name):
     # read staging data from csv using geopetl
     eastern = timezone('US/Eastern')
     csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
-    csv_data = etl.convert(csv_data,['datefield','timezone'], lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
+    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
+    csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
 
     # list of column names
     keys = csv_data[0]
 
+
     # read data using petl
     db_data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name)
-
     i=1
     # iterate through each row of data
     for row in db_data[1:]:
         # create dictionary for each row of data using same set of keys
-        etl_dict = dict(zip(keys, row))          # dictionary from etl data
+        etl_dict = dict(zip(db_data[0], row))          # dictionary from etl data
         csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
         # iterate through each keys
         for key in keys:
