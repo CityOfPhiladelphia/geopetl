@@ -464,7 +464,7 @@ class PostgisTable(object):
             val=str(val)
             if not val or val == 'None':
                 val = 'NULL'
-            elif 'timestamp' not in val.lower():
+            elif 'timestamp' not in str(val).lower():
                 val = '''TIMESTAMP '{}' '''.format(val)
             else:
                 val = val
@@ -472,7 +472,7 @@ class PostgisTable(object):
             val = str(val)
             if not val or val == 'None':
                 val = 'NULL'
-            elif 'timestamp' not in val.lower():
+            elif 'timestamptz' not in str(val).lower():
                 val = '''TIMESTAMPTZ '{}' '''.format(val)
         elif type_ == 'boolean':
             val = val if val else 'NULL'
