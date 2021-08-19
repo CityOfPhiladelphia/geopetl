@@ -79,13 +79,13 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     # do we need to create the table?
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
-#    create = '.'.join([table.schema, table.name]) not in db.tables
-    create = table_name not in db.tables
+    create = '.'.join([table.schema, table.name]) not in db.tables
+    #create = table_name not in db.tables
     # Create table if it doesn't exist
     if create:
         # Disable autocreate new postgres table
         if db.sde_version:
-            print('Autocreate tables for Postgres not currently implemented!!')
+            print('Autocreate tables for Postgres sde not currently implemented!!')
             raise
         # create new postgis table
         else:
