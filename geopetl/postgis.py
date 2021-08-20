@@ -76,6 +76,9 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     """
     # create db wrappers
     db = PostgisDatabase(dbo)
+    #parse table_name for schema:
+    if '.' not in table_name:
+        table_name = 'public.' + table_name
     # do we need to create the table?
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
