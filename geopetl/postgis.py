@@ -268,7 +268,7 @@ class PostgisDatabase(object):
                 scheme_type = DATA_TYPE_MAP.get(scheme['type'].lower(), scheme['type'])
                 constraint = scheme.get('constraints', None)
                 if scheme_type == 'geometry':
-                    if self.db.sde_version:
+                    if self.sde_version:
                         scheme_type= 'st_geometry'
                     else:
                         scheme_srid = scheme.get('srid', '')
