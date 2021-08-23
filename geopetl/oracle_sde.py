@@ -324,7 +324,7 @@ class OracleSdeTable(object):
             self.schema = comps[0]
             self.name = comps[1]
         else:
-            self.schema = None
+            self.schema = self.db.user
             self.name = name
         self.geom_field = self._get_geom_field()
         self.geom_type = self._get_geom_type()
