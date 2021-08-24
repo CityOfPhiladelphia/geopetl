@@ -34,7 +34,8 @@ jobs:
       # Abort when any coontainer exits, and return the exit code from geopetl.
       # Otherwise docker-compose won't stop because postgis doesn't exit.
       run: |
-        $(aws ecr get-login --no-include-email --region us-east-1)
+        # $(aws ecr get-login --no-include-email --region us-east-1)
+        $(aws ecr get-login-password --no-include-email --region us-east-1)
         docker-compose up --build --abort-on-container-exit --exit-code-from geopetl
       env:
         POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
