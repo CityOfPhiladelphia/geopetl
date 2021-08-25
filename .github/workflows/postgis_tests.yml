@@ -39,7 +39,6 @@ jobs:
           echo "logging in ecr"
           docker ps -a
           echo "docker all containers in ECR"
-          #docker build -t 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v3
           docker-compose up --build --abort-on-container-exit --exit-code-from geopetl
 
 
