@@ -33,6 +33,8 @@ jobs:
           registry: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v3
           username: ${{ secrets.AWS_ACCESS_KEY_ID}}
           password: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+
+      - name: builds 
         run:
           echo "logging in ecr"
           docker ps -a
