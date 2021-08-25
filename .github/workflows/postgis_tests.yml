@@ -40,6 +40,7 @@ jobs:
           docker ps -a
           echo "docker all containers in ECR"
           docker-compose up --build --abort-on-container-exit --exit-code-from geopetl
+          echo "ran docker compose command."
 
 
 # TODO: push image to ECR?
