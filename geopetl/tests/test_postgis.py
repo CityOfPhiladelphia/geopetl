@@ -109,7 +109,7 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
     for row in rows:
         # create dictionary for each row of data using same set of keys
         csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
-        pg_dict = dict(zip(header, row))              # dictionary from postgis data
+        pg_dict = dict(zip(keys, row))              # dictionary from postgis data
         # iterate through each keys
         for key in keys:
             # compare values from each key
@@ -141,7 +141,7 @@ def test_assert_data_2(csv_dir, postgis, table_name):
     # iterate through each row of data
     for row in db_data[1:]:
         # create dictionary for each row of data using same set of keys
-        etl_dict = dict(zip(db_data[0], row))          # dictionary from etl data
+        etl_dict = dict(zip(keys, row))          # dictionary from etl data
         csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
         # iterate through each keys
         for key in keys:
