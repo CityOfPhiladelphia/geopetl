@@ -51,13 +51,13 @@ pytest geopetl/tests/test_postgis.py \
   --schema="public" \
   --column_definition="geopetl/tests/fixtures_data/schemas/point.json"
 POSTGIS_EXIT_CODE=$?
-echo "Done."
+echo "Postgis tests done."
 echo "#########################################"
 echo ""
 echo "##########################################"
 echo "Running tests against Esri SDE database..."
 # test for postgres-sde
-pytest geopetl/tests/test_postgis.py \
+pytest geopetl/tests/test_postgressde.py \
   --user=$SDE_USER \
   --pw=$POSTGRES_PASSWORD \
   --db=$SDE_DB \
@@ -67,7 +67,7 @@ pytest geopetl/tests/test_postgis.py \
   --column_definition="geopetl/tests/fixtures_data/schemas/point.json"
 
 SDE_EXIT_CODE=$?
-echo "Done."
+echo "postgres tests done."
 echo "##########################################"
 echo ""
 
