@@ -610,6 +610,14 @@ class PostgisTable(object):
                 elif field == objectid_field and self.db.sde_version: #and local_objectID_flag:
                     val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
                     val_row.append(val)
+                    # if self.db.sde_version and my_flag:
+                    #     val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
+                    #     print('object_id val ', val)
+                    #     val_row.append(val)
+                    # else:
+                    #     val = self.prepare_val(row[field], type_)
+                    #     print('object_id val ', val)
+                    #     val_row.append(val)
                 else:
                     val = self.prepare_val(row[field], type_)
                     val_row.append(val)
@@ -631,18 +639,24 @@ class PostgisTable(object):
                 val_rows = []
                 cur_stmt = stmt
 
-
-
-
         # Execute remaining rows (TODO clean this up)
-        if val_rows:
-            vals_joined = ['({})'.format(', '.join(vals)) for vals in val_rows]
-            rows_joined = ', '.join(vals_joined)
-            cur_stmt += rows_joined
-            execute(cur_stmt)
-            commit()
+        vals_joined = ['({})'.format(', '.join(vals)) for vals in val_rows]
+        rows_joined = ', '.join(vals_joined)
+        cur_stmt += rows_joined
+        execute(cur_stmt)
+        commit()
 
-
+    # def truncate(self, cascade=False):
+    #     """Drop all rows."""
+    #
+    #     name = self.name
+    #     # RESTART IDENTITY resets sequence generators.
+    #     stmt = "TRUNCATE {} RESTART IDENTITY".format(name)
+    #     if cascade:
+    #         stmt += ' CASCADE'
+    #
+    #     self.db.cursor.execute(stmt)
+    #     self.db.dbo.commit()
     def truncate(self, cascade=False):
         """Drop all rows."""
 
