@@ -27,7 +27,6 @@ etl.extract_table_schema = extract_table_schema
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
-
     return table.query(**kwargs)
 
 etl.fromoraclesde = fromoraclesde
@@ -284,7 +283,7 @@ FIELD_TYPE_MAP = {
 
     # date
     'DATE':         'date',
-    'TIMESTAMP':    'timestamp without time zone',
+    'TIMESTAMP':    'timestamp',#''timestamp without time zone','
     'timestamp with time zone':'timestamp with time zone',
 
     # clob
@@ -314,7 +313,7 @@ TODO:
 class OracleSdeTable(object):
     def __init__(self, db, name, srid=None):
         self.db = db
-        self.db.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'"
+        self.db.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'"
                                " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
                                " NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'")
 
@@ -389,7 +388,6 @@ class OracleSdeTable(object):
             # Use scale to identiry intetger numeric types
             if type_without_length == 'NUMBER' and scale == 0:
                 fields[name]['type'] = 'integer'
-        # print(fields)
         return fields
 
     @property
@@ -690,9 +688,16 @@ class OracleSdeTable(object):
         if type_ == 'text':
             pass
         elif type_ == 'num':
-            pass
+            if isinstance(val, str):
+                val = int(val)
+            else:
+                print('num error')
         elif type_ == 'integer':
-            pass
+            if isinstance(val,str):
+                val = int(val)
+            elif not isinstance(val,int):
+                print('int error')
+                raise
         elif type_ == 'geom':
             pass
         elif type_ == 'date':
@@ -700,18 +705,19 @@ class OracleSdeTable(object):
             if isinstance(val, str):
                 splitval = val.split(' ')
                 if ' ' in val and ':' in splitval[1] and 'T' not in val:
-                    val =splitval[0] + 'T' + splitval[1] 
+                    val =splitval[0] + 'T' + splitval[1]
             if isinstance(val, datetime):
                 # val = val.isoformat()
                 # Force microsecond output
-                val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
+                #val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
+                val = val.strftime('%Y-%m-%d')
         elif type_ == 'nclob':
             pass
         elif type_ == 'timestamp with time zone':
             if isinstance(val, datetime):
                 val = val.isoformat()
                 # Force microsecond output
-                val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
+                #val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
             elif isinstance(val, str):
                 val=dt_parser().parse(val)
                 val = val.isoformat()
@@ -721,8 +727,16 @@ class OracleSdeTable(object):
             # var = self._c.var(cx_Oracle.NCLOB)
             # var.setvalue(0, val)
             # val = var
-        elif type_ == 'timestamp without time zone': 
-            pass
+        elif type_ == 'timestamp':
+            if isinstance(val, datetime):
+                #val = val.isoformat()
+                # Force microsecond output
+                #val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
+                val = val.strftime('%Y-%m-%d %H:%M:%S.%f') #('YYYY-MM-DD HH24:MI:SS.FF')  #YYYY-MM-DD HH24:MI:SS.FF
+            elif isinstance(val, str):
+                val=dt_parser().parse(val)
+                val = val.strftime('%Y-%m-%d %H:%M:%S.%f') #('YYYY-MM-DD HH24:MI:SS.FF')  #YYYY-MM-DD HH24:MI:SS.FF
+            #pass
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -922,10 +936,11 @@ class OracleSdeTable(object):
                 placeholders.append(geom_placeholder)
             elif type_ == 'date':
                 # Insert an ISO-8601 timestring
-                placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
+                placeholders.append("TO_DATE(:{}, 'YYYY-MM-DD')".format(field))
             elif type_ == 'timestamp with time zone':
-#                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH')'''.format(field))
-                placeholders.append("TO_TIMESTAMP_TZ(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
+                placeholders.append("TO_TIMESTAMP_TZ(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH:TZM')".format(field)) #'YYYY-MM-DD\"T\"HH24:MI:SS.FF+TZH:TZM'
+            elif type_=='timestamp':
+                placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD HH24:MI:SS.FF')".format(field))
             else:
                 placeholders.append(':' + field)
 
