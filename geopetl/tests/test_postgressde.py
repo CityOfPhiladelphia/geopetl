@@ -102,7 +102,7 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
 def test_assert_data(csv_dir, postgis, table_name):
     # read staging data from csv
     csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
-    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
+    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row)) 
     csv_data = etl.convert(csv_data,'datefield', lambda row: row.date())
     csv_header = csv_data[0]
 
@@ -160,6 +160,5 @@ def test_assert_data_2(csv_dir, postgis, table_name):
             # compare values from each key
             else:
                 assert csv_dict.get(key) == etl_dict.get(key)
-
         i = i+1
 
