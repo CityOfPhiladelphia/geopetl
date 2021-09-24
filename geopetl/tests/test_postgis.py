@@ -91,12 +91,10 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
 
 # compare csv data with postgres data using psycopg2
 def test_assert_data(csv_dir, postgis, table_name, schema):
-    #eastern = timezone('US/Eastern')
     # read staging data from csv
     csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
-    csv_data = etl.convert(csv_data,['timestamp','datefield'], lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
+    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
     csv_data = etl.convert(csv_data,'datefield', lambda row: row.date())
-    csv_data = etl.convert(csv_data,'timezone', lambda row: dt_parser.parse(row))#.astimezone(eastern)
     keys = csv_data[0]
 
     # read data using postgis
@@ -109,7 +107,7 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
     for row in rows:
         # create dictionary for each row of data using same set of keys
         csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
-        pg_dict = dict(zip(keys, row))              # dictionary from postgis data
+        pg_dict = dict(zip(header, row))              # dictionary from postgis data
         # iterate through each keys
         for key in keys:
             # compare values from each key
@@ -118,8 +116,6 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
                 csv_geom = remove_whitespace(str(csv_dict.get(key)))
                 assert csv_geom == pg_geom
             else:
-                a = csv_dict.get(key)
-                b = pg_dict.get(key)
                 assert csv_dict.get(key) == pg_dict.get(key)
         i=i+1
 
@@ -127,7 +123,6 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
 #compare csv data with postgres data using geopetl
 def test_assert_data_2(csv_dir, postgis, table_name):
     # read staging data from csv using geopetl
-    #eastern = timezone('US/Eastern')
     csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
     csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
     csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
@@ -141,7 +136,7 @@ def test_assert_data_2(csv_dir, postgis, table_name):
     # iterate through each row of data
     for row in db_data[1:]:
         # create dictionary for each row of data using same set of keys
-        etl_dict = dict(zip(keys, row))          # dictionary from etl data
+        etl_dict = dict(zip(db_data[0], row))          # dictionary from etl data
         csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
         # iterate through each keys
         for key in keys:
