@@ -1,7 +1,7 @@
 import os
 from collections import OrderedDict
 from datetime import datetime
-from dateutil.parser import parser as dt_parser
+#from dateutil.parser import parser as dt_parser
 from decimal import Decimal
 import re
 import json
@@ -12,6 +12,7 @@ from petl.io.db_utils import _quote, _is_dbapi_connection
 from petl.util.base import Table
 from geopetl.base import SpatialQuery
 from geopetl.util import parse_db_url
+from dateutil import parser as dt_parser
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
 MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
@@ -312,6 +313,7 @@ TODO:
 """
 class OracleSdeTable(object):
     def __init__(self, db, name, srid=None):
+        print('init 315')
         self.db = db
         self.db.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'"
                                " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
@@ -328,7 +330,7 @@ class OracleSdeTable(object):
         self.geom_field = self._get_geom_field()
         self.geom_type = self._get_geom_type()
         self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
-
+        self.timezone_fields = self._get_timezone_fields()
         # handle srid
         table_srid = self._get_srid()
         if table_srid and srid and table_srid != srid:
@@ -367,7 +369,6 @@ class OracleSdeTable(object):
         cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
         fields = OrderedDict()
-
         for row in rows:
             name = row[0].lower().replace(' ', '_')
             type_ = row[1]
@@ -487,6 +488,14 @@ class OracleSdeTable(object):
         elif len(f) > 1:
             raise LookupError('Multiple geometry fields')
         return f[0].lower()
+
+    def _get_timezone_fields(self):
+        tz_list = []
+        for key, value in self.metadata.items():
+            if value.get('type') == 'timestamp with time zone':
+                tz_list.append(key)
+        return tz_list
+
 
     def _get_geom_type(self):
         """
@@ -710,18 +719,15 @@ class OracleSdeTable(object):
                 # val = val.isoformat()
                 # Force microsecond output
                 #val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
-                val = val.strftime('%Y-%m-%d')
+                val = val.strftime('YYYY-MM-DD')#'YYYY-MM-DD'   %Y-%m-%d
         elif type_ == 'nclob':
             pass
         elif type_ == 'timestamp with time zone':
             if isinstance(val, datetime):
                 val = val.isoformat()
-                # Force microsecond output
-                #val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
             elif isinstance(val, str):
                 val=dt_parser().parse(val)
                 val = val.isoformat()
-                #val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
 
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
             # var = self._c.var(cx_Oracle.NCLOB)
@@ -732,11 +738,10 @@ class OracleSdeTable(object):
                 #val = val.isoformat()
                 # Force microsecond output
                 #val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
-                val = val.strftime('%Y-%m-%d %H:%M:%S.%f') #('YYYY-MM-DD HH24:MI:SS.FF')  #YYYY-MM-DD HH24:MI:SS.FF
+                val = val.strftime('%Y-%m-%d %H:%M:%S.%f')
             elif isinstance(val, str):
                 val=dt_parser().parse(val)
-                val = val.strftime('%Y-%m-%d %H:%M:%S.%f') #('YYYY-MM-DD HH24:MI:SS.FF')  #YYYY-MM-DD HH24:MI:SS.FF
-            #pass
+                val = val.strftime('%Y-%m-%d %H:%M:%S.%f')
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -936,7 +941,7 @@ class OracleSdeTable(object):
                 placeholders.append(geom_placeholder)
             elif type_ == 'date':
                 # Insert an ISO-8601 timestring
-                placeholders.append("TO_DATE(:{}, 'YYYY-MM-DD')".format(field))
+                placeholders.append("TO_DATE(:{}, 'YYYY-MM-DD')".format(field))#'YYYY-MM-DD'
             elif type_ == 'timestamp with time zone':
                 placeholders.append("TO_TIMESTAMP_TZ(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH:TZM')".format(field)) #'YYYY-MM-DD\"T\"HH24:MI:SS.FF+TZH:TZM'
             elif type_=='timestamp':
@@ -1062,6 +1067,8 @@ class OracleSdeQuery(SpatialQuery):
         if self.geom_with_srid and self.geom_field and self.srid:
             db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
 
+        if len(self.table.timezone_fields)>0:
+            db_view = db_view.convert([s.upper() for s in self.table.timezone_fields], lambda row: dt_parser.parse(row))
         # lowercase headers
         headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in headers])
@@ -1083,7 +1090,8 @@ class OracleSdeQuery(SpatialQuery):
         if fields is None:
             # default to non geom fields
             fields = self.table.non_geom_fields
-        fields = [_quote(field.upper()) for field in fields]
+        fields = ['''to_char("{f}", 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {f} '''.format(f=field.upper()) if field in self.table.timezone_fields else _quote(field.upper()) for field in fields]
+
         # if still no fields, try select *: TODO: revisit
         if not fields:
             fields.append('{}.*'.format(self.table._name_with_schema_p))
@@ -1104,6 +1112,8 @@ class OracleSdeQuery(SpatialQuery):
         else:
             stmt = 'SELECT {} FROM {}'.format(fields_joined, self.table._name_with_schema_p)
 
+        print(1113)
+        print(stmt)
         # where conditions
         wheres = [self.where]
 
