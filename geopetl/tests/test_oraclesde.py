@@ -22,6 +22,7 @@ def remove_whitespace(stringval):
     elif geom_type == 'polygon' or geom_type=="POLYGON":
         geom = "{type}(({x}))".format(type=geom_type, x=" ".join(coordinates))
     return geom
+
 ############################################# FIXTURES ################################################################
 
 # return Oracle database object
@@ -62,9 +63,9 @@ def table_name(csv_dir, schema):
 @pytest.fixture
 def create_test_tables(oraclesde_db, table_name, csv_dir):
     # populate a new geopetl table object with staging data from csv file
-    rows1 = etl.fromcsv(csv_dir)
+    rows = etl.fromcsv(csv_dir)
     # write geopetl table to oracle
-    rows1.tooraclesde(oraclesde_db.dbo, table_name)
+    rows.tooraclesde(oraclesde_db.dbo, table_name)
 
 
 ######################################   TESTS   ####################################################################
@@ -98,8 +99,8 @@ def test_all_rows_written(host, port, service_name,user, pw,csv_dir,table_name, 
 
 # compare csv data with oracle data using cxoracle
 def test_assert_data(csv_dir, oraclesde_db, table_name):
-    csv_data = etl.fromcsv(csv_dir).convert('numericfield', int)
-    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row)) #.replace(microsecond=0))
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
+    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
 
     # list of column names
     csv_header = csv_data[0]
@@ -112,7 +113,7 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
     cur.execute(
         '''select objectid,textfield,numericfield,timestamp,datefield,
          to_char(timezone, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as timezone,
-         sde.st_astext(shape) as shape from ''' + table_name)  # sde.st_astext(shape)  at time zone 'UTC' as timezone
+         sde.st_astext(shape) as shape from ''' + table_name)
 
     db_header = [column[0] for column in cur.description]
     rows = cur.fetchall()
@@ -126,7 +127,7 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
 
         for key in csv_header:
             if key == 'objectid':
-                continue
+                 continue
             elif key == 'timezone':
                 db_val = oracle_dict.get(key.upper())
                 db_val = dt_parser.parse(db_val)
@@ -134,27 +135,25 @@ def test_assert_data(csv_dir, oraclesde_db, table_name):
                 assert db_val == csv_val
             elif key == 'shape':
                 db_val = remove_whitespace(str(oracle_dict.get(key.upper())))
-                csv_geom = remove_whitespace(str(csv_dict.get(key)))
-                assert csv_geom == db_val
+                csv_val = remove_whitespace(str(csv_dict.get(key)))
+                assert db_val == csv_val
             else:
                 db_val = oracle_dict.get(key.upper())
                 csv_val = csv_dict.get(key)
                 assert csv_val == db_val
-            print('\n')
         i=i+1
 
 
 # # compare csv data with oracle data using geopetl
 def test_assert_data_2(csv_dir, oraclesde_db, table_name):
-    csv_data = etl.fromcsv(csv_dir).convert('numericfield', int)
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
     csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
 
     # list of column names
     keys = csv_data[0]
 
     # get oracle data
-    stmt = '''select objectid,textfield,numericfield,timestamp,datefield, to_char(timezone, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as timezone, sde.st_astext(shape) as shape from {table}'''.format(table=table_name)
-    rows = etl.fromoraclesde(dbo=oraclesde_db.dbo,table_name=table_name, sql= stmt)
+    rows = etl.fromoraclesde(dbo=oraclesde_db.dbo,table_name=table_name)
     db_header = rows[0]
 
     i=1
@@ -163,19 +162,13 @@ def test_assert_data_2(csv_dir, oraclesde_db, table_name):
         # create dictionary for each row of data using same set of keys
         csv_dict = dict(zip(keys, csv_data[i]))         # dictionary from csv data
         oracle_dict = dict(zip(db_header, row))         # dictionary from oracle data
-
         for key in keys:
             if key == 'objectid':
-                continue
-            elif key == 'timezone':
-                db_val = oracle_dict.get(key)
-                csv_val = csv_dict.get(key)
-                db_val = dt_parser.parse(db_val)
-                assert db_val == csv_val
+                 continue
             elif key == 'shape':
                 db_val = remove_whitespace(str(oracle_dict.get(key)))
-                csv_geom = remove_whitespace(str(csv_dict.get(key)))
-                assert csv_geom == db_val
+                csv_val = remove_whitespace(str(csv_dict.get(key)))
+                assert csv_val == db_val
             else:
                 db_val = oracle_dict.get(key)
                 csv_val = csv_dict.get(key)
