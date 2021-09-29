@@ -1,7 +1,7 @@
 import os
 from collections import OrderedDict
 from datetime import datetime
-#from dateutil.parser import parser as dt_parser
+from dateutil.parser import parser as dt_parser
 from decimal import Decimal
 import re
 import json
@@ -12,7 +12,6 @@ from petl.io.db_utils import _quote, _is_dbapi_connection
 from petl.util.base import Table
 from geopetl.base import SpatialQuery
 from geopetl.util import parse_db_url
-from dateutil import parser as dt_parser
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
 MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
@@ -1068,7 +1067,7 @@ class OracleSdeQuery(SpatialQuery):
             db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
 
         if len(self.table.timezone_fields)>0:
-            db_view = db_view.convert([s.upper() for s in self.table.timezone_fields], lambda row: dt_parser.parse(row))
+            db_view = db_view.convert([s.upper() for s in self.table.timezone_fields], lambda row: dt_parser().parse(row))
         # lowercase headers
         headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in headers])
@@ -1112,8 +1111,6 @@ class OracleSdeQuery(SpatialQuery):
         else:
             stmt = 'SELECT {} FROM {}'.format(fields_joined, self.table._name_with_schema_p)
 
-        print(1113)
-        print(stmt)
         # where conditions
         wheres = [self.where]
 
