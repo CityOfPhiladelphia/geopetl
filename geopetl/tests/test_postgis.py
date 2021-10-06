@@ -5,6 +5,8 @@ import psycopg2
 import csv
 import os
 import re
+from pytz import timezone
+from dateutil import parser as dt_parser
 
 def remove_whitespace(stringval):
     shapestring = str(stringval)
@@ -39,14 +41,14 @@ def csv_dir():
 @pytest.fixture
 def table_name(csv_dir, schema):
     head_tail = os.path.split(csv_dir)
-    # define which table based on csv file name
+    # define which table based on csv name
     table = ''
     if 'point' in head_tail[1]:
         table = 'point'
     elif 'polygon' in head_tail[1]:
         table = 'polygon'
     # define table name
-    table_name = schema+'.'+ table + '_table'
+    table_name = table + '_table'
     return table_name
 
 
@@ -88,61 +90,74 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
 # compare csv data with postgres data using psycopg2
 def test_assert_data(csv_dir, postgis, table_name, schema):
     # read staging data from csv
-    with open(csv_dir, newline='') as f:
-        reader = csv.reader(f)
-        csv_data = list(reader)
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid', 'numericfield'], int)
+    csv_data = etl.convert(csv_data, ['timestamp', 'datefield','timezone'],lambda row: dt_parser.parse(row))
+    csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
+    #csv_data = etl.convert(csv_data, 'timezone', lambda row: dt_parser.parse(row))
+
     # list of column names
     keys = csv_data[0]
 
     # read data using postgis
-    cur = postgis.dbo.cursor()
-    cur.execute('select objectid,textfield,datefield,numericfield,st_astext(shape) from {table}'.format(table= table_name))
-    rows = cur.fetchall()
+    cursor = postgis.dbo.cursor()
+    cursor.execute('select objectid,textfield,timestamp,numericfield, timezone, st_astext(shape) as shape, datefield from ' + table_name)
+    rows = cursor.fetchall()
+    header = [column[0] for column in cursor.description]
+
     i=1
     # iterate through each row of data
     for row in rows:
         # create dictionary for each row of data using same set of keys
         csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
-        pg_dict = dict(zip(keys, row))              # dictionary from postgis data
+        pg_dict = dict(zip(header, row))            # dictionary from postgis data
         # iterate through each keys
         for key in keys:
             # compare values from each key
             if key=='shape':
-                pg_geom = remove_whitespace(str(pg_dict.get('shape')))
-                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                pg_geom = remove_whitespace(str(pg_dict.get(key)))
+                csv_geom = remove_whitespace(str(csv_dict.get(key)))
                 assert csv_geom == pg_geom
             else:
-                assert str(csv_dict.get(key)) == str(pg_dict.get(key))
+                # a = csv_dict.get(key)
+                # b = pg_dict.get(key)
+                # print('a ',a)
+                # print('b ',b)
+                assert csv_dict.get(key) == pg_dict.get(key)
         i=i+1
 
 
 #compare csv data with postgres data using geopetl
 def test_assert_data_2(csv_dir, postgis, table_name):
-    # read staging data from csv
-    with open(csv_dir, newline='') as f:
-        reader = csv.reader(f)
-        csv_data = list(reader)
+    # read staging data from csv using geopetl
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
+    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
+    csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
     # list of column names
     keys = csv_data[0]
-    # read data using petl
-    db_data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name,fields=['objectid','textfield','datefield','numericfield','shape'])
+
+    # read data from test DB using petl
+    db_data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name)
 
     i=1
     # iterate through each row of data
     for row in db_data[1:]:
         # create dictionary for each row of data using same set of keys
-        etl_dict = dict(zip(keys, row))          # dictionary from etl data
-        csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
+        etl_dict = dict(zip(db_data[0], row))       # dictionary from etl data
+        csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
 
         # iterate through each keys
         for key in keys:
             # assert shape field
             if key=='shape':
-                pg_geom = remove_whitespace(str(etl_dict.get('shape')))
-                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                pg_geom = remove_whitespace(str(etl_dict.get(key)))
+                csv_geom = remove_whitespace(str(csv_dict.get(key)))
                 assert csv_geom == pg_geom
             # compare values from each key
             else:
-                assert str(csv_dict.get(key)) == str(etl_dict.get(key))
+                # a = csv_dict.get(key)
+                # b = etl_dict.get(key)
+                # print('a ',a)
+                # print('b ',b)
+                assert csv_dict.get(key) == etl_dict.get(key)
         i = i+1
 

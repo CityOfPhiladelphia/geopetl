@@ -6,6 +6,8 @@ from petl.util.base import Table
 from petl.io.db_utils import _quote
 from geopetl.util import parse_db_url
 import json
+from pytz import timezone
+from dateutil import parser as dt_parser
 
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
@@ -268,7 +270,8 @@ class PostgisDatabase(object):
                 scheme_type = DATA_TYPE_MAP.get(scheme['type'].lower(), scheme['type'])
                 constraint = scheme.get('constraints', None)
                 if scheme_type == 'geometry':
-                    if self.db.sde_version:
+                    #if self.db.sde_version:
+                    if self.sde_version:
                         scheme_type= 'st_geometry'
                     else:
                         scheme_srid = scheme.get('srid', '')
@@ -305,7 +308,7 @@ FIELD_TYPE_MAP = {
     'character varying':        'text',
     'date':                     'date',
     'USER-DEFINED':             'geometry',
-    'timestamp with time zone': 'timestamp',
+    'timestamp with time zone': 'timestamptz',
     'timestamp without time zone': 'timestamp',
     'boolean':                  'boolean',
     'uuid':                     'uuid',
@@ -468,6 +471,12 @@ class PostgisTable(object):
                 val = '''TIMESTAMP '{}' '''.format(val)
             else:
                 val = val
+        elif type_ == 'timestamptz':
+            val = str(val)
+            if not val or val == 'None':
+                val = 'NULL'
+            elif 'timestamptz' not in str(val).lower():
+                val = '''TIMESTAMPTZ '{}' '''.format(val)
         elif type_ == 'boolean':
             val = val if val else 'NULL'
         elif type_ == 'money':
