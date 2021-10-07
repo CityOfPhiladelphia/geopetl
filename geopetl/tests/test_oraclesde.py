@@ -176,7 +176,7 @@ def test_assert_data_2(csv_dir, oraclesde_db, table_name, db_data,csv_data):
         i=i+1
 
 
-def test_assert_timestamp(csv_dir, oraclesde_db, table_name, csv_data, db_data):
+def test_assert_timestamp(csv_data, db_data):
     key = 'timestamp'
     csv_col = csv_data[key]
     # get oracle data
@@ -185,7 +185,7 @@ def test_assert_timestamp(csv_dir, oraclesde_db, table_name, csv_data, db_data):
          assert db_col[i] == csv_col[i]
 
 
-def test_assert_numericfield(csv_dir, oraclesde_db, table_name, csv_data, db_data):
+def test_assert_numericfield(csv_data, db_data):
     key = 'numericfield'
     csv_col = csv_data[key]
     # get oracle data
@@ -193,7 +193,7 @@ def test_assert_numericfield(csv_dir, oraclesde_db, table_name, csv_data, db_dat
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
 
-def test_assert_datefield(csv_dir, oraclesde_db, table_name, csv_data, db_data):
+def test_assert_datefield(csv_data, db_data):
     key = 'datefield'
     csv_col = csv_data[key]
     # get oracle data
@@ -201,7 +201,7 @@ def test_assert_datefield(csv_dir, oraclesde_db, table_name, csv_data, db_data):
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
 
-def test_assert_shape(csv_dir, oraclesde_db, table_name, csv_data, db_data):
+def test_assert_shape(csv_data, db_data):
     key = 'shape'
     csv_col = csv_data[key]
     # get oracle data
@@ -212,7 +212,7 @@ def test_assert_shape(csv_dir, oraclesde_db, table_name, csv_data, db_data):
         assert db_val == csv_val
 
 
-def test_assert_textfield(csv_dir, oraclesde_db, table_name, csv_data, db_data):
+def test_assert_textfield(csv_data, db_data):
     key = 'textfield'
     csv_col = csv_data[key]
     # get oracle data
@@ -220,7 +220,7 @@ def test_assert_textfield(csv_dir, oraclesde_db, table_name, csv_data, db_data):
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
 
-def test_assert_timezone(csv_dir, oraclesde_db, table_name, csv_data, db_data):
+def test_assert_timezone(csv_data, db_data):
     key = 'timezone'
     csv_col = csv_data[key]
     # get oracle data
