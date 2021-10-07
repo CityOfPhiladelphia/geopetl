@@ -329,7 +329,7 @@ class OracleSdeTable(object):
         self.geom_field = self._get_geom_field()
         self.geom_type = self._get_geom_type()
         self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
-
+        self.timezone_fields = self._timezone_fields()
         # handle srid
         table_srid = self._get_srid()
         if table_srid and srid and table_srid != srid:
@@ -648,6 +648,14 @@ class OracleSdeTable(object):
             return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then EMPTY_CLOB() else SDE.ST_AsText({}) end AS {}" \
                 .format(geom_field_t, geom_field_t, geom_field)
 
+    #returns a list of the time zone aware field names in a table
+    def _timezone_fields(self):
+        _tz_list = []
+        for key, value in self.metadata.items():
+            if value.get('type') == 'timestamp with time zone':
+                _tz_list.append(key)
+        return _tz_list
+
     @property
     def _name_with_schema(self):
         """Returns the table name prepended with the schema name."""
@@ -702,20 +710,15 @@ class OracleSdeTable(object):
                 if ' ' in val and ':' in splitval[1] and 'T' not in val:
                     val =splitval[0] + 'T' + splitval[1] 
             if isinstance(val, datetime):
-                # val = val.isoformat()
-                # Force microsecond output
-                val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
+                val = val.isoformat()
         elif type_ == 'nclob':
             pass
         elif type_ == 'timestamp with time zone':
             if isinstance(val, datetime):
                 val = val.isoformat()
-                # Force microsecond output
-                val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
             elif isinstance(val, str):
                 val=dt_parser().parse(val)
                 val = val.isoformat()
-                #val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
 
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
             # var = self._c.var(cx_Oracle.NCLOB)
@@ -924,8 +927,7 @@ class OracleSdeTable(object):
                 # Insert an ISO-8601 timestring
                 placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
             elif type_ == 'timestamp with time zone':
-#                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH')'''.format(field))
-                placeholders.append("TO_TIMESTAMP_TZ(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
+                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH:TZM')'''.format(field))
             else:
                 placeholders.append(':' + field)
 
@@ -1047,6 +1049,11 @@ class OracleSdeQuery(SpatialQuery):
         if self.geom_with_srid and self.geom_field and self.srid:
             db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
 
+        if len(self.table.timezone_fields) > 0:
+            print(1052)
+            db_view = db_view.convert([s.upper() for s in self.table.timezone_fields],
+                                      lambda timezone_field: dt_parser().parse(timezone_field))
+        print(1055)
         # lowercase headers
         headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in headers])
@@ -1068,7 +1075,8 @@ class OracleSdeQuery(SpatialQuery):
         if fields is None:
             # default to non geom fields
             fields = self.table.non_geom_fields
-        fields = [_quote(field.upper()) for field in fields]
+        fields = ['''to_char("{f}", 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {f} '''.format(
+            f=field.upper()) if field in self.table.timezone_fields else _quote(field.upper()) for field in fields]
         # if still no fields, try select *: TODO: revisit
         if not fields:
             fields.append('{}.*'.format(self.table._name_with_schema_p))
