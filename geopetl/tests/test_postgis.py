@@ -60,7 +60,18 @@ def create_test_tables(postgis, table_name, csv_dir, column_definition):
     # write geopetl table to postgis
     rows.topostgis(postgis.dbo, table_name, column_definition_json=column_definition, from_srid=2272)
 
+@pytest.fixture
+def csv_data(csv_dir):
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
+    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
+    csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
+    return csv_data
 
+
+@pytest.fixture
+def db_data(postgis, table_name):
+    db_col = etl.frompostgis(dbo=postgis.dbo,table_name=table_name)
+    return db_col
 
 ######################################   TESTS   ####################################################################
 
@@ -88,13 +99,7 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
 
 
 # compare csv data with postgres data using psycopg2
-def test_assert_data(csv_dir, postgis, table_name, schema):
-    # read staging data from csv
-    csv_data = etl.fromcsv(csv_dir).convert(['objectid', 'numericfield'], int)
-    csv_data = etl.convert(csv_data, ['timestamp', 'datefield','timezone'],lambda row: dt_parser.parse(row))
-    csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
-    #csv_data = etl.convert(csv_data, 'timezone', lambda row: dt_parser.parse(row))
-
+def test_assert_data(csv_dir, postgis, table_name, csv_data):
     # list of column names
     keys = csv_data[0]
 
@@ -118,20 +123,12 @@ def test_assert_data(csv_dir, postgis, table_name, schema):
                 csv_geom = remove_whitespace(str(csv_dict.get(key)))
                 assert csv_geom == pg_geom
             else:
-                # a = csv_dict.get(key)
-                # b = pg_dict.get(key)
-                # print('a ',a)
-                # print('b ',b)
                 assert csv_dict.get(key) == pg_dict.get(key)
         i=i+1
 
 
 #compare csv data with postgres data using geopetl
-def test_assert_data_2(csv_dir, postgis, table_name):
-    # read staging data from csv using geopetl
-    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
-    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
-    csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
+def test_assert_data_2(csv_dir, postgis, table_name, csv_data):
     # list of column names
     keys = csv_data[0]
 
@@ -144,7 +141,6 @@ def test_assert_data_2(csv_dir, postgis, table_name):
         # create dictionary for each row of data using same set of keys
         etl_dict = dict(zip(db_data[0], row))       # dictionary from etl data
         csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
-
         # iterate through each keys
         for key in keys:
             # assert shape field
@@ -154,10 +150,57 @@ def test_assert_data_2(csv_dir, postgis, table_name):
                 assert csv_geom == pg_geom
             # compare values from each key
             else:
-                # a = csv_dict.get(key)
-                # b = etl_dict.get(key)
-                # print('a ',a)
-                # print('b ',b)
                 assert csv_dict.get(key) == etl_dict.get(key)
         i = i+1
 
+def test_assert_timestamp(csv_data, db_data):
+    key = 'timestamp'
+    csv_col = csv_data[key]
+    # get oracle data
+    db_col = db_data[key]
+    for i in range(len(db_col)):
+         assert db_col[i] == csv_col[i]
+
+
+def test_assert_numericfield(csv_data, db_data):
+    key = 'numericfield'
+    csv_col = csv_data[key]
+    # get oracle data
+    db_col = db_data[key]
+    for i in range(len(db_col)):
+         assert db_col[i] == csv_col[i]
+
+def test_assert_datefield(csv_data, db_data):
+    key = 'datefield'
+    csv_col = csv_data[key]
+    # get oracle data
+    db_col = db_data[key]
+    for i in range(len(db_col)):
+         assert db_col[i] == csv_col[i]
+
+def test_assert_shape(csv_data, db_data):
+    key = 'shape'
+    csv_col = csv_data[key]
+    # get oracle data
+    db_col = db_data[key]
+    for i in range(len(db_col)):
+        db_val = remove_whitespace(str(db_col[i]))
+        csv_val = remove_whitespace(str(csv_col[i]))
+        assert db_val == csv_val
+
+
+def test_assert_textfield(csv_data, db_data):
+    key = 'textfield'
+    csv_col = csv_data[key]
+    # get oracle data
+    db_col = db_data[key]
+    for i in range(len(db_col)):
+         assert db_col[i] == csv_col[i]
+
+def test_assert_timezone(csv_data, db_data):
+    key = 'timezone'
+    csv_col = csv_data[key]
+    # get oracle data
+    db_col = db_data[key]
+    for i in range(len(db_col)):
+         assert db_col[i] == csv_col[i]
