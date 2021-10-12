@@ -15,7 +15,6 @@ def remove_whitespace(stringval):
     geom_type = re.findall("[A-Z]{1,12}", shapestring)[0]
     coordinates = re.findall("\d+\.\d+", shapestring)
     coordinates= [str(float(coords))for coords in coordinates]
-
     if geom_type == 'point' or geom_type=="POINT":
         geom = "{type}({x})".format(type=geom_type, x=" ".join(coordinates))
     elif geom_type == 'polygon' or geom_type=="POLYGON":
@@ -75,6 +74,12 @@ def db_data(oraclesde_db, table_name):
     db_col = etl.fromoraclesde(dbo=oraclesde_db.dbo,table_name=table_name)
     return db_col
 
+@pytest.fixture
+def create_test_table_noid(csv_dir, oraclesde_db, table_name):
+    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
+    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
+    csv_data = csv_data.cutout('objectid')
+    csv_data.tooraclesde(oraclesde_db.dbo, table_name)
 
 ######################################   TESTS   ####################################################################
 
@@ -150,7 +155,7 @@ def test_assert_data(csv_dir, oraclesde_db, table_name, csv_data):
 
 
 
-# # compare csv data with postgres data using geopetl
+# # compare csv data with oracle data using geopetl
 def test_assert_data_2(csv_dir, oraclesde_db, table_name, db_data,csv_data):
     # list of column names
     keys = csv_data[0]
@@ -163,9 +168,7 @@ def test_assert_data_2(csv_dir, oraclesde_db, table_name, db_data,csv_data):
         oracle_dict = dict(zip(db_data[0], row))              # dictionary from postgis data
 
         for key in keys:
-            if key == 'objectid':
-                continue
-            elif key == 'shape':
+            if key == 'shape':
                 pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
@@ -227,3 +230,28 @@ def test_assert_timezone(csv_data, db_data):
     db_col = db_data[key]
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
+
+# # compare csv data with oracle data using geopetl
+def test_assert_data_no_id(csv_dir, oraclesde_db, table_name, create_test_table_noid,csv_data, db_data):
+    # list of column names
+    keys = csv_data[0]
+
+    i=1
+    # iterate through each row of data
+    for row in db_data[1:]:
+        # create dictionary for each row of data using same set of keys
+        csv_dict = dict(zip(keys, csv_data[i]))         # dictionary from csv data
+        oracle_dict = dict(zip(db_data[0], row))              # dictionary from postgis data
+
+        for key in keys:
+            if key == 'objectid':
+                continue
+            elif key == 'shape':
+                pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
+                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                assert csv_geom == pg_geom
+            else:
+                val1 = oracle_dict.get(key)
+                val2 = csv_dict.get(key)
+                assert val1 == val2
+        i=i+1
