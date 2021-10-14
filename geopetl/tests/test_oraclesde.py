@@ -76,9 +76,7 @@ def db_data(oraclesde_db, table_name):
 
 @pytest.fixture
 def create_test_table_noid(csv_dir, oraclesde_db, table_name):
-    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
-    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
-    csv_data = csv_data.cutout('objectid')
+    csv_data = etl.fromcsv(csv_dir).cutout('objectid')
     csv_data.tooraclesde(oraclesde_db.dbo, table_name)
 
 ######################################   TESTS   ####################################################################
@@ -232,7 +230,7 @@ def test_assert_timezone(csv_data, db_data):
          assert db_col[i] == csv_col[i]
 
 # # compare csv data with oracle data using geopetl
-def test_assert_data_no_id(csv_dir, oraclesde_db, table_name, create_test_table_noid,csv_data, db_data):
+def test_assert_data_no_id(create_test_table_noid,csv_data, db_data):
     # list of column names
     keys = csv_data[0]
 
