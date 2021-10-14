@@ -85,6 +85,13 @@ def db_data(postgis, table_name):
     #db_data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name,fields=['textfield','datefield','timestamp','numericfield','shape','timezone'])
     return db_col
 
+@pytest.fixture
+def create_test_table_noid(csv_dir, postgis, table_name,column_definition):
+    # csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
+    # csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
+    csv_data = etl.fromcsv(csv_dir).cutout('objectid')
+    csv_data.topostgis(postgis.dbo, table_name, column_definition_json=column_definition, from_srid=2272)
+
 ######################################   TESTS   ####################################################################
 
 # compare number of rows
@@ -225,4 +232,28 @@ def test_assert_timezone(csv_data, db_data):
     db_col = db_data[key]
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
+
+def test_assert_data_no_id(csv_dir, create_test_table_noid,csv_data, db_data):
+    # list of column names
+    keys = csv_data[0]
+
+    i=1
+    # iterate through each row of data
+    for row in db_data[1:]:
+        # create dictionary for each row of data using same set of keys
+        csv_dict = dict(zip(keys, csv_data[i]))         # dictionary from csv data
+        oracle_dict = dict(zip(db_data[0], row))              # dictionary from postgis data
+
+        for key in keys:
+            if key == 'objectid':
+                continue
+            elif key == 'shape':
+                pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
+                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                assert csv_geom == pg_geom
+            else:
+                val1 = oracle_dict.get(key)
+                val2 = csv_dict.get(key)
+                assert val1 == val2
+        i=i+1
 
