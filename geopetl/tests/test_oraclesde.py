@@ -61,7 +61,7 @@ def csv_data(csv_dir):
     csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
     return csv_data
 
-# write csv staging data to test table
+# write csv staging data to test table using geopetl
 @pytest.fixture
 def create_test_tables(oraclesde_db, table_name, csv_dir):
     # populate a new geopetl table object with staging data from csv file
@@ -69,6 +69,7 @@ def create_test_tables(oraclesde_db, table_name, csv_dir):
     # write geopetl table to postgis
     rows.tooraclesde(oraclesde_db.dbo, table_name)
 
+# fetch data from database using geopetl
 @pytest.fixture
 def db_data(oraclesde_db, table_name):
     db_col = etl.fromoraclesde(dbo=oraclesde_db.dbo,table_name=table_name)
@@ -114,17 +115,14 @@ def test_assert_data(csv_dir, oraclesde_db, table_name, csv_data):
     csv_header = csv_data[0]
 
     # read data using oracle_cx
-    cur = oraclesde_db.dbo.cursor()
-    cur.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'"
-                " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
-                " NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM'")
-    cur.execute(
+    cursor = oraclesde_db.dbo.cursor()
+    cursor.execute(
         '''select objectid,textfield,numericfield,timestamp,datefield,
          to_char(timezone, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as timezone,
          sde.st_astext(shape) as shape from ''' + table_name)
     # list of csv column names
-    db_header = [column[0] for column in cur.description]
-    rows = cur.fetchall()
+    db_header = [column[0] for column in cursor.description]
+    rows = cursor.fetchall()
 
     i = 1
     # iterate through each row of data
