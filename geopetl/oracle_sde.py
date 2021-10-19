@@ -265,6 +265,12 @@ class OracleSdeDatabase(object):
 # TABLE
 ################################################################################
 
+FIELD_FORMAT = {
+    'DATE_FORMAT': 'YYYY-MM-DD HH24:MI:SS',
+    "TIMESTAMP_FORMAT": 'YYYY-MM-DD HH24:MI:SS.FF',
+    "TIMESTAMP_TZ_FORMAT": 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'
+}
+
 FIELD_TYPE_MAP = {
     # num
     'NUMBER':       'num',
@@ -708,7 +714,9 @@ class OracleSdeTable(object):
             if isinstance(val, str):
                 splitval = val.split(' ')
                 if ' ' in val and ':' in splitval[1] and 'T' not in val:
-                    val =splitval[0] + 'T' + splitval[1] 
+                    val =splitval[0] + 'T' + splitval[1]
+                val=dt_parser().parse(val)
+                val = val.strftime("%Y-%m-%d %H:%M:%S")
             if isinstance(val, datetime):
                 val = val.isoformat()
         elif type_ == 'nclob':
@@ -923,9 +931,9 @@ class OracleSdeTable(object):
                 geom_placeholder = 'SDE.ST_Geometry(:{}, {})'\
                                         .format(field, self.srid)
                 placeholders.append(geom_placeholder)
-            elif type_ == 'date':
-                # Insert an ISO-8601 timestring
-                placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
+            # elif type_ == 'date':
+            #     # Insert an ISO-8601 timestring
+            #     #placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
             elif type_ == 'timestamp with time zone':
                 placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH:TZM')'''.format(field))
             else:
@@ -1050,10 +1058,8 @@ class OracleSdeQuery(SpatialQuery):
             db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
 
         if len(self.table.timezone_fields) > 0:
-            print(1052)
             db_view = db_view.convert([s.upper() for s in self.table.timezone_fields],
                                       lambda timezone_field: dt_parser().parse(timezone_field))
-        print(1055)
         # lowercase headers
         headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in headers])
