@@ -34,7 +34,7 @@ jobs:
           password: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
 
       - name: Build and bring up the Docker image using docker-compose
-        run:|
+        run: |
           echo "logging in ecr"
           docker ps -a
           echo "docker all containers in ECR"
