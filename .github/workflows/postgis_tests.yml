@@ -26,8 +26,7 @@ jobs:
   login:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Login to ECR
+      - name: Login to ECR
         uses: docker/login-action@v1
         with:
           registry: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v3
@@ -40,7 +39,7 @@ jobs:
           echo "docker all containers in ECR"
           docker ps -a
           pwd
-          docker-compose up -f docker-compose.yml --build --force-recreate --abort-on-container-exit --exit-code-from geopetl
+          docker-compose up -f docker-compose.yml --build --force-recreate --log-level DEBUG --abort-on-container-exit --exit-code-from geopetl
           echo "ran docker compose command."
         env:
           POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
