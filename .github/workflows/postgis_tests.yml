@@ -40,7 +40,7 @@ jobs:
           echo "docker all containers in ECR"
           docker ps -a
           pwd
-          docker-compose -f docker-compose.yml up --build -d
+          docker-compose up -f docker-compose.yml --build --abort-on-container-exit --exit-code-from geopetl
           echo "ran docker compose command."
         env:
           POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
