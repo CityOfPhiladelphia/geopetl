@@ -37,11 +37,9 @@ jobs:
       - name: Build and bring up the Docker image using docker-compose
         run: |
           echo "logging in ecr"
+          echo "docker all containers in ECR"
           docker ps -a
           pwd
-          cd ..
-          pwd
-          echo "docker all containers in ECR"
           docker-compose -f docker-compose.yml up --build -d
           echo "ran docker compose command."
         env:
