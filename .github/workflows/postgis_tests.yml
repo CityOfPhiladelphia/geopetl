@@ -16,9 +16,10 @@ on:
       - 'setup.py'
       # changes to postgis-specific docker stuff
       - 'docker-compose.yml'
-      - 'postgis_Dockerfile'
+      - 'geopetl_Dockerfile'
       # changes to the docker entrypoint.sh script that runs our pytest commands
       - 'scripts/entrypoint.sh'
+      - '.github/workflows/postgis_tests.yml'
 
 
 jobs:
