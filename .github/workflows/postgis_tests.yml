@@ -15,7 +15,7 @@ on:
       # changes to the geopetl setup.py
       - 'setup.py'
       # changes to postgis-specific docker stuff
-      - 'docker-compose.yml'
+      - 'postgis-docker-compose.yml'
       - 'geopetl_Dockerfile'
       # changes to the docker entrypoint.sh script that runs our pytest commands
       - 'scripts/entrypoint.sh'
