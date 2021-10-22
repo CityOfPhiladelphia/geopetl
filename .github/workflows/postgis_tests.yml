@@ -23,7 +23,7 @@ on:
 
 
 jobs:
-  login:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Login to ECR
@@ -39,10 +39,13 @@ jobs:
           echo "docker all containers in ECR"
           docker ps -a
           pwd
-          docker-compose up -f docker-compose.yml --build --force-recreate --log-level DEBUG --abort-on-container-exit --exit-code-from geopetl
+          docker-compose -f postgis-docker-compose.yml up --build -d
           echo "ran docker compose command."
         env:
           POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
+
+      - name: Run pytests
+        run: docker exec geopetl /bin/bash -c "/usr/local/bin/postgis_tests.sh" 
 
 # TODO: push image to ECR?
 #    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
