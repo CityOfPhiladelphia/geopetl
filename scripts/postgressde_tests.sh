@@ -15,10 +15,12 @@ export SDE_DB
 export SDE_HOST
 export SDE_USER
 
-echo SDE_HOST
-echo SDE_DB
-echo SDE_USER
-echo POST
+echo $SDE_HOST
+echo $SDE_DB
+echo $SDE_USER
+echo $PGPASSWORD
+echo $POSTGRES_PASSWORD
+
 pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER  -d $SDE_DB &>/dev/null; echo $? )
 
 max_retry=20
