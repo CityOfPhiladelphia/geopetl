@@ -6,11 +6,19 @@ export LANG=C.UTF-8
 
 #psql will read the password from this variable automatically:
 export PGPASSWORD=$POSTGRES_PASSWORD
+
 # Since we're doing health checks via a subshell-made variable, we'll need to export
 # our variables so they're accessible.
 
 export POSTGRES_PASSWORD
+export SDE_DB
+export SDE_HOST
+export SDE_USER
 
+echo SDE_HOST
+echo SDE_DB
+echo SDE_USER
+echo POST
 pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER  -d $SDE_DB &>/dev/null; echo $? )
 
 max_retry=20
