@@ -204,3 +204,27 @@ def test_assert_timezone(csv_data, db_data):
     db_col = db_data[key]
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
+
+# assert DB data with itself
+def test_with_types(create_test_tables,db_data):
+    # read data from DB
+    data1 = db_data
+    data2 = db_data
+    i = 1
+    # iterate through each row of DB data
+    for row in db_data[1:]:
+        # create dictionary with header and each row of data
+        db_dict1 = dict(zip(data1[0], data1[i]))  # dictionary from db data
+        db_dict2 = dict(zip(data2[0], data2[i]))  # dictionary from db data
+
+        # iterate through each key in header row
+        for key in db_data[0]:
+            # assert shape field
+            if key == 'shape':
+                geom1 = remove_whitespace(str(db_dict1.get(key)))
+                geom2 = remove_whitespace(str(db_dict2.get(key)))
+                assert geom1 == geom2
+            # assert values from each key
+            else:
+                assert db_dict1.get(key) == db_dict2.get(key)
+        i = i + 1
