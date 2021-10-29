@@ -228,10 +228,10 @@ def test_assert_timezone(csv_data, db_data):
          assert db_col[i] == csv_col[i]
 
 
-def test_with_types(create_test_tables,csv_dir, db_data,table_name): #
-    # read staging data from csv
-    data1 =db_data
-    data2 =db_data
+def test_with_types(create_test_tables, db_data):
+    # read data from db
+    data1 = db_data
+    data2 = db_data
     i = 1
     # iterate through each row of data
     for row in db_data[1:]:
@@ -239,38 +239,37 @@ def test_with_types(create_test_tables,csv_dir, db_data,table_name): #
         db_dict1 = dict(zip(data1[0], data1[i]))  # dictionary from etl data
         db_dict2 = dict(zip(data2[0], data2[i]))  # dictionary from csv data
 
-        # iterate through each keys
-        for key in db_dict1:
+        # iterate through each row of DB data
+        for key in db_data[0]:
             # assert shape field
             if key == 'shape':
                 db_geom1 = remove_whitespace(str(db_dict1.get(key)))
                 db_geom2 = remove_whitespace(str(db_dict2.get(key)))
                 assert db_geom1 == db_geom2
-            # compare values from each key
+            # assert values from each key
             else:
                 assert db_dict1.get(key) == db_dict2.get(key)
         i = i + 1
 
 # # compare csv data with oracle data using geopetl
 def test_assert_data_no_id(create_test_table_noid,csv_data, db_data):
-    # list of column names
-    keys = csv_data[0]
+
     i=1
     # iterate through each row of data
     for row in db_data[1:]:
-        # create dictionary for each row of data using same set of keys
-        csv_dict = dict(zip(keys, csv_data[i]))         # dictionary from csv data
-        oracle_dict = dict(zip(db_data[0], row))              # dictionary from postgis data
+        # create dictionary with header and each row of data
+        csv_dict = dict(zip(csv_data[0], csv_data[i]))          # dictionary from csv data
+        oracle_dict = dict(zip(db_data[0], row))                # dictionary from db data
 
-        for key in keys:
-            if key == 'objectid' and 'objectid' in keys and 'objectid' in db_data[0]:
+        for key in db_data[0]:
+            # assert objectid is not null
+            if key == 'objectid' and 'objectid' in csv_data[0] and 'objectid' in db_data[0]:
                 assert (oracle_dict.get('objectid') is not None)
             elif key == 'shape':
                 pg_geom = remove_whitespace(str(oracle_dict.get('shape')))
                 csv_geom = remove_whitespace(str(csv_dict.get('shape')))
                 assert csv_geom == pg_geom
+            # assert values from each key
             else:
-                val1 = oracle_dict.get(key)
-                val2 = csv_dict.get(key)
-                assert val1 == val2
+                assert oracle_dict.get(key) == csv_dict.get(key)
         i=i+1
