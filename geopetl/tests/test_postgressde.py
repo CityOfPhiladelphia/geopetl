@@ -255,24 +255,26 @@ def test_assert_data_no_id(csv_dir, create_test_table_noid,csv_data, db_data):
                 assert oracle_dict.get(key) == csv_dict.get(key)
         i=i+1
 
-def test_with_types(create_test_tables,csv_dir, db_data,table_name): #
-    # read staging data from csv
-    data1 =db_data
-    data2 =db_data
+
+# assert DB data with itself
+def test_with_types(create_test_tables, db_data):
+    # read data from db
+    data1 = db_data
+    data2 = db_data
     i = 1
-    # iterate through each row of data
+    # iterate through each row of DB data
     for row in db_data[1:]:
-        # create dictionary for each row of data using same set of keys
+        # create dictionary with header and each row of data
         db_dict1 = dict(zip(data1[0], data1[i]))
         db_dict2 = dict(zip(data2[0], data2[i]))
         # iterate through each keys
-        for key in db_dict1:
+        for key in db_data[0]:
             # assert shape field
             if key == 'shape':
                 geom1 = remove_whitespace(str(db_dict1.get(key)))
                 geom2 = remove_whitespace(str(db_dict2.get(key)))
                 assert geom1 == geom2
-            # compare values from each key
+            # assert values from each key
             else:
                 assert db_dict1.get(key) == db_dict2.get(key)
         i = i + 1
