@@ -718,7 +718,7 @@ class OracleSdeTable(object):
                 val=dt_parser().parse(val)
                 val = val.strftime("%Y-%m-%d %H:%M:%S")
             if isinstance(val, datetime):
-                val = val.isoformat()
+                val = val.strftime("%Y-%m-%d %H:%M:%S")
         elif type_ == 'nclob':
             pass
         elif type_ == 'timestamp with time zone':
