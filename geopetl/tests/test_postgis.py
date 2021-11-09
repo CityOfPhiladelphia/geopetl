@@ -206,12 +206,17 @@ def test_assert_timezone(csv_data, db_data):
          assert db_col[i] == csv_col[i]
 
 # assert DB data with itself
-def test_with_types(create_test_tables,db_data):
+def test_with_types(create_test_tables,db_data, table_name, postgis,column_definition):
     # read data from DB
     data1 = db_data
-    data2 = db_data
+
+    #load to second test table
+    etl.topostgis(db_data, postgis.dbo, table_name+'2', from_srid=2272, column_definition_json=column_definition)
+    #extract from second test table
+    data2 = etl.frompostgis(dbo=postgis.dbo,table_name=table_name+'2')
+
     i = 1
-    # iterate through each row of DB data
+    # iterate through each row of DB data and assert data from the 2 test tables
     for row in db_data[1:]:
         # create dictionary with header and each row of data
         db_dict1 = dict(zip(data1[0], data1[i]))  # dictionary from db data
