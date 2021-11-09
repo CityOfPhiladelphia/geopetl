@@ -228,10 +228,14 @@ def test_assert_timezone(csv_data, db_data):
          assert db_col[i] == csv_col[i]
 
 
-def test_with_types(create_test_tables, db_data):
-    # read data from db
+def test_with_types(db_data,oraclesde_db, table_name):
     data1 = db_data
-    data2 = db_data
+
+    # load to second test table
+    db_data.tooraclesde(oraclesde_db.dbo, table_name+'2')
+    # extract from second test table
+    data2 = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name=table_name + '2')
+
     i = 1
     # iterate through each row of data
     for row in db_data[1:]:
