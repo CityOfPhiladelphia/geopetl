@@ -257,10 +257,14 @@ def test_assert_data_no_id(csv_dir, create_test_table_noid,csv_data, db_data):
 
 
 # assert DB data with itself
-def test_with_types(create_test_tables, db_data):
+def test_with_types(create_test_tables, db_data,table_name, postgis, column_definition):
     # read data from db
     data1 = db_data
-    data2 = db_data
+    # data2 = db_data
+    #load to second test table
+    etl.topostgis(db_data, postgis.dbo, table_name+'2', column_definition_json=column_definition,  from_srid=2272)
+    #extract from second test table
+    data2 = etl.frompostgis(dbo=postgis.dbo,table_name=table_name+'2')
     i = 1
     # iterate through each row of DB data
     for row in db_data[1:]:
@@ -270,6 +274,8 @@ def test_with_types(create_test_tables, db_data):
         # iterate through each keys
         for key in db_data[0]:
             # assert shape field
+            if key == 'objectid':
+                continue
             if key == 'shape':
                 geom1 = remove_whitespace(str(db_dict1.get(key)))
                 geom2 = remove_whitespace(str(db_dict2.get(key)))
