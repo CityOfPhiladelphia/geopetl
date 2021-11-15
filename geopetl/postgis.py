@@ -81,8 +81,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     # do we need to create the table?
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
-#    create = '.'.join([table.schema, table.name]) not in db.tables
-    create = table_name not in db.tables
+    create = table.name_with_schema not in db.tables
     # Create table if it doesn't exist
     if create:
         # Disable autocreate new postgres table
@@ -91,11 +90,11 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
             raise
         # create new postgis table
         else:
-            print('Autocreating PostGIS table ')
+            print('Autocreating PostGIS table')
             db.create_table(column_definition_json, table)
-
     if not create:
         table.truncate()
+
     table.write(rows, from_srid=from_srid)
 
 etl.topostgis = topostgis
@@ -157,7 +156,6 @@ class PostgisDatabase(object):
             # otherwise assume it's a postgres connection string
             except ValueError:
                 dbo = psycopg2.connect(dbo)
-
         cursor = dbo.cursor()
         # Check if DB is sde registered
         try:
@@ -528,7 +526,6 @@ class PostgisTable(object):
             - calls to DB functions like ST_GeomFromText end up getting quoted;
               not sure how to disable this.
         """
-
         # Get fields from the row because some fields from self.fields may be
         # optional, such as autoincrementing integers.
         # raise
@@ -540,7 +537,6 @@ class PostgisTable(object):
 
         # convert rows to records (hybrid objects that can behave like dicts)
         rows = etl.records(rows)
-
         # Get geom metadata
         if geom_field:
             srid = from_srid or self.get_srid()
@@ -699,7 +695,6 @@ class PostgisQuery(Table):
 
         # handle geom
         geom_field = self.table.geom_field
-        #print('fields before wkt ', fields)
         # replace geom field with wkt in fields list
         if geom_field and self.return_geom:
             wkt_getter = self.table.wkt_getter(geom_field, self.to_srid)
