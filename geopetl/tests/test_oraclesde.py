@@ -41,9 +41,9 @@ def csv_dir():
     return csv_dir
 
 
-# return table name for Oracle table based on json file name
+# return table name for Oracle table based on csv file name
 @pytest.fixture
-def table_name(csv_dir, schema):
+def table_name_no_schema(csv_dir, schema):
     head_tail = os.path.split(csv_dir)
     # define which table based on schema file name
     table = ''
@@ -52,8 +52,13 @@ def table_name(csv_dir, schema):
     elif 'polygon' in head_tail[1]:
         table = 'polygon'
     # define table name
-    table_name = schema + '.' + table + '_table'
+    table_name = table + '_table'
     return table_name
+
+@pytest.fixture
+def table_name_with_schema(table_name_no_schema, schema):
+    return'.'.join([schema,table_name_no_schema])
+
 
 @pytest.fixture
 def csv_data(csv_dir):
@@ -63,27 +68,27 @@ def csv_data(csv_dir):
 
 # write csv staging data to test table using geopetl
 @pytest.fixture
-def create_test_tables(oraclesde_db, table_name, csv_dir):
+def create_test_tables(oraclesde_db, table_name_with_schema, csv_dir):
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(csv_dir)
     # write geopetl table to postgis
-    rows.tooraclesde(oraclesde_db.dbo, table_name)
+    rows.tooraclesde(oraclesde_db.dbo, table_name_with_schema)
 
 # fetch data from database using geopetl
 @pytest.fixture
-def db_data(oraclesde_db, table_name):
-    db_col = etl.fromoraclesde(dbo=oraclesde_db.dbo,table_name=table_name)
+def db_data(oraclesde_db, table_name_with_schema):
+    db_col = etl.fromoraclesde(dbo=oraclesde_db.dbo,table_name=table_name_with_schema)
     return db_col
 
 @pytest.fixture
-def create_test_table_noid(csv_dir, oraclesde_db, table_name):
+def create_test_table_noid(csv_dir, oraclesde_db, table_name_with_schema):
     csv_data = etl.fromcsv(csv_dir).cutout('objectid')
-    csv_data.tooraclesde(oraclesde_db.dbo, table_name)
+    csv_data.tooraclesde(oraclesde_db.dbo, table_name_with_schema)
 
 ######################################   TESTS   ####################################################################
 
 # read number of rows
-def test_all_rows_written(host, port, service_name,user, pw,csv_dir,table_name, create_test_tables): #
+def test_all_rows_written(host, port, service_name,user, pw,csv_dir,table_name_with_schema, create_test_tables): #
     # read staging data from csv
     with open(csv_dir, newline='') as f:
         reader = csv.reader(f)
@@ -97,7 +102,7 @@ def test_all_rows_written(host, port, service_name,user, pw,csv_dir,table_name, 
     try:
         with connection.cursor() as cursor:
             # execute the insert statement
-            cursor.execute("select * from "+ table_name)
+            cursor.execute("select * from "+ table_name_with_schema)
             result = cursor.fetchall()
     except cx_Oracle.Error as error:
         print('Error occurred')
@@ -110,7 +115,7 @@ def test_all_rows_written(host, port, service_name,user, pw,csv_dir,table_name, 
 
 
 # compare csv data with oracle data using oraclecx
-def test_assert_data(csv_dir, oraclesde_db, table_name, csv_data):
+def test_assert_data(csv_dir, oraclesde_db, table_name_with_schema, csv_data):
     # list of csv column names
     csv_header = csv_data[0]
 
@@ -119,7 +124,7 @@ def test_assert_data(csv_dir, oraclesde_db, table_name, csv_data):
     cursor.execute(
         '''select objectid,textfield,numericfield,timestamp,datefield,
          to_char(timezone, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as timezone,
-         sde.st_astext(shape) as shape from ''' + table_name)
+         sde.st_astext(shape) as shape from ''' + table_name_with_schema)
     # list of csv column names
     db_header = [column[0] for column in cursor.description]
     rows = cursor.fetchall()
@@ -152,7 +157,7 @@ def test_assert_data(csv_dir, oraclesde_db, table_name, csv_data):
 
 
 # # compare csv data with oracle data using geopetl
-def test_assert_data_2(csv_dir, oraclesde_db, table_name, db_data,csv_data):
+def test_assert_data_2(csv_dir, oraclesde_db, db_data,csv_data):
     # list of column names
     keys = csv_data[0]
 
@@ -228,13 +233,13 @@ def test_assert_timezone(csv_data, db_data):
          assert db_col[i] == csv_col[i]
 
 
-def test_with_types(db_data,oraclesde_db, table_name):
+def test_with_types(db_data,oraclesde_db, table_name_with_schema):
     data1 = db_data
 
     # load to second test table
-    db_data.tooraclesde(oraclesde_db.dbo, table_name+'2')
+    db_data.tooraclesde(oraclesde_db.dbo, table_name_with_schema+'2')
     # extract from second test table
-    data2 = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name=table_name + '2')
+    data2 = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name=table_name_with_schema + '2')
 
     i = 1
     # iterate through each row of data
@@ -277,3 +282,29 @@ def test_assert_data_no_id(create_test_table_noid,csv_data, db_data):
             else:
                 assert oracle_dict.get(key) == csv_dict.get(key)
         i=i+1
+
+## assert data by loading and extracting data without providing schema
+def test_without_schema( oraclesde_db, csv_data, table_name_no_schema):
+    etl.tooraclesde(csv_data, oraclesde_db.dbo, table_name_no_schema)
+    data = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name=table_name_no_schema)
+
+    for row in data[0]:
+        # list of column names
+        keys = csv_data[0]
+        i = 1
+        # iterate through each row of data
+        for row in data[1:]:
+            # create dictionary for each row of data using same set of keys
+            etl_dict = dict(zip(data[0], row))          # dictionary from etl data
+            csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
+            # iterate through each keys
+            for key in keys:
+                # assert shape field
+                if key == 'shape':
+                    pg_geom = remove_whitespace(str(etl_dict.get(key)))
+                    csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                    assert csv_geom == pg_geom
+                # compare values from each key
+                else:
+                    assert csv_dict.get(key) == etl_dict.get(key)
+            i = i + 1
