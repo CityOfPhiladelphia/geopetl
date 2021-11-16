@@ -210,7 +210,7 @@ def test_assert_timezone(csv_data, db_data):
          assert db_col[i] == csv_col[i]
 
 # assert DB data with itself
-def test_with_types(create_test_tables,db_data, table_name_with_schema, postgis,column_definition):
+def test_with_types(db_data, table_name_with_schema, postgis,column_definition):
     # read data from DB
     data1 = db_data
 
@@ -238,6 +238,7 @@ def test_with_types(create_test_tables,db_data, table_name_with_schema, postgis,
                 assert db_dict1.get(key) == db_dict2.get(key)
         i = i + 1
 
+# assert data by loading and extracting data without providing schema
 def test_without_schema(db_data, postgis, column_definition,csv_data, table_name_no_schema):
     etl.topostgis(csv_data, postgis.dbo, table_name_no_schema, from_srid=2272, column_definition_json=column_definition)
     data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name_no_schema)
