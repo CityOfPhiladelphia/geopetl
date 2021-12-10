@@ -1,23 +1,14 @@
 import pytest
 import petl as etl
-from geopetl.postgis import PostgisDatabase
+from geopetl.postgis import PostgisDatabase, PostgisTable
 import psycopg2
 import csv
 import os
-import re
 from pytz import timezone
 from dateutil import parser as dt_parser
+from tests_config import remove_whitespace, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name
 
-def remove_whitespace(stringval):
-    shapestring = str(stringval)
-    geom_type = re.findall("[A-Z]{1,12}", shapestring)[0]
-    coordinates = re.findall("\d+\.\d+", shapestring)
-    coordinates= [str(round(float(coords),4))for coords in coordinates]
-    if geom_type == 'point' or geom_type=="POINT":
-        geom = "{type}({x})".format(type=geom_type, x=" ".join(coordinates))
-    elif geom_type == 'polygon' or geom_type=="POLYGON":
-        geom = "{type}(({x}))".format(type=geom_type, x=" ".join(coordinates))
-    return geom
+
 ############################################# FIXTURES ################################################################
 
 # return postgis database object
@@ -39,30 +30,29 @@ def csv_dir():
 
 # return table name for postgis table based on json file name
 @pytest.fixture
-def table_name_no_schema(csv_dir, schema):
+def table_name_no_schema(csv_dir):
     head_tail = os.path.split(csv_dir)
     # define which table based on csv name
-    table = ''
     if 'point' in head_tail[1]:
-        table = 'point'
+        table_name = point_table_name
     elif 'polygon' in head_tail[1]:
-        table = 'polygon'
-    # define table name
-    table_name = table + '_table'
+        table_name = polygon_table_name
+    elif 'line' in head_tail[1]:
+        table_name = line_table_name
     return table_name
 
-@pytest.fixture
-def table_name_with_schema(table_name_no_schema, schema):
-    return'.'.join([schema,table_name_no_schema])
+# @pytest.fixture
+# def table_name_with_schema(table_name_no_schema, schema):
+#     return'.'.join([schema,table_name_no_schema])
 
 
 # create new table and write csv staging data to it
 @pytest.fixture
-def create_test_tables(postgis, table_name_with_schema, csv_dir, column_definition):
+def create_test_tables(postgis, csv_dir, column_definition,schema):
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(csv_dir)
     # write geopetl table to postgis
-    rows.topostgis(postgis.dbo, table_name_with_schema, column_definition_json=column_definition, from_srid=2272)
+    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,point_table_name), column_definition_json=column_definition, from_srid=2272)
 
 @pytest.fixture
 def csv_data(csv_dir):
@@ -73,19 +63,17 @@ def csv_data(csv_dir):
 
 
 @pytest.fixture
-def db_data(postgis, table_name_with_schema):
-    db_col = etl.frompostgis(dbo=postgis.dbo,table_name=table_name_with_schema)
+def db_data(postgis,schema):
+    db_col = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}'.format(schema,point_table_name))
     return db_col
 
 ######################################   TESTS   ####################################################################
 
 # read number of rows
-def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_name_with_schema, schema): #
-    # read staging data from csv
-    with open(csv_dir, newline='') as f:
-        reader = csv.reader(f)
-        csv_data = list(reader)
-    csv_row_count = len(csv_data[1:])
+def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,csv_data,schema):
+
+    csv_row_count = etl.nrows(csv_data)
+    etl.nrows(csv_data)
 
     # connect to postgis DB using psycopg2
     connection = psycopg2.connect(user=user,
@@ -94,7 +82,7 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
                                   database=db)
     cur = connection.cursor()
     # query all data from postgis table
-    cur.execute('Select * from {table}'.format(table= table_name_with_schema))
+    cur.execute('Select * from {table}'.format(table='{}.{}'.format(schema,point_table_name)))
     result = cur.fetchall()
 
     # get number of rows from query
@@ -103,13 +91,12 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,table_n
 
 
 # compare csv data with postgres data using psycopg2
-def test_assert_data(csv_dir, postgis, table_name_with_schema, csv_data):
+def test_assert_data(csv_dir, postgis, csv_data,schema):
     # list of column names
     keys = csv_data[0]
-
     # read data using postgis
     cursor = postgis.dbo.cursor()
-    cursor.execute('select objectid,textfield,timestamp,numericfield, timezone, st_astext(shape) as shape, datefield from ' + table_name_with_schema)
+    cursor.execute('select objectid,textfield,timestamp,numericfield, timezone, st_astext(shape) as shape, datefield from ' + '{}.{}'.format(schema,point_table_name))
     rows = cursor.fetchall()
     header = [column[0] for column in cursor.description]
 
@@ -131,13 +118,14 @@ def test_assert_data(csv_dir, postgis, table_name_with_schema, csv_data):
         i=i+1
 
 
-#compare csv data with postgres data using geopetl
-def test_assert_data_2(csv_dir, postgis, table_name_with_schema, csv_data):
+# #compare csv data with postgres data using geopetl
+def test_assert_data_2(csv_dir, postgis, schema, csv_data):
+    tb = postgis.table('{}.{}'.format(schema, point_table_name))
     # list of column names
     keys = csv_data[0]
 
     # read data from test DB using petl
-    db_data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name_with_schema)
+    db_data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}'.format(schema, point_table_name))
 
     i=1
     # iterate through each row of data
@@ -148,7 +136,7 @@ def test_assert_data_2(csv_dir, postgis, table_name_with_schema, csv_data):
         # iterate through each keys
         for key in keys:
             # assert shape field
-            if key=='shape':
+            if key== tb.geom_field:
                 pg_geom = remove_whitespace(str(etl_dict.get(key)))
                 csv_geom = remove_whitespace(str(csv_dict.get(key)))
                 assert csv_geom == pg_geom
@@ -160,7 +148,6 @@ def test_assert_data_2(csv_dir, postgis, table_name_with_schema, csv_data):
 def test_assert_timestamp(csv_data, db_data):
     key = 'timestamp'
     csv_col = csv_data[key]
-    # get oracle data
     db_col = db_data[key]
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
@@ -169,7 +156,6 @@ def test_assert_timestamp(csv_data, db_data):
 def test_assert_numericfield(csv_data, db_data):
     key = 'numericfield'
     csv_col = csv_data[key]
-    # get oracle data
     db_col = db_data[key]
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
@@ -177,7 +163,6 @@ def test_assert_numericfield(csv_data, db_data):
 def test_assert_datefield(csv_data, db_data):
     key = 'datefield'
     csv_col = csv_data[key]
-    # get oracle data
     db_col = db_data[key]
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
@@ -185,7 +170,6 @@ def test_assert_datefield(csv_data, db_data):
 def test_assert_shape(csv_data, db_data):
     key = 'shape'
     csv_col = csv_data[key]
-    # get oracle data
     db_col = db_data[key]
     for i in range(len(db_col)):
         db_val = remove_whitespace(str(db_col[i]))
@@ -196,7 +180,6 @@ def test_assert_shape(csv_data, db_data):
 def test_assert_textfield(csv_data, db_data):
     key = 'textfield'
     csv_col = csv_data[key]
-    # get oracle data
     db_col = db_data[key]
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
@@ -204,20 +187,19 @@ def test_assert_textfield(csv_data, db_data):
 def test_assert_timezone(csv_data, db_data):
     key = 'timezone'
     csv_col = csv_data[key]
-    # get oracle data
     db_col = db_data[key]
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
 
 # assert DB data with itself
-def test_with_types(db_data, table_name_with_schema, postgis,column_definition):
+def test_with_types(db_data, schema, postgis,column_definition):
+    tb = postgis.table('{}.{}'.format(schema, point_table_name))
     # read data from DB
     data1 = db_data
-
     #load to second test table
-    etl.topostgis(db_data, postgis.dbo, table_name_with_schema+'2', from_srid=2272, column_definition_json=column_definition)
+    etl.topostgis(db_data, postgis.dbo, '{}.{}'.format(schema, point_table_name)+'2', from_srid=2272, column_definition_json=column_definition)
     #extract from second test table
-    data2 = etl.frompostgis(dbo=postgis.dbo,table_name=table_name_with_schema+'2')
+    data2 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}'.format(schema, point_table_name)+'2')
 
     i = 1
     # iterate through each row of DB data and assert data from the 2 test tables
@@ -229,7 +211,7 @@ def test_with_types(db_data, table_name_with_schema, postgis,column_definition):
         # iterate through each key in header row
         for key in db_data[0]:
             # assert shape field
-            if key == 'shape':
+            if key == tb.geom_field:
                 geom1 = remove_whitespace(str(db_dict1.get(key)))
                 geom2 = remove_whitespace(str(db_dict2.get(key)))
                 assert geom1 == geom2
@@ -239,10 +221,38 @@ def test_with_types(db_data, table_name_with_schema, postgis,column_definition):
         i = i + 1
 
 # assert data by loading and extracting data without providing schema
-def test_without_schema(db_data, postgis, column_definition,csv_data, table_name_no_schema):
-    etl.topostgis(csv_data, postgis.dbo, table_name_no_schema, from_srid=2272, column_definition_json=column_definition)
-    data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name_no_schema)
+# def test_without_schema(db_data, postgis, column_definition,csv_data, table_name_no_schema):
+#     etl.topostgis(csv_data, postgis.dbo, table_name_no_schema, from_srid=2272, column_definition_json=column_definition)
+#     data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name_no_schema)
+#
+#     for row in data[0]:
+#         # list of column names
+#         keys = csv_data[0]
+#         i = 1
+#         # iterate through each row of data
+#         for row in data[1:]:
+#             # create dictionary for each row of data using same set of keys
+#             etl_dict = dict(zip(data[0], row))          # dictionary from etl data
+#             csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
+#             # iterate through each keys
+#             for key in keys:
+#                 # assert shape field
+#                 if key == 'shape':
+#                     pg_geom = remove_whitespace(str(etl_dict.get(key)))
+#                     csv_geom = remove_whitespace(str(csv_dict.get(key)))
+#                     assert csv_geom == pg_geom
+#                 # compare values from each key
+#                 else:
+#                     assert csv_dict.get(key) == etl_dict.get(key)
+#             i = i + 1
 
+# write using a string connection to db
+def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition, schema):
+    tb = postgis.table('{}.{}'.format(schema, point_table_name))
+    my_dsn = '''dbname={db} user={user} password={pw} host={host}'''.format(db=db,user=user,pw=pw,host=host)
+    etl.topostgis(csv_data, my_dsn,
+                  '{}.{}'.format(schema, point_table_name), from_srid=2272, column_definition_json=column_definition)
+    data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}'.format(schema, point_table_name))
     for row in data[0]:
         # list of column names
         keys = csv_data[0]
@@ -250,12 +260,12 @@ def test_without_schema(db_data, postgis, column_definition,csv_data, table_name
         # iterate through each row of data
         for row in data[1:]:
             # create dictionary for each row of data using same set of keys
-            etl_dict = dict(zip(data[0], row))          # dictionary from etl data
-            csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
+            etl_dict = dict(zip(data[0], row))  # dictionary from etl data
+            csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
             # iterate through each keys
             for key in keys:
                 # assert shape field
-                if key == 'shape':
+                if key == tb.geom_field:
                     pg_geom = remove_whitespace(str(etl_dict.get(key)))
                     csv_geom = remove_whitespace(str(csv_dict.get(key)))
                     assert csv_geom == pg_geom
@@ -263,3 +273,69 @@ def test_without_schema(db_data, postgis, column_definition,csv_data, table_name
                 else:
                     assert csv_dict.get(key) == etl_dict.get(key)
             i = i + 1
+
+
+#compare csv data with postgres data using geopetl
+def test_line_assertion(csv_dir, postgis, csv_data, schema):
+
+    tb = postgis.table('{}.{}'.format(schema,line_table_name))
+    rows = etl.fromcsv(line_csv_dir)
+    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,line_table_name), from_srid=2272)
+    csv_data = etl.fromcsv(line_csv_dir).convert(['objectid'], int)
+    # list of column names
+    keys = csv_data[0]
+
+    # read data from test DB using petl
+    db_data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}'.format(schema,line_table_name))
+
+    i=1
+    # iterate through each row of data
+    for row in db_data[1:]:
+        # create dictionary for each row of data using same set of keys
+        etl_dict = dict(zip(db_data[0], row))       # dictionary from etl data
+        csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
+        # iterate through each keys
+        for key in keys:
+            # assert shape field
+            if key== tb.geom_field:
+                pg_geom = remove_whitespace(str(etl_dict.get(key)))
+                csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                assert csv_geom == pg_geom
+            # compare values from each key
+            else:
+                assert csv_dict.get(key) == etl_dict.get(key)
+        i = i+1
+
+
+
+#compare csv data with postgres data using geopetl
+def test_polygon_assertion(postgis,schema):
+    # geopetl table object
+    tb = postgis.table('{}.{}'.format(schema,polygon_table_name))
+
+    rows = etl.fromcsv(polygon_csv_dir)
+    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,polygon_table_name), from_srid=2272)
+    csv_data = etl.fromcsv(polygon_csv_dir).convert(['objectid'], int)
+
+    # list of column names
+    keys = csv_data[0]
+    # read data from test DB using petl
+    db_data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}'.format(schema,polygon_table_name))
+    i=1
+
+    # iterate through each row of data
+    for row in db_data[1:]:
+        # create dictionary for each row of data using same set of keys
+        etl_dict = dict(zip(db_data[0], row))       # dictionary from etl data
+        csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
+        # iterate through each keys
+        for key in keys:
+            # assert shape field
+            if key == tb.geom_field:
+                pg_geom = remove_whitespace(str(etl_dict.get(key)))
+                csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                assert csv_geom == pg_geom
+            # compare values from each key
+            else:
+                assert csv_dict.get(key) == etl_dict.get(key)
+        i = i+1
