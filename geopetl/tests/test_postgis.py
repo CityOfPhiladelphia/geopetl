@@ -2,11 +2,8 @@ import pytest
 import petl as etl
 from geopetl.postgis import PostgisDatabase, PostgisTable
 import psycopg2
-import csv
-import os
-from pytz import timezone
 from dateutil import parser as dt_parser
-from tests_config import remove_whitespace, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name
+from tests_config import remove_whitespace, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name, point_csv_dir
 
 
 ############################################# FIXTURES ################################################################
@@ -20,43 +17,17 @@ def postgis(db, user, pw, host):
     postgis_db = PostgisDatabase(dsn)
     return postgis_db
 
-
-# return csv file directory containing staging data
-@pytest.fixture
-def csv_dir():
-    csv_dir = 'geopetl/tests/fixtures_data/staging/point.csv'
-    return csv_dir
-
-
-# return table name for postgis table based on json file name
-@pytest.fixture
-def table_name_no_schema(csv_dir):
-    head_tail = os.path.split(csv_dir)
-    # define which table based on csv name
-    if 'point' in head_tail[1]:
-        table_name = point_table_name
-    elif 'polygon' in head_tail[1]:
-        table_name = polygon_table_name
-    elif 'line' in head_tail[1]:
-        table_name = line_table_name
-    return table_name
-
-# @pytest.fixture
-# def table_name_with_schema(table_name_no_schema, schema):
-#     return'.'.join([schema,table_name_no_schema])
-
-
 # create new table and write csv staging data to it
 @pytest.fixture
-def create_test_tables(postgis, csv_dir, column_definition,schema):
+def create_test_tables(postgis, column_definition,schema):
     # populate a new geopetl table object with staging data from csv file
-    rows = etl.fromcsv(csv_dir)
+    rows = etl.fromcsv(point_csv_dir)
     # write geopetl table to postgis
     rows.topostgis(postgis.dbo, '{}.{}'.format(schema,point_table_name), column_definition_json=column_definition, from_srid=2272)
 
 @pytest.fixture
-def csv_data(csv_dir):
-    csv_data = etl.fromcsv(csv_dir).convert(['objectid','numericfield'], int)
+def csv_data():
+    csv_data = etl.fromcsv(point_csv_dir).convert(['objectid','numericfield'], int)
     csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
     csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
     return csv_data
@@ -70,7 +41,7 @@ def db_data(postgis,schema):
 ######################################   TESTS   ####################################################################
 
 # read number of rows
-def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,csv_data,schema):
+def test_all_rows_written(db, user, host, pw,create_test_tables,csv_data,schema):
 
     csv_row_count = etl.nrows(csv_data)
     etl.nrows(csv_data)
@@ -91,7 +62,7 @@ def test_all_rows_written(db, user, host, pw, csv_dir,create_test_tables,csv_dat
 
 
 # compare csv data with postgres data using psycopg2
-def test_assert_data(csv_dir, postgis, csv_data,schema):
+def test_assert_data(postgis, csv_data,schema):
     # list of column names
     keys = csv_data[0]
     # read data using postgis
@@ -119,7 +90,7 @@ def test_assert_data(csv_dir, postgis, csv_data,schema):
 
 
 # #compare csv data with postgres data using geopetl
-def test_assert_data_2(csv_dir, postgis, schema, csv_data):
+def test_assert_data_2(postgis, schema, csv_data):
     tb = postgis.table('{}.{}'.format(schema, point_table_name))
     # list of column names
     keys = csv_data[0]
@@ -237,7 +208,7 @@ def test_with_types(db_data, schema, postgis,column_definition):
 #             # iterate through each keys
 #             for key in keys:
 #                 # assert shape field
-#                 if key == 'shape':
+#                 if key == :
 #                     pg_geom = remove_whitespace(str(etl_dict.get(key)))
 #                     csv_geom = remove_whitespace(str(csv_dict.get(key)))
 #                     assert csv_geom == pg_geom
@@ -251,7 +222,8 @@ def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition, 
     tb = postgis.table('{}.{}'.format(schema, point_table_name))
     my_dsn = '''dbname={db} user={user} password={pw} host={host}'''.format(db=db,user=user,pw=pw,host=host)
     etl.topostgis(csv_data, my_dsn,
-                  '{}.{}'.format(schema, point_table_name), from_srid=2272, column_definition_json=column_definition)
+                  '{}.{}'.format(schema, point_table_name),
+                  from_srid=2272, column_definition_json=column_definition)
     data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}'.format(schema, point_table_name))
     for row in data[0]:
         # list of column names
@@ -276,7 +248,7 @@ def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition, 
 
 
 #compare csv data with postgres data using geopetl
-def test_line_assertion(csv_dir, postgis, csv_data, schema):
+def test_line_assertion(postgis, csv_data, schema):
 
     tb = postgis.table('{}.{}'.format(schema,line_table_name))
     rows = etl.fromcsv(line_csv_dir)
