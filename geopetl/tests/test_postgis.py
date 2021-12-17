@@ -192,30 +192,30 @@ def test_with_types(db_data, schema, postgis,column_definition):
         i = i + 1
 
 # assert data by loading and extracting data without providing schema
-# def test_without_schema(db_data, postgis, column_definition,csv_data, table_name_no_schema):
-#     etl.topostgis(csv_data, postgis.dbo, table_name_no_schema, from_srid=2272, column_definition_json=column_definition)
-#     data = etl.frompostgis(dbo=postgis.dbo, table_name=table_name_no_schema)
-#
-#     for row in data[0]:
-#         # list of column names
-#         keys = csv_data[0]
-#         i = 1
-#         # iterate through each row of data
-#         for row in data[1:]:
-#             # create dictionary for each row of data using same set of keys
-#             etl_dict = dict(zip(data[0], row))          # dictionary from etl data
-#             csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
-#             # iterate through each keys
-#             for key in keys:
-#                 # assert shape field
-#                 if key == :
-#                     pg_geom = remove_whitespace(str(etl_dict.get(key)))
-#                     csv_geom = remove_whitespace(str(csv_dict.get(key)))
-#                     assert csv_geom == pg_geom
-#                 # compare values from each key
-#                 else:
-#                     assert csv_dict.get(key) == etl_dict.get(key)
-#             i = i + 1
+def test_without_schema(db_data, postgis, column_definition,csv_data):
+    etl.topostgis(csv_data, postgis.dbo, point_table_name, from_srid=2272, column_definition_json=column_definition)
+    data = etl.frompostgis(dbo=postgis.dbo, table_name=point_table_name)
+
+    for row in data[0]:
+        # list of column names
+        keys = csv_data[0]
+        i = 1
+        # iterate through each row of data
+        for row in data[1:]:
+            # create dictionary for each row of data using same set of keys
+            etl_dict = dict(zip(data[0], row))          # dictionary from etl data
+            csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
+            # iterate through each keys
+            for key in keys:
+                # assert shape field
+                if key == 'shape':
+                    pg_geom = remove_whitespace(str(etl_dict.get(key)))
+                    csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                    assert csv_geom == pg_geom
+                # compare values from each key
+                else:
+                    assert csv_dict.get(key) == etl_dict.get(key)
+            i = i + 1
 
 # write using a string connection to db
 def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition, schema):
