@@ -25,34 +25,7 @@ def oraclesde_db(host, port, service_name,user, pw):
     # create & return OracleSdeDatabase object
     dbo = OracleSdeDatabase(connection)
     return dbo
-
-
-# # return csv file directory containing staging data
-# @pytest.fixture
-# def csv_dir():
-#     csv_dir = 'geopetl/tests/fixtures_data/staging/point.csv'
-#     return csv_dir
 #
-#
-# # return table name for Oracle table based on csv file name
-# @pytest.fixture
-# def table_name_no_schema(csv_dir, schema):
-#     head_tail = os.path.split(csv_dir)
-#     # define which table based on csv name
-#     if 'point' in head_tail[1]:
-#         table_name = config.point_table_name
-#     elif 'polygon' in head_tail[1]:
-#         table_name = config.polygon_table_name
-#     elif 'line' in head_tail[1]:
-#         table_name = config.line_table_name
-#     return table_name
-#
-#
-# @pytest.fixture
-# def table_name_with_schema(table_name_no_schema, schema):
-#     return'.'.join([schema,table_name_no_schema])
-#
-
 @pytest.fixture
 def csv_data():
     csv_data = etl.fromcsv(point_csv_dir).convert(['objectid','numericfield'], int)
@@ -226,9 +199,9 @@ def test_with_types(db_data,oraclesde_db, schema):
     tb = oraclesde_db.table('{}.{}'.format(schema,point_table_name))
     data1 = db_data
     # load to second test table
-    db_data.tooraclesde(oraclesde_db.dbo, '{}.{}'.format(schema,point_table_name)+'2')
+    db_data.tooraclesde(oraclesde_db.dbo, '{}.{}2'.format(schema,point_table_name))
     # extract from second test table
-    data2 = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name='{}.{}'.format(schema,point_table_name) + '2')
+    data2 = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name='{}.{}2'.format(schema,point_table_name))
 
     i = 1
     # iterate through each row of data
