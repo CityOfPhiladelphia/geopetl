@@ -174,6 +174,7 @@ class PostgisDatabase(object):
         # TODO use petl dbo check/validation
         self.dbo = dbo
         self.user = a.get('user')
+        #self.schemas =
         # Check if DB is sde registered
         try:
             cursor.execute('select description from sde.sde_version')
@@ -238,7 +239,12 @@ class PostgisDatabase(object):
 #                             where="table_type = 'BASE TABLE'")
 #                 )
 #        return ['.'.join([x[0], x[1]]) for x in tables]
-
+    @property
+    def get_schemas(self):
+        cur = self.dbo.cursor()
+        cur.execute('select distinct schema_name FROM information_schema.schemata')
+        schemas = [t[0] for t in cur.fetchall()]
+        return schemas
     def table(self, name):
         return PostgisTable(self, name)
 
@@ -337,9 +343,14 @@ class PostgisTable(object):
         # Check for a schema
         if '.' in name:
             self.schema, self.name = name.split('.')
+        #schema not provided
+        elif self.db.user not in self.db.get_schemas:
+            self.schema = 'public'
+            self.name = name
         else:
             self.schema = self.db.user
             self.name = name
+
     def __str__(self):
         return 'PostgisTable: {}'.format(self.name)
 
