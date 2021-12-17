@@ -76,6 +76,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     """
     Writes rows to database.
     """
+
     # create db wrappers
     db = PostgisDatabase(dbo)
     # do we need to create the table?
@@ -139,7 +140,6 @@ class PostgisDatabase(object):
     def __init__(self, dbo):
         import psycopg2
         from psycopg2.extras import RealDictCursor
-
         # if dbo is a string, create connection object
         if isinstance(dbo, string_types):
             # try to parse as url
@@ -156,14 +156,30 @@ class PostgisDatabase(object):
             # otherwise assume it's a postgres connection string
             except ValueError:
                 dbo = psycopg2.connect(dbo)
+        elif isinstance(dbo,psycopg2.extensions.connection):
+            print('163 connection')
+        # is it a callable?
+        elif callable(dbo):
+            print('callable object ')
+
+        # REVIEW petl already handles db api connections?
+        # elif callable(dbo):
+        #     dbo = dbo()
+
+
         cursor = dbo.cursor()
+        #a = psycopg2.ConnectionInfo(dbo)
+        a = dbo.get_dsn_parameters()
+
+        # TODO use petl dbo check/validation
+        self.dbo = dbo
+        self.user = a.get('user')
         # Check if DB is sde registered
         try:
             cursor.execute('select description from sde.sde_version')
             sde = cursor.fetchall()
             sde_version = sde[0][0]
             self.sde_version = sde_version.split(' ')[0]
-            print('self.sde_version ', self.sde_version)
         except:
             self.sde_version = ''
             cursor.execute('rollback;') # abort failed transaction
@@ -179,9 +195,10 @@ class PostgisDatabase(object):
             self.postgis_version = ''
             cursor.execute('rollback;') # abort failed transaction
             print('DB not Postgis enabled')
-
-        # TODO use petl dbo check/validation
-        self.dbo = dbo
+        #
+        # # TODO use petl dbo check/validation
+        # self.dbo = dbo
+        # self.user = dbo.user
 
         # make a cursor for introspecting the db. not used to read/write data.
         self.cursor = dbo.cursor(cursor_factory=RealDictCursor)
@@ -316,11 +333,12 @@ FIELD_TYPE_MAP = {
 class PostgisTable(object):
     def __init__(self, db, name):
         self.db = db
+
         # Check for a schema
         if '.' in name:
             self.schema, self.name = name.split('.')
         else:
-            self.schema = 'public'
+            self.schema = self.db.user
             self.name = name
     def __str__(self):
         return 'PostgisTable: {}'.format(self.name)
@@ -416,7 +434,7 @@ class PostgisTable(object):
                 """.format(self.schema, self.name, self.geom_field)
             return self.db.fetch(stmt)[0].pop('type')
         else: # sde enabled
-            geom_dict = {1:"POINT", 13:"LINE",4:"POLYGON", 11:"MULTIPOLYGON"}
+            geom_dict = {1:"POINT", 9:"LINE",4:"POLYGON", 11:"MULTIPOLYGON"}
             stmt = """
                 SELECT geometry_type
                 FROM sde_geometry_columns
@@ -512,7 +530,6 @@ class PostgisTable(object):
         if multi_geom:
             if not self.db.sde_version:
                 geom = 'ST_Multi({})'.format(geom)
-
         return geom
 
     def write(self, rows, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
@@ -556,10 +573,10 @@ class PostgisTable(object):
                 multi_geom = False
 
 
+
         #local_objectID_flag = False
         #if PG objectid_field not in local data fields tuple, append to local data fields
         if objectid_field and objectid_field not in fields:
-            print('objectid_field not in local fields!!')
             fields = fields + (objectid_field,)
             #local_objectID_flag = True
         else:
