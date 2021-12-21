@@ -15,34 +15,30 @@ on:
       # changes to the geopetl setup.py
       - 'setup.py'
       # changes to postgis-specific docker stuff
-      - 'docker-compose.yml'
+      - 'postgis-docker-compose.yml'
       - 'geopetl_Dockerfile'
       # changes to the docker entrypoint.sh script that runs our pytest commands
-      - 'scripts/entrypoint.sh'
+      - 'scripts/postgis_tests.sh'
       - '.github/workflows/postgis_tests.yml'
 
 
 jobs:
-  login:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Login to ECR
-        uses: docker/login-action@v1
-        with:
-          registry: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v3
-          username: ${{ secrets.AWS_ACCESS_KEY_ID}}
-          password: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
-
       - name: Build and bring up the Docker image using docker-compose
         run: |
           echo "logging in ecr"
           echo "docker all containers in ECR"
           docker ps -a
           pwd
-          docker-compose up -f docker-compose.yml --build --force-recreate --log-level DEBUG --abort-on-container-exit --exit-code-from geopetl
+          docker-compose -f postgis-docker-compose.yml up --build -d
           echo "ran docker compose command."
         env:
           POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
+
+      - name: Run pytests
+        run: docker exec geopetl /bin/bash -c "/usr/local/bin/postgis_tests.sh" 
 
 # TODO: push image to ECR?
 #    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
