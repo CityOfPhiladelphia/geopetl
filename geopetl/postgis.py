@@ -9,7 +9,7 @@ import json
 from pytz import timezone
 from dateutil import parser as dt_parser
 
-
+aw = 'test2'
 DEFAULT_WRITE_BUFFER_SIZE = 1000
 
 DATA_TYPE_MAP = {
