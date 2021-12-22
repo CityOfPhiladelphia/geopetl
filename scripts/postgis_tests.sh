@@ -14,6 +14,9 @@ export POSTGIS_HOST
 export POSTGIS_USER
 export POSTGRES_PASSWORD
 
+echo $POSTGIS_DB
+echo $POSTGIS_HOST
+
 pg_postgis_ready=$(pg_isready -h $POSTGIS_HOST -U $POSTGIS_USER -d $POSTGIS_DB &>/dev/null; echo $? )
 
 max_retry=20
@@ -21,7 +24,7 @@ counter=0
 while [[ "$pg_postgis_ready" != "0" ]]
 do
   [[ counter -eq $max_retry ]] && echo "Failed!" && exit 1
-  echo "PostGIS or postgres-sde database is not ready yet!!"
+  echo "PostGIS database is not ready yet!!"
   sleep 15
   pg_isready -h $POSTGIS_HOST -U $POSTGIS_USER -d $POSTGIS_DB
   pg_postgis_ready=$(pg_isready -h $POSTGIS_HOST -U $POSTGIS_USER -d $POSTGIS_DB &>/dev/null; echo $? )
@@ -29,7 +32,7 @@ do
 #  echo "pg_sde_ready return is" $pg_sde_ready
   ((counter++))
 done
-echo "Both databases are ready and accepting conections."
+echo "Postgis database is ready and accepting conections."
 
 # Note: the hostname postgis is a docker-made DNS record
 # When you specify the container name in docker-compose.yml
