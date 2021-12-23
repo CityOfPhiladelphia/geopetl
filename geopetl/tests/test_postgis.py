@@ -1,9 +1,9 @@
 import pytest
 import petl as etl
-from geopetl.postgis import PostgisDatabase, PostgisTable
+from geopetl.postgis import PostgisDatabase
 import psycopg2
 from dateutil import parser as dt_parser
-from tests_config import remove_whitespace, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name, point_csv_dir
+from tests_config import remove_whitespace, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name, point_csv_dir, line_column_definition, polygon_column_definition
 
 
 ############################################# FIXTURES ################################################################
@@ -38,7 +38,7 @@ def db_data(postgis,schema):
     db_col = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}'.format(schema,point_table_name))
     return db_col
 
-######################################   TESTS   ####################################################################
+########################################   TESTS   #####################################################################
 
 # read number of rows
 def test_all_rows_written(db, user, host, pw,create_test_tables,csv_data,schema):
@@ -252,7 +252,7 @@ def test_line_assertion(postgis, csv_data, schema):
 
     tb = postgis.table('{}.{}'.format(schema,line_table_name))
     rows = etl.fromcsv(line_csv_dir)
-    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,line_table_name), from_srid=2272)
+    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,line_table_name), from_srid=2272, column_definition_json=line_column_definition)
     csv_data = etl.fromcsv(line_csv_dir).convert(['objectid'], int)
     # list of column names
     keys = csv_data[0]
@@ -286,7 +286,7 @@ def test_polygon_assertion(postgis,schema):
     tb = postgis.table('{}.{}'.format(schema,polygon_table_name))
 
     rows = etl.fromcsv(polygon_csv_dir)
-    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,polygon_table_name), from_srid=2272)
+    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,polygon_table_name), from_srid=2272, column_definition_json=polygon_column_definition)
     csv_data = etl.fromcsv(polygon_csv_dir).convert(['objectid'], int)
 
     # list of column names

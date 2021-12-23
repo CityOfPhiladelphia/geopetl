@@ -1,11 +1,13 @@
 import re
 point_table_name = ''
 point_csv_dir = ''
+point_column_definition = ''
 polygon_table_name = ''
 polygon_csv_dir = ''
+polygon_column_definition = ''
 line_table_name = ''
 line_csv_dir = ''
-
+line_column_definition = ''
 
 
 def remove_whitespace(stringval):

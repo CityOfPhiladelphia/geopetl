@@ -1,0 +1,20 @@
+{
+  "primaryKey": [
+    "objectid"
+  ],
+  "fields": [
+    {
+      "name": "objectid",
+      "constraints": {
+        "required": true
+      },
+      "type": "numeric"
+    },
+    {
+      "name": "shape",
+      "type": "geometry",
+      "geometry_type": "polygon",
+      "srid": 2272
+    }
+  ]
+}
