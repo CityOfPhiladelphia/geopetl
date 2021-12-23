@@ -16,7 +16,6 @@ export POSTGRES_PASSWORD
 
 echo $POSTGIS_DB
 echo $POSTGIS_HOST
-
 pg_postgis_ready=$(pg_isready -h $POSTGIS_HOST -U $POSTGIS_USER -d $POSTGIS_DB &>/dev/null; echo $? )
 
 max_retry=20
@@ -33,6 +32,8 @@ do
   ((counter++))
 done
 echo "Postgis database is ready and accepting conections."
+
+python -m pytest
 
 # Note: the hostname postgis is a docker-made DNS record
 # When you specify the container name in docker-compose.yml
