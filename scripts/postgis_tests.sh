@@ -12,10 +12,8 @@ export PGPASSWORD=$POSTGRES_PASSWORD
 export POSTGIS_DB
 export POSTGIS_HOST
 export POSTGIS_USER
-export POSTGRES_PASSWORD
+export POSTGIS_PASSWORD
 
-echo $POSTGIS_DB
-echo $POSTGIS_HOST
 pg_postgis_ready=$(pg_isready -h $POSTGIS_HOST -U $POSTGIS_USER -d $POSTGIS_DB &>/dev/null; echo $? )
 
 max_retry=20
@@ -42,7 +40,7 @@ echo "#########################################"
 echo "Running tests against PostGIS database..."
 pytest geopetl/tests/test_postgis.py \
   --user=$POSTGIS_USER \
-  --pw=$POSTGRES_PASSWORD \
+  --pw=$POSTGIS_PASSWORD \
   --db=$POSTGIS_DB \
   --host=$POSTGIS_HOST \
   --port=5432 \
