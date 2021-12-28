@@ -10,16 +10,10 @@ export PGPASSWORD=$POSTGRES_PASSWORD
 # Since we're doing health checks via a subshell-made variable, we'll need to export
 # our variables so they're accessible.
 
-export POSTGRES_PASSWORD
+export SDE_PASSWORD
 export SDE_DB
 export SDE_HOST
 export SDE_USER
-
-echo $SDE_HOST
-echo $SDE_DB
-echo $SDE_USER
-echo $PGPASSWORD
-echo $POSTGRES_PASSWORD
 
 pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER  -d $SDE_DB &>/dev/null; echo $? )
 
@@ -44,11 +38,11 @@ echo "Running tests against Esri SDE database..."
 # test for postgres-sde
 pytest geopetl/tests/test_postgressde.py \
   --user=$SDE_USER \
-  --pw=$POSTGRES_PASSWORD \
+  --pw=$SDE_PASSWORD \
   --db=$SDE_DB \
   --host=$SDE_HOST \
   --port=5432 \
-  --schema="test_user" \
+  --schema=$SDE_USER \
   --column_definition="geopetl/tests/fixtures_data/schemas/point.json"
 
 SDE_EXIT_CODE=$?
