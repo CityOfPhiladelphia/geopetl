@@ -32,6 +32,9 @@ jobs:
           echo "docker all containers in ECR"
           docker ps -a
           pwd
+          ls
+          cd ..
+          ls
           docker-compose -f postgis-docker-compose.yml up --build -d
           echo "ran docker compose command."
         env:
