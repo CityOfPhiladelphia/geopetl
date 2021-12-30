@@ -68,9 +68,6 @@ RUN pip3 install -e .
 COPY scripts/python_pg_isready.py /usr/local/bin/python_pg_isready.py
 RUN chmod +x  /usr/local/bin/python_pg_isready.py
 
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
 COPY scripts/postgis_tests.sh /usr/local/bin/postgis_tests.sh
 RUN chmod +x /usr/local/bin/postgis_tests.sh
 
