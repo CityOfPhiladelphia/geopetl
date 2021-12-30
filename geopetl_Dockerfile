@@ -58,8 +58,9 @@ COPY pytest-requirements.txt /pytest-requirements.txt
 RUN pip3 install -r pytest-requirements.txt
 
 # Setup and install geopetl
-COPY geopetl
+COPY geopetl /geopetl
 COPY setup.py /setup.py
+COPY postgis-docker-compose.yml /postgis-docker-compose.yml
 
 # Install geopetl via setup.py
 RUN pip3 install -e .
