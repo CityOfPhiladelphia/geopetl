@@ -58,7 +58,7 @@ COPY pytest-requirements.txt /pytest-requirements.txt
 RUN pip3 install -r pytest-requirements.txt
 
 # Setup and install geopetl
-COPY geopetl /geopetl
+COPY geopetl
 COPY setup.py /setup.py
 
 # Install geopetl via setup.py
