@@ -34,7 +34,7 @@ jobs:
           pwd
           ls
           cd ..
-          ls
+          pwd
           docker-compose -f postgis-docker-compose.yml up --build -d
           echo "ran docker compose command."
         env:
