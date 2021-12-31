@@ -26,6 +26,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: run docker image
+        run:
+          using:'docker'
+          image:geopetl_Dockerfile
+          
+
       - name: Build and bring up the Docker image using docker-compose
         run: |
           echo "docker all containers ps -a"
