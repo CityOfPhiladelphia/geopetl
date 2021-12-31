@@ -75,7 +75,7 @@ COPY scripts/postgressde_tests.sh /usr/local/bin/postgressde_tests.sh
 RUN chmod +x /usr/local/bin/postgressde_tests.sh
 
 COPY scripts/postgis_tests_entrypoint.sh /postgis_tests_entrypoint.sh
-ENTRYPOINT ["postgis_tests_entrypoint .sh", "$POSTGRES_PASSWORD", "$POSTGIS_USER", "$POSTGIS_DB", "$POSTGIS_HOST", "$SDE_USER", "$SDE_DB", "$SDE_HOST"]
+ENTRYPOINT ["/postgis_tests_entrypoint .sh", "$POSTGRES_PASSWORD", "$POSTGIS_USER", "$POSTGIS_DB", "$POSTGIS_HOST", "$SDE_USER", "$SDE_DB", "$SDE_HOST"]
 CMD ["sleep", "90000"]
 
 
