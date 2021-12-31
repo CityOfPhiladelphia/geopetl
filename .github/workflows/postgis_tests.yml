@@ -28,7 +28,7 @@ jobs:
     steps:
       - name: run docker image
         run:
-          using:'docker'
+          using:docker
           image:geopetl_Dockerfile
           
 
