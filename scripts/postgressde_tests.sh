@@ -14,8 +14,16 @@ export SDE_PASSWORD
 export SDE_DB
 export SDE_HOST
 export SDE_USER
+echo 'sde creds'
+echo $SDE_HOST
+echo $SDE_DB
+echo $SDE_PASSWORD
+echo $SDE_USER
 
+#pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER  -d $SDE_DB &>/dev/null; echo $? )
 pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER  -d $SDE_DB &>/dev/null; echo $? )
+echo 'pg_sde_ready'
+echo $pg_sde_ready
 
 max_retry=20
 counter=0
