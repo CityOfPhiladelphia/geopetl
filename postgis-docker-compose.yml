@@ -8,10 +8,10 @@ services:
     image: mdillon/postgis:11
     container_name: postgis
     environment:
-      - POSTGRES_USER
-      - POSTGRES_PASSWORD
-      - POSTGRES_DB
-      - POSTGRES_HOST_AUTH_METHOD
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
 
   geopetl:
     depends_on:
@@ -23,7 +23,7 @@ services:
     # Pass connection parameters for both databases to geopetl
     # so our pytest scripts can connect to both.
     environment:
-      - POSTGIS_HOST=
-      - POSTGIS_USER=
-      - POSTGIS_DB=
-      - POSTGIS_PASSWORD=
+      - POSTGIS_HOST=postgis
+      - POSTGIS_USER=postgres
+      - POSTGIS_DB=postgres
+      - POSTGIS_PASSWORD=postgres

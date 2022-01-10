@@ -64,14 +64,9 @@ COPY setup.py /setup.py
 # Install geopetl via setup.py
 RUN pip3 install -e .
 
-
-# function to check if DB is accepting connections
-COPY scripts/python_pg_isready.py /usr/local/bin/python_pg_isready.py
-RUN chmod +x  /usr/local/bin/python_pg_isready.py
-
 # copy entry point to container
-COPY scripts/postgressde_tests.sh /usr/local/bin/postgressde_tests_entrypoint.sh
+COPY scripts/postgressde_tests_entrypoint.sh /usr/local/bin/postgressde_tests_entrypoint.sh
 RUN chmod +x /usr/local/bin/postgressde_tests_entrypoint.sh
 
-ENTRYPOINT ["postgressde_tests_entrypoint.sh", "$POSTGRES_PASSWORD", "$POSTGIS_USER", "$POSTGIS_DB", "$POSTGIS_HOST", "$SDE_USER", "$SDE_DB", "$SDE_HOST"]
+ENTRYPOINT ["postgressde_tests_entrypoint.sh", "$POSTGRES_PASSWORD", "$SDE_USER", "$SDE_DB", "$SDE_HOST"]
 CMD ["sleep", "90000"]

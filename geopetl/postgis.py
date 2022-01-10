@@ -82,6 +82,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     # do we need to create the table?
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
+    print("Checking if table {} exists".format(table_name))
     create = '.'.join([table.schema, table.name]) not in db.tables
     # Create table if it doesn't exist
     if create:

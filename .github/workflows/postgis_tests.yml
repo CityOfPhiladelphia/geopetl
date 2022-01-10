@@ -15,37 +15,46 @@ on:
       # changes to the geopetl setup.py
       - 'setup.py'
       # changes to postgis-specific docker stuff
-      - 'postgis-docker-compose.yml'
-      - 'geopetl_Dockerfile'
+      - 'docker-compose.yml'
+      - 'postgis_Dockerfile'
       # changes to the docker entrypoint.sh script that runs our pytest commands
-      - 'scripts/postgis_tests.sh'
-      - '.github/workflows/postgis_tests.yml'
+      - 'scripts/entrypoint.sh'
 
 
 jobs:
   build:
+    name: Build and Test Geopetl against PostGIS db
+    # The type of runner that the job will run on
     runs-on: ubuntu-latest
-    steps:
-      - name: run docker image
-        run:
-          using:docker
-          image:geopetl_Dockerfile
-          
+    steps: 
 
-      - name: Build and bring up the Docker image using docker-compose
-        run: |
-          echo "docker all containers ps -a"
-          docker ps -a
-          echo "pwd"
-          pwd
-          ls -a
-          docker-compose -f postgis-docker-compose.yml up --build -d
-          echo "ran docker compose command."
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
+    - name: Checkout the latest github changes
+      uses: actions/checkout@v1
 
-      - name: Run pytests
-        run: docker exec geopetl /bin/bash -c "/usr/local/bin/postgis_tests.sh" 
+    - name: Debug docker command
+      run: ls -lah && pwd
+
+    - name: debug docker command
+      run: |
+          which docker
+          which docker-compose
+          docker version
+          docker-compose
+
+    - name: Login to ECR
+      uses: docker/login-action@v1
+      with:
+        registry: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:latest
+        username: ${{ secrets.AWS_ACCESS_KEY_ID}}
+        password: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+
+    - name: Build and bring up the Docker image using docker-compose
+      # Abort when any coontainer exits, and return the exit code from geopetl.
+      # Otherwise docker-compose won't stop because postgis doesn't exit.
+      run: |
+        docker-compose up --build --abort-on-container-exit --exit-code-from geopetl
+      env:
+        POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
 
 # TODO: push image to ECR?
 #    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
@@ -53,6 +62,7 @@ jobs:
 #        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
 #        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 #        REPOSITORY_URL: 
+
 
 
 

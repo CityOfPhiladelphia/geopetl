@@ -9,7 +9,6 @@ export PGPASSWORD=$POSTGRES_PASSWORD
 
 # Since we're doing health checks via a subshell-made variable, we'll need to export
 # our variables so they're accessible.
-
 export SDE_PASSWORD
 export SDE_DB
 export SDE_HOST
@@ -21,7 +20,8 @@ echo $SDE_PASSWORD
 echo $SDE_USER
 
 #pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER  -d $SDE_DB &>/dev/null; echo $? )
-pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER  -d $SDE_DB &>/dev/null; echo $? )
+#pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER -d $SDE_DB &>/dev/null; echo $? )
+pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER -p 5432 &>/dev/null; echo $? )
 echo 'pg_sde_ready'
 echo $pg_sde_ready
 
@@ -32,8 +32,7 @@ do
   [[ counter -eq $max_retry ]] && echo "Failed!" && exit 1
   echo "postgres-sde database is not ready yet!!"
   sleep 15
-  pg_isready -h $SDE_HOST -U $SDE_USER -d $SDE_DB
-  pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER -d $SDE_DB &>/dev/null; echo $? )
+  pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER -p 5432 &>/dev/null; echo $? )
   ((counter++))
 done
 echo "sde database ready and accepting conections."
