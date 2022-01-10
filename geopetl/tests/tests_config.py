@@ -1,13 +1,18 @@
 import re
-point_table_name = ''
-point_csv_dir = ''
-point_column_definition = ''
-polygon_table_name = ''
-polygon_csv_dir = ''
-polygon_column_definition = ''
-line_table_name = ''
-line_csv_dir = ''
-line_column_definition = ''
+import re
+point_table_name = 'point_table'
+point_csv_dir = 'geopetl/tests/fixtures_data/staging/point.csv'
+
+polygon_table_name = 'polygon_table'
+polygon_csv_dir = 'geopetl/tests/fixtures_data/staging/polygon.csv'
+
+line_table_name = 'line_table'
+line_csv_dir = 'geopetl/tests/fixtures_data/staging/line.csv'
+
+
+point_column_definition = 'geopetl/tests/fixtures_data/schemas/point.json'
+polygon_column_definition = 'geopetl/tests/fixtures_data/schemas/polygon.json'
+line_column_definition = 'geopetl/tests/fixtures_data/schemas/line.json'
 
 
 def remove_whitespace(stringval):
