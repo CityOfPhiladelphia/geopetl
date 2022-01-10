@@ -38,6 +38,9 @@ jobs:
         username: ${{ secrets.AWS_ACCESS_KEY_ID}}
         password: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
 
+    - name: Pull down latest postgressde image from ECR
+      run: docker pull 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:latest
+
     - name: Build and bring up the Docker image using docker-compose
       # Abort when any coontainer exits, and return the exit code from geopetl.
       # Otherwise docker-compose won't stop because postgis doesn't exit.
