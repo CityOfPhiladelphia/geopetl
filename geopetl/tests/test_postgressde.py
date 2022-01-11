@@ -8,14 +8,6 @@ from dateutil import parser as dt_parser
 from tests_config import remove_whitespace, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name, point_csv_dir
 
 
-def convert_to_utc(this_date):
-    eastern = timezone('US/Eastern')
-    try:
-        this_date = dt_parser.parse(this_date)
-        this_date = this_date.astimezone(eastern)
-    except:
-        print('already a datetime object ....', this_date)
-    return this_date
 ############################################# FIXTURES ################################################################
 
 # return postgres database object
@@ -32,7 +24,6 @@ def postgis(db, user, pw, host):
 # create new table and write csv staging data to it
 @pytest.fixture
 def create_test_tables(postgis, column_definition,schema):
-    print('create test table fixture')
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(point_csv_dir)
     # write geopetl table to postpostgis
@@ -41,7 +32,6 @@ def create_test_tables(postgis, column_definition,schema):
 @pytest.fixture
 def csv_data():
     csv_data = etl.fromcsv(point_csv_dir).convert(['objectid','numericfield'], int)
-    print(csv_data)
     csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
     csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
     return csv_data
@@ -268,8 +258,6 @@ def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,s
                     # assert csv_dict.get(key) == etl_dict.get(key)
                 # assert shape field
                 elif key == 'shape':
-                    print('str(etl_dict.get(key)) ',str(etl_dict.get(key)))
-                    print('str(csv_dict.get(key)) ',str(csv_dict.get(key)))
                     pg_geom = remove_whitespace(str(etl_dict.get(key)))
                     csv_geom = remove_whitespace(str(csv_dict.get(key)))
                     assert csv_geom == pg_geom
@@ -359,9 +347,8 @@ def test_without_schema(db_data, postgis, column_definition, csv_data,create_tes
 
 # # # write using a string connection to db
 def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,schema):
-    mydsn = '''dbname={db} user={user} password={pw} host={host}'''.format(db=db,user=user,pw=pw,host=host)
-
     my_dsn = '''dbname={db} user={user} password={pw} host={host}'''.format(db=db,user=user,pw=pw,host=host)
+    tb = postgis.table('{}.{}'.format(schema,point_table_name))
     etl.topostgis(csv_data, my_dsn,
                   point_table_name,
                   from_srid=2272, column_definition_json=column_definition)
@@ -380,7 +367,7 @@ def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,s
                 if key =='objectid':
                     continue
                 # assert shape field
-                if key == 'shape':
+                if key == tb.geom_field:
                     pg_geom = remove_whitespace(str(etl_dict.get(key)))
                     csv_geom = remove_whitespace(str(csv_dict.get(key)))
                     assert csv_geom == pg_geom
