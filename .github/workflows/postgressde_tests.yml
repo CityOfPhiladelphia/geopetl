@@ -18,7 +18,7 @@ on:
       - 'postgressde-docker-compose.yml'
       - 'postgresde_Dockerfile'
       # changes to the docker entrypoint.sh script that runs our pytest commands
-      - 'scripts/entrypoint.sh'
+      - 'scripts/postgressde_tests_entrypoint.sh'
 
 
 jobs:
