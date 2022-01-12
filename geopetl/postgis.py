@@ -524,8 +524,11 @@ class PostgisTable(object):
         try:
             if self.db.postgis_version != '' and not self.db.sde_version:
                 geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
+            else:
+                print('NO POSTGIS VERSION')
         except:
             #else: # if DB is not Postgis enabled
+            print('DB is not POSTGIS enabled')
             geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
 
         # Handle 3D geometries
