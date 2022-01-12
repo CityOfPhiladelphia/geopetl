@@ -521,14 +521,14 @@ class PostgisTable(object):
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
         # if DB is postgis enabled
-        try:
-            if self.db.postgis_version != '' and not self.db.sde_version:
-                geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
-            else:
-                print('NO POSTGIS VERSION')
-        except:
-            #else: # if DB is not Postgis enabled
-            print('DB is not POSTGIS enabled')
+
+        if self.db.postgis_version != '' and not self.db.sde_version:
+            print('526')
+            print('self.db.postgis_version ',self.db.postgis_version)
+            geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
+        else: # if DB is not Postgis enabled
+            print('DB is not POSTGIS enabled 530')
+            print('self.db.sde_version ',self.db.sde_version)
             geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
 
         # Handle 3D geometries
