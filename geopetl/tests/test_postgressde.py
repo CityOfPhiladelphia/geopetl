@@ -52,6 +52,7 @@ def create_test_table_noid(postgis, schema,column_definition):
 
 # compare number of rows
 def test_all_rows_written(db, user, host, pw,create_test_tables,schema):
+    print('test_all_rows_written')
     # read staging data from csv
     with open(point_csv_dir, newline='') as f:
         reader = csv.reader(f)
@@ -73,6 +74,7 @@ def test_all_rows_written(db, user, host, pw,create_test_tables,schema):
 
 # compare csv data with postgres data using psycopg2
 def test_assert_data(postgis, csv_data, schema):
+    print('test_assert_data')
     csv_data = csv_data
     csv_header = csv_data[0]
 
@@ -105,6 +107,7 @@ def test_assert_data(postgis, csv_data, schema):
 
 #compare csv data with postgres data using geopetl
 def test_assert_data_2(postgis, schema,csv_data,db_data):
+    print('test_assert_data_2')
     csv_header = csv_data[0]
 
     # read data using geopetl
