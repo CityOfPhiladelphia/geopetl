@@ -82,7 +82,6 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     # do we need to create the table?
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
-    print("Checking if table {} exists".format(table_name))
     create = '.'.join([table.schema, table.name]) not in db.tables
     # Create table if it doesn't exist
     if create:
@@ -180,23 +179,26 @@ class PostgisDatabase(object):
         try:
             cursor.execute('select description from sde.sde_version')
             sde = cursor.fetchall()
+            print('sde ', sde)
             sde_version = sde[0][0]
+            print('sde_version ', sde_version)
             self.sde_version = sde_version.split(' ')[0]
         except:
+            print('187 except ')
             self.sde_version = ''
             cursor.execute('rollback;') # abort failed transaction
             print('DB not SDE enabled')
 
         # Check if DB is postgis is enabled
-        try:
-            cursor.execute('select Postgis_version()')
-            res = cursor.fetchall()
-            postgis_version = res[0][0]
-            self.postgis_version = postgis_version.split(' ')[0]
-        except:
-            self.postgis_version = ''
-            cursor.execute('rollback;') # abort failed transaction
-            print('DB not Postgis enabled')
+            try:
+                cursor.execute('select Postgis_version()')
+                res = cursor.fetchall()
+                postgis_version = res[0][0]
+                self.postgis_version = postgis_version.split(' ')[0]
+            except:
+                self.postgis_version = ''
+                cursor.execute('rollback;') # abort failed transaction
+                print('DB not Postgis enabled')
         #
         # # TODO use petl dbo check/validation
         # self.dbo = dbo
