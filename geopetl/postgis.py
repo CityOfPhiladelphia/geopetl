@@ -520,16 +520,17 @@ class PostgisTable(object):
 
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
+        print('preparing geom...')
         # if DB is postgis enabled
-
-        if self.db.postgis_version != '' and not self.db.sde_version:
-            print('526')
+        if self.db.sde_version != '':
+            print('sde geometry 525 ', self.db.sde_version)
+            geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
+        elif self.db.postgis_version != '' and not self.db.sde_version:
             print('self.db.postgis_version ',self.db.postgis_version)
             geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
-        else: # if DB is not Postgis enabled
-            print('DB is not POSTGIS enabled 530')
-            print('self.db.sde_version ',self.db.sde_version)
-            geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
+
+        # else: # if DB is not Postgis enabled
+        #     geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
 
         # Handle 3D geometries
         # TODO: screen these with regex
