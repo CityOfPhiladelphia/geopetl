@@ -174,6 +174,8 @@ class PostgisDatabase(object):
         # TODO use petl dbo check/validation
         self.dbo = dbo
         self.user = a.get('user')
+        self.sde_version = None
+        self.postgis_version = None
         #self.schemas =
         # Check if DB is sde registered
         try:
@@ -185,7 +187,7 @@ class PostgisDatabase(object):
             self.sde_version = sde_version.split(' ')[0]
         except:
             print('187 except ')
-            self.sde_version = ''
+            #self.sde_version = ''
             cursor.execute('rollback;') # abort failed transaction
             print('DB not SDE enabled')
 
@@ -196,7 +198,7 @@ class PostgisDatabase(object):
                 postgis_version = res[0][0]
                 self.postgis_version = postgis_version.split(' ')[0]
             except:
-                self.postgis_version = ''
+                #self.postgis_version = ''
                 cursor.execute('rollback;') # abort failed transaction
                 print('DB not Postgis enabled')
         #
@@ -521,11 +523,12 @@ class PostgisTable(object):
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
         print('preparing geom...')
-        # if DB is postgis enabled
-        if self.db.sde_version != '':
+        # if DB is sde enabled
+        if self.db.sde_version != None:
             print('sde geometry 525 ', self.db.sde_version)
             geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
-        elif self.db.postgis_version != '' and not self.db.sde_version:
+        # if DB is postgis en
+        elif self.db.postgis_version != None:
             print('self.db.postgis_version ',self.db.postgis_version)
             geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
 
