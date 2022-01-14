@@ -18,7 +18,7 @@ on:
       - 'docker-compose.yml'
       - 'postgis_Dockerfile'
       # changes to the docker entrypoint.sh script that runs our pytest commands
-      - 'scripts/entrypoint.sh'
+      - 'scripts/postgis_tests_entrypoint.sh'
 
 
 jobs:
