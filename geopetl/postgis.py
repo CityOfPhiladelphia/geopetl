@@ -137,8 +137,6 @@ Table.appendpostgis = _appendpostgis
 ################################################################################
 
 class PostgisDatabase(object):
-    print('---------------------------------')
-    print(140)
     def __init__(self, dbo):
         import psycopg2
         from psycopg2.extras import RealDictCursor
@@ -183,13 +181,9 @@ class PostgisDatabase(object):
         try:
             cursor.execute('select description from sde.sde_version')
             sde = cursor.fetchall()
-            print('sde 184 ', sde)
             sde_version = sde[0][0]
-            print('sde_version ', sde_version)
             self.sde_version = sde_version.split(' ')[0]
         except:
-            print('189 except ')
-            #self.sde_version = ''
             cursor.execute('rollback;') # abort failed transaction
             print('DB not SDE enabled')
 
@@ -201,11 +195,7 @@ class PostgisDatabase(object):
                 self.postgis_version = postgis_version.split(' ')[0]
             except:
                 #self.postgis_version = ''
-                cursor.execute('rollback;') # abort failed transaction
-                print('DB not Postgis enabled')
-        print('204 self.sde_version ', self.sde_version)
-        print('205 self.postgis_version  ', self.postgis_version)
-        #
+                cursor.execute('rollback;') # abort failed transaction        #
         # # TODO use petl dbo check/validation
         # self.dbo = dbo
         # self.user = dbo.user
@@ -225,8 +215,6 @@ class PostgisDatabase(object):
 
     def fetch(self, stmt):
         """Run a SQL statement and fetch all rows."""
-        print('stmt')
-        print(stmt)
         self.cursor.execute(stmt)
         return self.cursor.fetchall()
 
@@ -397,26 +385,19 @@ class PostgisTable(object):
 
     @property
     def geom_field(self):
-        #if self.db.sde_version != '':
         if self.db.sde_version is not None:
-            print(400)
             stmt = "select column_name from sde.st_geometry_columns where table_name = '{}'".format(self.name)
-            print('stmt ',stmt)
             r = self.db.fetch(stmt)
             if r:
                 return r[0].pop('column_name')
             else:
                 return None
         else:
-            print(408)
             f = [x for x in self.metadata if x['type'] == 'geometry']
-            print('f')
-            print(f)
             if len(f) == 0:
                 return None
             elif len(f) > 1:
                 raise LookupError('Multiple geometry fields')
-            print('''f[0]['name']  ''',f[0]['name'])
             return f[0]['name']
 
     @property
@@ -535,14 +516,11 @@ class PostgisTable(object):
 
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
-        print('preparing geom...')
         # if DB is sde enabled
         if self.db.sde_version is not None:
-            print('sde geometry 525 ', self.db.sde_version)
             geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
         # if DB is postgis en
         elif self.db.postgis_version is not None:
-            print('self.db.postgis_version ',self.db.postgis_version)
             geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
 
         # else: # if DB is not Postgis enabled
