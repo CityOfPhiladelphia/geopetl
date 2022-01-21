@@ -76,7 +76,6 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     """
     Writes rows to database.
     """
-
     # create db wrappers
     db = PostgisDatabase(dbo)
     # do we need to create the table?
@@ -422,7 +421,7 @@ class PostgisTable(object):
         return 'ST_AsText({}) AS {}'.format(geom_getter, geom_field)
 
     def get_srid(self):
-        if self.db.sde_version == '':
+        if self.db.sde_version is None:
             stmt = "SELECT Find_SRID('{}', '{}', '{}')"\
                     .format(self.schema, self.name, self.geom_field)
             return self.db.fetch(stmt)[0]['find_srid']
