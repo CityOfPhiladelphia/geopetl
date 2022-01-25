@@ -25,6 +25,7 @@ def oraclesde_db(host, port, service_name,user, pw):
     # create & return OracleSdeDatabase object
     dbo = OracleSdeDatabase(connection)
     return dbo
+
 #
 @pytest.fixture
 def csv_data():
@@ -34,27 +35,27 @@ def csv_data():
 
 # write csv staging data to test table using geopetl
 @pytest.fixture
-def create_test_tables(oraclesde_db):
+def create_test_tables(oraclesde_db, schema, srid):
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(point_csv_dir)
     # write geopetl table to Oracle
-    rows.tooraclesde(oraclesde_db.dbo, point_table_name)
+    rows.tooraclesde(oraclesde_db.dbo, '{}.{}_{}'.format(schema,point_table_name, srid))
 
 # fetch data from database using geopetl
 @pytest.fixture
-def db_data(oraclesde_db):
-    db_col = etl.fromoraclesde(dbo=oraclesde_db.dbo,table_name=point_table_name)
+def db_data(oraclesde_db, schema, srid):
+    db_col = etl.fromoraclesde(dbo=oraclesde_db.dbo,table_name='{}.{}_{}'.format(schema,point_table_name,srid))
     return db_col
 
 @pytest.fixture
-def create_test_table_noid(oraclesde_db, schema):
+def create_test_table_noid(oraclesde_db, schema,srid):
     csv_data = etl.fromcsv(point_csv_dir).cutout('objectid')
-    csv_data.tooraclesde(oraclesde_db.dbo, '{}.{}'.format(point_table_name, schema) )
+    csv_data.tooraclesde(oraclesde_db.dbo, '{}.{}_{}'.format(schema,point_table_name,srid))
 
 ######################################   TESTS   ####################################################################
 
 # read number of rows
-def test_all_rows_written(host, port, service_name,user, pw,schema, create_test_tables): #
+def test_all_rows_written(host, port, service_name,user, pw,schema, create_test_tables, srid): #
     # read staging data from csv
     with open(point_csv_dir, newline='') as f:
         reader = csv.reader(f)
@@ -68,7 +69,7 @@ def test_all_rows_written(host, port, service_name,user, pw,schema, create_test_
     try:
         with connection.cursor() as cursor:
             # execute the insert statement
-            cursor.execute("select * from {}.{} ".format(schema,point_table_name))
+            cursor.execute("select * from {}.{}_{} ".format(schema,point_table_name,srid))
             result = cursor.fetchall()
     except cx_Oracle.Error as error:
         print('Error occurred')
@@ -81,7 +82,7 @@ def test_all_rows_written(host, port, service_name,user, pw,schema, create_test_
 
 
 # compare csv data with oracle data using oraclecx
-def test_assert_data(oraclesde_db, csv_data, schema):
+def test_assert_data(oraclesde_db, csv_data, schema,srid):
     # list of csv column names
     csv_header = csv_data[0]
 
@@ -90,7 +91,7 @@ def test_assert_data(oraclesde_db, csv_data, schema):
     cursor.execute(
         '''select objectid,textfield,numericfield,timestamp,datefield,
          to_char(timezone, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as timezone,
-         sde.st_astext(shape) as shape from {}.{}'''.format(schema, point_table_name))
+         sde.st_astext(shape) as shape from {}.{}_{}'''.format(schema, point_table_name, srid))
     # list of csv column names
     db_header = [column[0] for column in cursor.description]
     rows = cursor.fetchall()
@@ -123,8 +124,8 @@ def test_assert_data(oraclesde_db, csv_data, schema):
 
 
 # # compare csv data with oracle data using geopetl
-def test_assert_data_2( oraclesde_db, db_data,csv_data,schema):
-    tb =  oraclesde_db.table('{}.{}'.format(schema,point_table_name))
+def test_assert_data_2( oraclesde_db, db_data,csv_data,schema, srid):
+    tb =  oraclesde_db.table('{}.{}_{}'.format(schema,point_table_name,srid))
     # list of column names
     keys = csv_data[0]
 
@@ -195,13 +196,13 @@ def test_assert_timezone(csv_data, db_data):
 
 
 # assert DB data with itself
-def test_with_types(db_data,oraclesde_db, schema):
-    tb = oraclesde_db.table('{}.{}'.format(schema,point_table_name))
+def test_with_types(db_data,oraclesde_db, schema, srid):
+    tb = oraclesde_db.table('{}.{}_{}'.format(schema,point_table_name,srid))
     data1 = db_data
     # load to second test table
-    db_data.tooraclesde(oraclesde_db.dbo, '{}.{}2'.format(schema,point_table_name))
+    db_data.tooraclesde(oraclesde_db.dbo, '{}.{}_{}_2'.format(schema,point_table_name,srid))
     # extract from second test table
-    data2 = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name='{}.{}2'.format(schema,point_table_name))
+    data2 = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name='{}.{}_{}_2'.format(schema,point_table_name,srid))
 
     i = 1
     # iterate through each row of data
@@ -223,8 +224,8 @@ def test_with_types(db_data,oraclesde_db, schema):
         i = i + 1
 
 # load csv data to oracle db without an objectid field using geopetl and assert data
-def test_assert_data_no_id(create_test_table_noid,csv_data,schema, db_data,oraclesde_db):
-    tb = oraclesde_db.table('{}.{}'.format(schema,point_table_name))
+def test_assert_data_no_id(create_test_table_noid,csv_data,schema, db_data,oraclesde_db, srid):
+    tb = oraclesde_db.table('{}.{}_{}'.format(schema,point_table_name,srid))
     i=1
     # iterate through each row of data
     for row in db_data[1:]:
@@ -245,8 +246,8 @@ def test_assert_data_no_id(create_test_table_noid,csv_data,schema, db_data,oracl
                 assert oracle_dict.get(key) == csv_dict.get(key)
         i=i+1
 
-# assert data by loading and extracting data without providing schema
-def test_without_schema( oraclesde_db, csv_data):
+# assert point table data by loading and extracting data without providing schema
+def test_without_schema(oraclesde_db, csv_data):
     tb = oraclesde_db.table(point_table_name)
     etl.tooraclesde(csv_data, oraclesde_db.dbo, point_table_name)
     data = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name=point_table_name)
@@ -273,46 +274,45 @@ def test_without_schema( oraclesde_db, csv_data):
             i = i + 1
 
 
-def test_dsn_connection(host,service_name,csv_data, oraclesde_db, db_data,schema,pw, user):
-    tb = oraclesde_db.table('{}.{}'.format(schema, point_table_name))
-    dsn = cx_Oracle.makedsn(host, 1521, service_name=service_name)
-    connection = cx_Oracle.connect(user=user, password=pw, dsn=dsn,
-                                   encoding="UTF-8")
-    etl.tooraclesde(csv_data, dsn, '{}.{}'.format(schema, point_table_name))
-    #csv_data.tooraclesde(dsn, table_name_with_schema)
-    for row in db_data[0]:
-        # list of column names
-        keys = csv_data[0]
-        i = 1
-        # iterate through each row of data
-        for row in db_data[1:]:
-            # create dictionary for each row of data using same set of keys
-            etl_dict = dict(zip(db_data[0], row))  # dictionary from etl data
-            csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
-            # iterate through each keys
-            for key in keys:
-                # assert shape field
-                if key == tb.geom_field:
-                    pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                    csv_geom = remove_whitespace(str(csv_dict.get(key)))
-                    assert csv_geom == pg_geom
-                # compare values from each key
-                else:
-                    assert csv_dict.get(key) == etl_dict.get(key)
-            i = i + 1
+# def test_dsn_connection(host,service_name,csv_data, oraclesde_db, db_data,schema,pw, user,srid):
+#     tb = oraclesde_db.table('{}.{}_{}'.format(schema, point_table_name,srid))
+#     dsn = cx_Oracle.makedsn(host, 1521, service_name=service_name)
+#     connection = cx_Oracle.connect(user=user, password=pw, dsn=dsn,
+#                                    encoding="UTF-8")
+#     etl.tooraclesde(csv_data, dsn, '{}.{}_{}'.format(schema, point_table_name,srid))
+#     #csv_data.tooraclesde(dsn, table_name_with_schema)
+#     for row in db_data[0]:
+#         # list of column names
+#         keys = csv_data[0]
+#         i = 1
+#         # iterate through each row of data
+#         for row in db_data[1:]:
+#             # create dictionary for each row of data using same set of keys
+#             etl_dict = dict(zip(db_data[0], row))  # dictionary from etl data
+#             csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
+#             # iterate through each keys
+#             for key in keys:
+#                 # assert shape field
+#                 if key == tb.geom_field:
+#                     pg_geom = remove_whitespace(str(etl_dict.get(key)))
+#                     csv_geom = remove_whitespace(str(csv_dict.get(key)))
+#                     assert csv_geom == pg_geom
+#                 # compare values from each key
+#                 else:
+#                     assert csv_dict.get(key) == etl_dict.get(key)
+#             i = i + 1
 
 #compare csv data with postgres data using geopetl
-def test_line_assertion( oraclesde_db, schema):
-    tb = oraclesde_db.table('{}.{}'.format(schema, line_table_name))
+def test_line_assertion( oraclesde_db, schema,srid):
+    tb = oraclesde_db.table('{}.{}_{}'.format(schema, line_table_name, srid))
     rows = etl.fromcsv(line_csv_dir)
-    rows.tooraclesde(oraclesde_db.dbo, '{}.{}'.format(schema,line_table_name))
+    rows.tooraclesde(oraclesde_db.dbo, '{}.{}_{}'.format(schema,line_table_name,srid))
     csv_data = etl.fromcsv(line_csv_dir).convert(['objectid'], int)
     # list of column names
     keys = csv_data[0]
 
     # read data from test DB using petl
-    db_data = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name='{}.{}'.format(schema,line_table_name))
-
+    db_data = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name='{}.{}_{}'.format(schema,line_table_name, srid))
     i=1
     # iterate through each row of data
     for row in db_data[1:]:
@@ -321,6 +321,7 @@ def test_line_assertion( oraclesde_db, schema):
         csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
         # iterate through each keys
         for key in keys:
+            print('key ',key)
             # assert shape field
             if key== tb.geom_field:
                 pg_geom = remove_whitespace(str(etl_dict.get(key)))
@@ -332,17 +333,17 @@ def test_line_assertion( oraclesde_db, schema):
         i = i+1
 
 
-def test_polygon_assertion(oraclesde_db, csv_data, schema):
-    tb = oraclesde_db.table('{}.{}'.format(schema, polygon_table_name))
+def test_polygon_assertion(oraclesde_db, schema,srid):
+    tb = oraclesde_db.table('{}.{}_{}'.format(schema, polygon_table_name,srid))
     rows = etl.fromcsv(polygon_csv_dir)
-    rows.tooraclesde(oraclesde_db.dbo, '{}.{}'.format(schema,polygon_table_name))
+    rows.tooraclesde(oraclesde_db.dbo, '{}.{}_{}'.format(schema,polygon_table_name,srid))
     csv_data = etl.fromcsv(polygon_csv_dir).convert(['objectid'], int)
 
     # list of column names
     keys = csv_data[0]
 
     # read data from test DB using petl
-    db_data = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name='{}.{}'.format(schema, polygon_table_name))
+    db_data = etl.fromoraclesde(dbo=oraclesde_db.dbo, table_name='{}.{}_{}'.format(schema, polygon_table_name,srid))
 
     i=1
     # iterate through each row of data
@@ -353,7 +354,7 @@ def test_polygon_assertion(oraclesde_db, csv_data, schema):
         # iterate through each keys
         for key in keys:
             # assert shape field
-            if key== tb.geom_field:
+            if key == tb.geom_field:
                 pg_geom = remove_whitespace(str(etl_dict.get(key)))
                 csv_geom = remove_whitespace(str(csv_dict.get(key)))
                 assert csv_geom == pg_geom
