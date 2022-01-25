@@ -19,11 +19,12 @@ def remove_whitespace(stringval):
     shapestring = str(stringval)
     geom_type = re.findall("[A-Z]{1,12}", shapestring)[0]
     coordinates = re.findall(r"[-+]?\d*\.\d+|\d+", shapestring)
-    coordinates= [str(round(float(coords),4))for coords in coordinates]
-    if geom_type == 'point' or geom_type=="POINT":
+    #truncate coordinates to 3 decimal places
+    coordinates= [str(float('%.3f' % float(coords))) for coords in coordinates]
+    if geom_type.lower()  == 'point':
         geom = "{type}({x})".format(type=geom_type, x=" ".join(coordinates))
-    elif geom_type == 'polygon' or geom_type=="POLYGON":
+    elif geom_type.lower()  == 'polygon':
         geom = "{type}(({x}))".format(type=geom_type, x=" ".join(coordinates))
-    elif geom_type == 'linestring' or geom_type=="LINESTRING":
+    elif geom_type.lower() == 'linestring':
         geom = "{type}(({x}))".format(type=geom_type, x=" ".join(coordinates))
     return geom
