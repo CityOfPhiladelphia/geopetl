@@ -3,14 +3,14 @@ import pytest
 
 def pytest_addoption(parser):
     parser.addoption("--db", action="store", default="default_value")
-    parser.addoption("--user", action="store", default="defaukt_value")
+    parser.addoption("--user", action="store", default="default_value")
     parser.addoption("--pw", action="store", default="default_value")
-
     parser.addoption("--host", action="store", default="localhost")
     parser.addoption("--port", action="store", default="default_value")
     parser.addoption("--service_name", action="store", default="default_value")
     parser.addoption("--schema", action="store", default="public")
     parser.addoption("--column_definition", action="store", default="default_value")
+    parser.addoption("--srid", action="store", default="default_value")
 
 
 def pytest_generate_tests(metafunc):
@@ -46,7 +46,10 @@ def pytest_generate_tests(metafunc):
     if 'schema' in metafunc.fixturenames and option_value7 is not None:
         metafunc.parametrize("schema", [option_value7])
 
-
     option_value8 = metafunc.config.option.column_definition
     if 'column_definition' in metafunc.fixturenames and option_value8 is not None:
         metafunc.parametrize("column_definition", [option_value8])
+
+    option_value9 = metafunc.config.option.srid
+    if 'srid' in metafunc.fixturenames and option_value9 is not None:
+        metafunc.parametrize("srid", [option_value9])
