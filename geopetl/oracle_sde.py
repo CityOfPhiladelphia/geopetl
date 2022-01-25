@@ -395,7 +395,6 @@ class OracleSdeTable(object):
             # Use scale to identiry intetger numeric types
             if type_without_length == 'NUMBER' and scale == 0:
                 fields[name]['type'] = 'integer'
-        # print(fields)
         return fields
 
     @property
