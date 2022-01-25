@@ -43,7 +43,7 @@ echo "sde database ready and accepting conections."
 # When you specify the container name in docker-compose.yml
 
 echo "##########################################"
-echo "Running tests against Esri SDE database..."
+echo "Running postgressde tests 4326 against Esri SDE database..."
 # test for postgres-sde
 pytest geopetl/tests/test_postgressde.py \
   --user=$SDE_USER \
@@ -52,10 +52,11 @@ pytest geopetl/tests/test_postgressde.py \
   --host=$SDE_HOST \
   --port=5432 \
   --schema=$SDE_USER \
-  --column_definition="geopetl/tests/fixtures_data/schemas/point.json"
+  --column_definition="geopetl/tests/fixtures_data/schemas/point.json"\
+  --srid=4326
 
 SDE_EXIT_CODE=$?
-echo "postgres tests done."
+echo "postgres 4326 tests done."
 echo "##########################################"
 echo ""
 
@@ -63,8 +64,35 @@ if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
     echo "Errors encountered in tests."
     exit 1
 else
-    echo "All tests passed!"
+    echo "postgres 4326 tests passed!"
     exit 0
 fi
 
+
+
+echo "##########################################"
+echo "Running postgressde tests 2272 against Esri SDE database..."
+# test for postgres-sde
+pytest geopetl/tests/test_postgressde.py \
+  --user=$SDE_USER \
+  --pw=$SDE_PASSWORD \
+  --db=$SDE_DB \
+  --host=$SDE_HOST \
+  --port=5432 \
+  --schema=$SDE_USER \
+  --column_definition="geopetl/tests/fixtures_data/schemas/point.json"\
+  --srid=2272
+
+SDE_EXIT_CODE=$?
+echo "postgres 2272 tests done."
+echo "##########################################"
+echo ""
+
+if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
+    echo "Errors encountered in tests."
+    exit 1
+else
+    echo "postgres 2272  passed!"
+    exit 0
+fi
 
