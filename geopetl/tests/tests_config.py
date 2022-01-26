@@ -15,12 +15,22 @@ polygon_column_definition = 'geopetl/tests/fixtures_data/schemas/polygon.json'
 line_column_definition = 'geopetl/tests/fixtures_data/schemas/line.json'
 
 
-def remove_whitespace(stringval):
+def remove_whitespace(stringval,srid=None):
     shapestring = str(stringval)
     geom_type = re.findall("[A-Z]{1,12}", shapestring)[0]
     coordinates = re.findall(r"[-+]?\d*\.\d+|\d+", shapestring)
-    #truncate coordinates to 3 decimal places
-    coordinates= [str(float('%.3f' % float(coords))) for coords in coordinates]
+    srid = int(srid)
+    if srid == 4326:
+        print('this ')
+        #truncate coordinates to 8 decimal places
+        coordinates= [str(float('%.8f' % float(coords))) for coords in coordinates]
+    elif srid == 2272:
+        #truncate coordinates to 3 decimal places
+        coordinates= [str(float('%.3f' % float(coords))) for coords in coordinates]
+    else:
+        #truncate coordinates to 4 decimal places
+        coordinates= [str(float('%.6f' % float(coords))) for coords in coordinates]
+
     if geom_type.lower()  == 'point':
         geom = "{type}({x})".format(type=geom_type, x=" ".join(coordinates))
     elif geom_type.lower()  == 'polygon':

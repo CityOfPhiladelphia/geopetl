@@ -93,8 +93,8 @@ def test_assert_data(postgis, csv_data, schema,srid):
         for key in db_header:
             # compare values from each key
             if key=='shape':
-                pg_geom = remove_whitespace(str(pg_dict.get(key)))
-                csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                pg_geom = remove_whitespace(str(pg_dict.get(key)), srid)
+                csv_geom = remove_whitespace(str(csv_dict.get(key)), srid)
                 assert csv_geom == pg_geom
             elif key =='objectid':
                 continue
@@ -105,7 +105,7 @@ def test_assert_data(postgis, csv_data, schema,srid):
 
 
 #compare csv data with postgres data using geopetl
-def test_assert_data_2(postgis, schema,csv_data,db_data):
+def test_assert_data_2(postgis,csv_data,db_data,srid):
     print('test_assert_data_2')
     csv_header = csv_data[0]
 
@@ -124,8 +124,8 @@ def test_assert_data_2(postgis, schema,csv_data,db_data):
         for key in etl_dict:
             # assert shape field
             if key=='shape':
-                pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                pg_geom = remove_whitespace(str(etl_dict.get(key)), srid)
+                csv_geom = remove_whitespace(str(csv_dict.get(key)), srid)
                 assert csv_geom == pg_geom
             elif key =='objectid':
                 continue
@@ -156,13 +156,13 @@ def test_assert_datefield(csv_data, db_data):
     for i in range(len(db_col)):
          assert db_col[i] == csv_col[i]
 
-def test_assert_shape(csv_data, db_data):
+def test_assert_shape(csv_data, db_data,srid):
     key = 'shape'
     csv_col = csv_data[key]
     db_col = db_data[key]
     for i in range(len(db_col)):
-        db_val = remove_whitespace(str(db_col[i]))
-        csv_val = remove_whitespace(str(csv_col[i]))
+        db_val = remove_whitespace(str(db_col[i]),srid)
+        csv_val = remove_whitespace(str(csv_col[i]),srid)
         assert db_val == csv_val
 
 
@@ -186,7 +186,7 @@ def test_with_types(db_data, postgis, column_definition, schema, srid):
     # read data from db
     data1 = db_data
     #load to second test table
-    etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema,point_table_name,srid), column_definition_json=column_definition,  from_srid=2272)
+    etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema,point_table_name,srid), column_definition_json=column_definition,  from_srid=srid)
     #extract from second test table
     data2 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema,point_table_name,srid))
     i = 1
@@ -201,8 +201,8 @@ def test_with_types(db_data, postgis, column_definition, schema, srid):
             if key == 'objectid':
                 continue
             if key == 'shape':
-                geom1 = remove_whitespace(str(db_dict1.get(key)))
-                geom2 = remove_whitespace(str(db_dict2.get(key)))
+                geom1 = remove_whitespace(str(db_dict1.get(key)),srid)
+                geom2 = remove_whitespace(str(db_dict2.get(key)),srid)
                 assert geom1 == geom2
             # assert values from each key
             else:
@@ -211,7 +211,7 @@ def test_with_types(db_data, postgis, column_definition, schema, srid):
 
 #11th test
 # assert data by loading and extracting data without providing schema
-def test_without_schema(db_data, postgis, column_definition, csv_data, schema,create_test_tables, srid):
+def test_without_schema(db_data, postgis, csv_data, schema,create_test_tables, srid):
 
     data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,point_table_name, srid))
 
@@ -230,8 +230,8 @@ def test_without_schema(db_data, postgis, column_definition, csv_data, schema,cr
                     continue
                 # assert shape field
                 elif key == 'shape':
-                    pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                    csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                    pg_geom = remove_whitespace(str(etl_dict.get(key)),srid)
+                    csv_geom = remove_whitespace(str(csv_dict.get(key)),srid)
                     assert csv_geom == pg_geom
                 # compare values from each key
                 else:
@@ -261,8 +261,8 @@ def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,s
                     # assert csv_dict.get(key) == etl_dict.get(key)
                 # assert shape field
                 elif key == 'shape':
-                    pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                    csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                    pg_geom = remove_whitespace(str(etl_dict.get(key)),srid)
+                    csv_geom = remove_whitespace(str(csv_dict.get(key)),srid)
                     assert csv_geom == pg_geom
                 # compare values from each key
                 else:
@@ -271,7 +271,7 @@ def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,s
 
 
 # # load csv data to postgressde db without an objectid field using geopetl and assert data
-def test_assert_data_no_id(create_test_table_noid,csv_data, db_data):
+def test_assert_data_no_id(create_test_table_noid,csv_data, db_data,srid):
     # list of column names
     i=1
     # iterate through each row of data
@@ -284,8 +284,8 @@ def test_assert_data_no_id(create_test_table_noid,csv_data, db_data):
             if key == 'objectid' and 'objectid' in csv_data[0] and 'objectid' in db_data[0]:
                 assert (db_dict.get('objectid') is not None)
             elif key == 'shape':
-                pg_geom = remove_whitespace(str(db_dict.get('shape')))
-                csv_geom = remove_whitespace(str(csv_dict.get('shape')))
+                pg_geom = remove_whitespace(str(db_dict.get('shape')),srid)
+                csv_geom = remove_whitespace(str(csv_dict.get('shape')),srid)
                 assert csv_geom == pg_geom
             else:
                 assert db_dict.get(key) == csv_dict.get(key)
@@ -312,8 +312,8 @@ def test_with_types(create_test_tables, db_data,schema, postgis, column_definiti
             if key == 'objectid':
                 continue
             if key == 'shape':
-                geom1 = remove_whitespace(str(db_dict1.get(key)))
-                geom2 = remove_whitespace(str(db_dict2.get(key)))
+                geom1 = remove_whitespace(str(db_dict1.get(key)),srid)
+                geom2 = remove_whitespace(str(db_dict2.get(key)),srid)
                 assert geom1 == geom2
             # assert values from each key
             else:
@@ -340,8 +340,8 @@ def test_without_schema(db_data, postgis, column_definition, csv_data,create_tes
                     continue
                 # assert shape field
                 elif key == 'shape':
-                    pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                    csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                    pg_geom = remove_whitespace(str(etl_dict.get(key)),srid)
+                    csv_geom = remove_whitespace(str(csv_dict.get(key)),srid)
                     assert csv_geom == pg_geom
                 # compare values from each key
                 else:
@@ -354,7 +354,7 @@ def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,s
     tb = postgis.table('{}.{}_{}'.format(schema,point_table_name,srid))
     etl.topostgis(csv_data, my_dsn,
                   '{}.{}_{}'.format(schema,point_table_name,srid),
-                  from_srid=srid, column_definition_json=column_definition)
+                  from_srid=srid)
     data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,point_table_name,srid))
     for row in data[0]:
         # list of column names
@@ -371,8 +371,8 @@ def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,s
                     continue
                 # assert shape field
                 if key == tb.geom_field:
-                    pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                    csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                    pg_geom = remove_whitespace(str(etl_dict.get(key)), srid)
+                    csv_geom = remove_whitespace(str(csv_dict.get(key)), srid)
                     assert csv_geom == pg_geom
                 # compare values from each key
                 else:
@@ -402,8 +402,8 @@ def test_line_assertion(postgis, csv_data,schema,srid):
         for key in keys:
             # assert shape field
             if key== tb.geom_field:
-                pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                pg_geom = remove_whitespace(str(etl_dict.get(key)), srid)
+                csv_geom = remove_whitespace(str(csv_dict.get(key)), srid)
                 assert csv_geom == pg_geom
             elif key == 'objectid':
                 continue
@@ -435,8 +435,8 @@ def test_polygon_assertion(postgis, schema, csv_data, srid):
         for key in keys:
             # assert shape field
             if key== tb.geom_field:
-                pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                pg_geom = remove_whitespace(str(etl_dict.get(key)), srid)
+                csv_geom = remove_whitespace(str(csv_dict.get(key)), srid)
                 assert csv_geom == pg_geom
             elif key =='objectid':
                 continue
@@ -450,7 +450,6 @@ def test_null_times(postgis, csv_data, schema, column_definition, srid):
     csv_data['timestamp'] = ''
     csv_data['timezone'] = ''
     csv_data['datefield']=''
-
     keys = csv_data[0]
     tb = postgis.table('{}.{}_{}'.format(schema, point_table_name, srid))
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), column_definition_json=column_definition,
@@ -468,8 +467,8 @@ def test_null_times(postgis, csv_data, schema, column_definition, srid):
         for key in keys:
             # assert shape field
             if key == tb.geom_field:
-                pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                pg_geom = remove_whitespace(str(etl_dict.get(key)), srid)
+                csv_geom = remove_whitespace(str(csv_dict.get(key)), srid)
                 assert csv_geom == pg_geom
             elif key == 'objectid':
                 continue
