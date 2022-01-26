@@ -19,11 +19,11 @@ def postgis(db, user, pw, host):
 
 # create new table and write csv staging data to it
 @pytest.fixture
-def create_test_tables(postgis, column_definition,schema,srid):
+def create_test_tables(postgis, column_definition,schema):
     # populate a new geopetl table object with staging data from csv file
     rows = etl.fromcsv(point_csv_dir)
     # write geopetl table to postgis
-    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,point_table_name), column_definition_json=column_definition, from_srid=srid)
+    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,point_table_name), column_definition_json=column_definition)
 
 @pytest.fixture
 def csv_data():
@@ -41,7 +41,7 @@ def db_data(postgis,schema):
 ########################################   TESTS   #####################################################################
 
 # read number of rows
-def test_all_rows_written(db, user, host, pw,create_test_tables,csv_data,schema,srid):
+def test_all_rows_written(db, user, host, pw,create_test_tables,csv_data,schema):
     csv_row_count = etl.nrows(csv_data)
     etl.nrows(csv_data)
 
@@ -52,7 +52,7 @@ def test_all_rows_written(db, user, host, pw,create_test_tables,csv_data,schema,
                                   database=db)
     cur = connection.cursor()
     # query all data from postgis table
-    cur.execute('Select * from {table}'.format(table='{}.{}_{}'.format(schema,point_table_name,srid)))
+    cur.execute('Select * from {table}'.format(table='{}.{}'.format(schema,point_table_name)))
     result = cur.fetchall()
 
     # get number of rows from query
@@ -66,7 +66,7 @@ def test_assert_data(postgis, csv_data,schema):
     keys = csv_data[0]
     # read data using postgis
     cursor = postgis.dbo.cursor()
-    cursor.execute('select objectid,textfield,timestamp,numericfield, timezone, st_astext(shape) as shape, datefield from ' + '{}.{}'.format(schema,point_table_name))
+    cursor.execute('select objectid,textfield,timestamp,numericfield, timezone, st_astext(shape) as shape, datefield from {}.{}'.format(schema,point_table_name))
     rows = cursor.fetchall()
     header = [column[0] for column in cursor.description]
 
@@ -162,14 +162,14 @@ def test_assert_timezone(csv_data, db_data):
          assert db_col[i] == csv_col[i]
 
 # assert DB data with itself
-def test_with_types(db_data, schema, postgis,column_definition,srid):
+def test_with_types(db_data, schema, postgis,column_definition):
     tb = postgis.table('{}.{}'.format(schema, point_table_name))
     # read data from DB
     data1 = db_data
     #load to second test table
-    etl.topostgis(db_data, postgis.dbo, '{}.{}'.format(schema, point_table_name)+'2', from_srid=srid, column_definition_json=column_definition)
+    etl.topostgis(db_data, postgis.dbo, '{}.{}2'.format(schema, point_table_name), column_definition_json=column_definition)
     #extract from second test table
-    data2 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}'.format(schema, point_table_name)+'2')
+    data2 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}2'.format(schema, point_table_name))
 
     i = 1
     # iterate through each row of DB data and assert data from the 2 test tables
@@ -191,8 +191,8 @@ def test_with_types(db_data, schema, postgis,column_definition,srid):
         i = i + 1
 
 # assert data by loading and extracting data without providing schema
-def test_without_schema(db_data, postgis, column_definition,csv_data,srid):
-    etl.topostgis(csv_data, postgis.dbo, point_table_name, from_srid=srid, column_definition_json=column_definition)
+def test_without_schema(db_data, postgis, column_definition,csv_data):
+    etl.topostgis(csv_data, postgis.dbo, point_table_name, column_definition_json=column_definition)
     data = etl.frompostgis(dbo=postgis.dbo, table_name=point_table_name)
 
     for row in data[0]:
@@ -217,12 +217,12 @@ def test_without_schema(db_data, postgis, column_definition,csv_data,srid):
             i = i + 1
 
 # write using a string connection to db
-def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition, schema,srid):
+def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition, schema):
     tb = postgis.table('{}.{}'.format(schema, point_table_name))
     my_dsn = '''dbname={db} user={user} password={pw} host={host}'''.format(db=db,user=user,pw=pw,host=host)
     etl.topostgis(csv_data, my_dsn,
-                  '{}.{}_{}'.format(schema, point_table_name,srid),
-                  from_srid=srid, column_definition_json=column_definition)
+                  '{}.{}'.format(schema, point_table_name),
+                   column_definition_json=column_definition)
     data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}'.format(schema, point_table_name))
     for row in data[0]:
         # list of column names
@@ -247,17 +247,17 @@ def test_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition, 
 
 
 #compare csv data with postgres data using geopetl
-def test_line_assertion(postgis, schema,srid):
+def test_line_assertion(postgis, schema):
 
-    tb = postgis.table('{}.{}'.format(schema,'{}.{}_{}'.format(schema,line_table_name,srid)))
+    tb = postgis.table('{}.{}'.format(schema,line_table_name))
     rows = etl.fromcsv(line_csv_dir)
-    rows.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,line_table_name,srid), from_srid=srid, column_definition_json=line_column_definition)
+    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,line_table_name), column_definition_json=line_column_definition)
     csv_data = etl.fromcsv(line_csv_dir).convert(['objectid'], int)
     # list of column names
     keys = csv_data[0]
 
     # read data from test DB using petl
-    db_data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,line_table_name,srid))
+    db_data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}'.format(schema,line_table_name))
 
     i=1
     # iterate through each row of data
@@ -285,7 +285,7 @@ def test_polygon_assertion(postgis,schema):
     tb = postgis.table('{}.{}'.format(schema,polygon_table_name))
 
     rows = etl.fromcsv(polygon_csv_dir)
-    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,polygon_table_name), from_srid=2272, column_definition_json=polygon_column_definition)
+    rows.topostgis(postgis.dbo, '{}.{}'.format(schema,polygon_table_name), column_definition_json=polygon_column_definition)
     csv_data = etl.fromcsv(polygon_csv_dir).convert(['objectid'], int)
 
     # list of column names
