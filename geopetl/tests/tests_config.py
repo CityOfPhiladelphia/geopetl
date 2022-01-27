@@ -19,9 +19,9 @@ def remove_whitespace(stringval,srid=None):
     shapestring = str(stringval)
     geom_type = re.findall("[A-Z]{1,12}", shapestring)[0]
     coordinates = re.findall(r"[-+]?\d*\.\d+|\d+", shapestring)
-    srid = int(srid)
+    if srid:
+        srid = int(srid)
     if srid == 4326:
-        print('this ')
         #truncate coordinates to 8 decimal places
         coordinates= [str(float('%.8f' % float(coords))) for coords in coordinates]
     elif srid == 2272:
