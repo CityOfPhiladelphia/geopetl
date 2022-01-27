@@ -324,8 +324,8 @@ def test_line_assertion( oraclesde_db, schema,srid):
             print('key ',key)
             # assert shape field
             if key== tb.geom_field:
-                pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                pg_geom = remove_whitespace(str(etl_dict.get(key)),srid)
+                csv_geom = remove_whitespace(str(csv_dict.get(key)),srid)
                 assert csv_geom == pg_geom
             # compare values from each key
             else:
@@ -355,8 +355,8 @@ def test_polygon_assertion(oraclesde_db, schema,srid):
         for key in keys:
             # assert shape field
             if key == tb.geom_field:
-                pg_geom = remove_whitespace(str(etl_dict.get(key)))
-                csv_geom = remove_whitespace(str(csv_dict.get(key)))
+                pg_geom = remove_whitespace(str(etl_dict.get(key)),srid)
+                csv_geom = remove_whitespace(str(csv_dict.get(key)),srid)
                 assert csv_geom == pg_geom
             # compare values from each key
             else:
