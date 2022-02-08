@@ -33,7 +33,7 @@ def fromoraclesde(dbo, table_name, **kwargs):
 etl.fromoraclesde = fromoraclesde
 
 def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
-                buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=True):
+                buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=True, increment=True):
     """
     Writes rows to database. Truncates by default.
 
@@ -55,21 +55,21 @@ def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
     if create:
         # TODO create table if it doesn't exist
         raise NotImplementedError('Autocreate tables for Oracle SDE not currently implemented.')
-    elif truncate:
-        table.truncate()
+    # elif truncate:
+    #     table.truncate()
 
-    table.write(rows, srid=srid, table_srid=table_srid)
+    table.write(rows, srid=srid, table_srid=table_srid, increment=increment, truncate=truncate)
 
 etl.tooraclesde = tooraclesde
 
-def _tooraclesde(self, dbo, table_name, table_srid=None,
-                 buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+def _tooraclesde(self, dbo, table_name, srid=None, table_srid=None,
+                 buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=True, increment=True):
     """
     This wraps tooraclesde and adds a `self` arg so it can be attached to
     the Table class. This enables functional-style chaining.
     """
     return tooraclesde(self, dbo, table_name, table_srid=table_srid,
-                       buffer_size=buffer_size)
+                       buffer_size=buffer_size, truncate=truncate, increment=increment)
 
 Table.tooraclesde = _tooraclesde
 
@@ -318,7 +318,7 @@ TODO:
 - used parametrized queries/bind variables across the board
 """
 class OracleSdeTable(object):
-    def __init__(self, db, name, srid=None):
+    def __init__(self, db, name, srid=None, increment=True):
         self.db = db
         self.db.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'"
                                " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
@@ -336,6 +336,7 @@ class OracleSdeTable(object):
         self.geom_type = self._get_geom_type()
         self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
         self.timezone_fields = self._timezone_fields()
+        self.increment = increment
         # handle srid
         table_srid = self._get_srid()
         if table_srid and srid and table_srid != srid:
@@ -811,7 +812,7 @@ class OracleSdeTable(object):
 
 
     def write(self, rows, srid=None, table_srid=None,
-              buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+              buffer_size=DEFAULT_WRITE_BUFFER_SIZE,increment=True,truncate=True):
         """
         Inserts dictionary row objects in the the database.
         Args: list of row dicts, table name, ordered field names
@@ -945,11 +946,28 @@ class OracleSdeTable(object):
 
         # Inject the object ID field if it's missing from the supplied rows
         stmt_fields = list(fields)
-        if self.objectid_field and self.objectid_field not in fields:
-            stmt_fields.append(self.objectid_field)
-            incrementor = "SDE.GDB_UTIL.NEXT_ROWID('{}', '{}')"\
-                .format(self._owner, self.name)
-            placeholders.append(incrementor)
+        if self.objectid_field:
+            if self.objectid_field not in stmt_fields:
+                if not increment:
+                    print('increment is false and local data does not contain object_id field')
+                    raise
+                stmt_fields.append(self.objectid_field)
+                incrementor = "SDE.GDB_UTIL.NEXT_ROWID('{}', '{}')"\
+                    .format(self._owner, self.name)
+                placeholders.append(incrementor)
+            else:# if obid in csv fieds
+                #insert into (obid,textfield,,,) values(:textfield ,,, sde.gdb)
+                if increment:
+                    ob_id_index = stmt_fields.index(self.objectid_field)
+                    # remove obid from fields
+                    stmt_fields.remove(self.objectid_field)
+                    # append obid into fields
+                    stmt_fields.append(self.objectid_field)
+                    # remove objectid from placeholders
+                    del placeholders[ob_id_index]
+                    incrementor = "SDE.GDB_UTIL.NEXT_ROWID('{}', '{}')" \
+                        .format(self._owner, self.name)
+                    placeholders.append(incrementor)
 
         # get input sizes so cx_Oracle what field types to expect on executemany
         # execute this later
@@ -964,7 +982,7 @@ class OracleSdeTable(object):
             stmt_fields_joined, placeholders_joined)
         self.db.cursor.prepare(stmt)
 
-        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in fields}
+        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields}
         # db_types_filtered.pop('ID')
 
         #c.setinputsizes(**db_types_filtered)
@@ -989,13 +1007,16 @@ class OracleSdeTable(object):
                         multi_geom=multi_geom)
                     val_row[field.upper()] = val
                 else:
+                    if field == self.objectid_field and increment:
+                        continue
                     val = self._prepare_val(row[field], type_)
                     # TODO: NCLOBS should be inserted via array vars
                     # if type_ == 'nclob':
                     # val_row.append(val)
                     val_row[field.upper()] = val
             val_rows.append(val_row)
-
+            if truncate:
+                self.truncate()
             if i % buffer_size == 0:
                 # execute
                 self.db.cursor.executemany(None, val_rows, batcherrors=False)
