@@ -259,7 +259,8 @@ def test_with_types(db_data,oraclesde_db, schema, srid):
     tb = myDB.table('{}.{}_{}'.format(schema, point_table_name, srid))
     data1 = db_data
     # load to second test table
-    db_data.tooraclesde(oraclesde_db, '{}.{}_{}_2'.format(schema,point_table_name,srid))
+    db_data.tooraclesde(oraclesde_db, '{}.{}_{}_2'.format(schema,point_table_name,srid), srid=srid)
+    #csv_data.tooraclesde(dbridge_conn, '{}.{}_{}'.format('GIS_TEST', 'point_table', 2272), increment=False)
     # extract from second test table
     data2 = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}.{}_{}_2'.format(schema,point_table_name,srid))
 
@@ -273,7 +274,9 @@ def test_with_types(db_data,oraclesde_db, schema, srid):
         # iterate through each row of DB data
         for key in db_data[0]:
             # assert shape field
-            if key == tb.geom_field:
+            if key == tb.objectid_field:
+                continue
+            elif key == tb.geom_field:
                 db_geom1 = remove_whitespace(str(db_dict1.get(key)))
                 db_geom2 = remove_whitespace(str(db_dict2.get(key)))
                 assert db_geom1 == db_geom2
@@ -326,8 +329,10 @@ def test_without_schema(oraclesde_db, csv_data,schema,srid):
             csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
             # iterate through each keys
             for key in keys:
+                if key == tb.objectid_field:
+                    continue
                 # assert shape field
-                if key == tb.geom_field:
+                elif key == tb.geom_field:
                     pg_geom = remove_whitespace(str(etl_dict.get(key)))
                     csv_geom = remove_whitespace(str(csv_dict.get(key)))
                     assert csv_geom == pg_geom
@@ -370,7 +375,7 @@ def test_line_assertion( oraclesde_db, schema,srid):
     myDB= OracleSdeDatabase(oraclesde_db)
     tb = myDB.table('{}.{}_{}'.format(schema, line_table_name, srid))
     rows = etl.fromcsv(line_csv_dir)
-    rows.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema,line_table_name,srid))
+    rows.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema,line_table_name,srid), srid=srid)
     csv_data = etl.fromcsv(line_csv_dir).convert(['objectid'], int)
     # list of column names
     keys = csv_data[0]
@@ -385,8 +390,10 @@ def test_line_assertion( oraclesde_db, schema,srid):
         csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
         # iterate through each keys
         for key in keys:
+            if key == tb.objectid_field:
+                continue
             # assert shape field
-            if key== tb.geom_field:
+            elif key== tb.geom_field:
                 pg_geom = remove_whitespace(str(etl_dict.get(key)),srid)
                 csv_geom = remove_whitespace(str(csv_dict.get(key)),srid)
                 assert csv_geom == pg_geom
@@ -418,8 +425,10 @@ def test_polygon_assertion(oraclesde_db, schema,srid):
         csv_dict = dict(zip(keys, csv_data[i]))     # dictionary from csv data
         # iterate through each keys
         for key in keys:
+            if key == tb.objectid_field:
+                continue
             # assert shape field
-            if key == tb.geom_field:
+            elif key == tb.geom_field:
                 pg_geom = remove_whitespace(str(etl_dict.get(key)),srid)
                 csv_geom = remove_whitespace(str(csv_dict.get(key)),srid)
                 assert csv_geom == pg_geom
