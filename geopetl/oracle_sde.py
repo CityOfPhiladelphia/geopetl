@@ -55,8 +55,6 @@ def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
     if create:
         # TODO create table if it doesn't exist
         raise NotImplementedError('Autocreate tables for Oracle SDE not currently implemented.')
-    # elif truncate:
-    #     table.truncate()
 
     table.write(rows, srid=srid, table_srid=table_srid, increment=increment, truncate=truncate)
 
@@ -680,7 +678,8 @@ class OracleSdeTable(object):
         # If there's a schema we have to double quote the owner and the table
         # name, but also make them uppercase.
         if self.schema:
-            comps = [_quote(self.schema.upper()), self.name.upper()]
+            comps = [_quote(self.schema.upper()), _quote(self.name.upper())]
+            #comps = [self.schema.upper(), self.name.upper()]
             return '.'.join(comps)
         return self.name
 
@@ -975,6 +974,8 @@ class OracleSdeTable(object):
         c.execute('select * from {} where rownum = 1'.format(self._name_with_schema))
         db_types = {d[0]: d[1] for d in self.db.cursor.description}
 
+        if truncate:
+            self.truncate()
         # Prepare statement
         placeholders_joined = ', '.join(placeholders)
         stmt_fields_joined = ', '.join(stmt_fields)
@@ -985,7 +986,6 @@ class OracleSdeTable(object):
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields}
         # db_types_filtered.pop('ID')
 
-        #c.setinputsizes(**db_types_filtered)
         #Don't fail on setinputsizes error
         try:
             c.setinputsizes(**db_types_filtered)
@@ -1015,8 +1015,7 @@ class OracleSdeTable(object):
                     # val_row.append(val)
                     val_row[field.upper()] = val
             val_rows.append(val_row)
-            if truncate:
-                self.truncate()
+
             if i % buffer_size == 0:
                 # execute
                 self.db.cursor.executemany(None, val_rows, batcherrors=False)
