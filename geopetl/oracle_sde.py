@@ -27,7 +27,6 @@ etl.extract_table_schema = extract_table_schema
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
-
     return table.query(**kwargs)
 
 etl.fromoraclesde = fromoraclesde
@@ -643,7 +642,8 @@ class OracleSdeTable(object):
         #     - therefore choose query based on max length of geom
         #     - for not use geom_type as proxy for length of geom (handle POINT geom_type conversions in the database
         #     - TODO: make determination based on max geom field length
-
+        if self.max_num_points_in_geom is None:
+            self.max_num_points_in_geom = 0
 ##        if self.geom_type == 'POINT':
         if self.max_num_points_in_geom <= MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else TO_CHAR(SDE.ST_AsText({})) end AS {}" \
@@ -1065,6 +1065,14 @@ class OracleSdeQuery(SpatialQuery):
         self.timestamp = timestamp
         self.geom_with_srid = geom_with_srid
         self.sql = sql
+        db_view = etl.fromdb(self.db.dbo, self.stmt())
+        # Check if table is empty
+        try:
+            rown_num = etl.nrows(db_view)
+        except Exception as e:
+            print(e)
+            print('ERROR: table is empty')
+            raise
 
     def __iter__(self):
         """Proxy iteration to core petl."""
@@ -1114,7 +1122,6 @@ class OracleSdeQuery(SpatialQuery):
         # handle timestamp argument
         if self.timestamp:
             fields.append('CURRENT_TIMESTAMP as etl_read_timestamp')
-
         # handle geom
         geom_field = self.table.geom_field
         if geom_field and self.return_geom:
