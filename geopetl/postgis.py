@@ -316,6 +316,7 @@ class PostgisDatabase(object):
 # maps db field types to more generic internal ones
 FIELD_TYPE_MAP = {
     'smallint':                 'num',
+    'int8':                     'num',
     'integer':                  'num',
     'smallint':                 'num',
     'float':                    'num',
@@ -325,11 +326,15 @@ FIELD_TYPE_MAP = {
     'double precision':         'num',
     'text':                     'text',
     'character varying':        'text',
+    'varchar':                  'text',
     'date':                     'date',
     'USER-DEFINED':             'geometry',
     'timestamp with time zone': 'timestamptz',
     'timestamp without time zone': 'timestamp',
+    # materialized views don't specify if they use a timezone, this could be problematic.
+    'timestamp':                'timestamp',
     'boolean':                  'boolean',
+    'bool':                     'boolean',
     'uuid':                     'uuid',
     'money':                    'money'
 }
@@ -356,12 +361,58 @@ class PostgisTable(object):
         return self.__str__()
 
     @property
-    def metadata(self):
+    def database_object_type(self):
+        """returns whether the object is a table, view, or materialized view using pg_class
+        to figure out the type of object we're interacting with.
+        docs: https://www.postgresql.org/docs/11/catalog-pg-class.html
+        Right now we want to know whether its a table, view, or materialized view. Other
+        things shouldn't be getting passed and we'll raise an exception if they are.
+        """
+        type_map = {
+            'r': 'table','i': 'index','S': 'sequence','t': 'TOAST_table','v': 'view', 'm': 'materialized_view',
+            'c': 'composite_type','f': 'foreign_table','p': 'partitioned_table','I': 'partitioned_index'
+        }
         stmt = """
-            select column_name as name, data_type as type
-            from information_schema.columns
-            where table_schema = '{}' and table_name = '{}'
-        """.format(self.schema, self.name)
+            SELECT relkind FROM pg_class
+            JOIN pg_catalog.pg_namespace n ON n.oid = pg_class.relnamespace
+            WHERE relname='{}'
+            AND n.nspname='{}';
+            """.format(self.name,self.schema)
+        #relkind = self.db.fetch(stmt)[0]
+        relkind = self.db.fetch(stmt)[0]['relkind']
+        if type_map[relkind] in ['table', 'materialized_view', 'view']:
+            return type_map[relkind]
+        else:
+            raise TypeError("""This database object is unsupported at this time.
+            database object passed to us looks like a '{}'""".format(type_map[relkind]))
+
+    @property
+    def metadata(self):
+        if self.database_object_type == 'table':
+            stmt = """
+                select column_name as name, data_type as type
+                from information_schema.columns
+                where table_schema = '{}' and table_name = '{}'
+                """.format(self.schema, self.name)
+        # Funny method for getting the column names and data types for views
+        elif self.database_object_type == 'materialized_view' or self.database_object_type == 'view':
+            stmt = """
+                select 
+                    attr.attname as name,
+                    trim(leading '_' from tp.typname) as type
+                from pg_catalog.pg_attribute as attr
+                join pg_catalog.pg_class as cls on cls.oid = attr.attrelid
+                join pg_catalog.pg_namespace as ns on ns.oid = cls.relnamespace
+                join pg_catalog.pg_type as tp on tp.typelem = attr.atttypid
+                where 
+                    ns.nspname = '{}' and
+                    cls.relname = '{}' and 
+                    not attr.attisdropped and 
+                    cast(tp.typanalyze as text) = 'array_typanalyze' and 
+                    attr.attnum > 0
+                order by 
+                    attr.attnum
+                """.format(self.schema,self.name)
         fields = self.db.fetch(stmt)
         for field in fields:
             field['type'] = FIELD_TYPE_MAP[field['type']]
@@ -556,6 +607,9 @@ class PostgisTable(object):
             - calls to DB functions like ST_GeomFromText end up getting quoted;
               not sure how to disable this.
         """
+        if self.database_object_type != 'table':
+            raise TypeError('Database object {} is a {}, we cannot write to that!'.format(self.name,self.database_object_type))
+
         # Get fields from the row because some fields from self.fields may be
         # optional, such as autoincrementing integers.
         # raise
