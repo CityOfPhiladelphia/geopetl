@@ -857,6 +857,9 @@ class OracleSdeTable(object):
                         raise ValueError('Multiple geometry fields found: {}'.format(', '.join([rows_geom_field, first_row_header[i]])))
                     rows_geom_field = first_row_header[i]
 
+            # for cases when the above method doesn't work b/c the first row geom is empty, set rows_geom_field = table_geom_field
+            rows_geom_field = rows_geom_field or table_geom_field
+
             if rows_geom_field:
                 geom_rows = rows.selectnotnone(rows_geom_field).records()
                 geom_row = geom_rows[0]
@@ -991,9 +994,11 @@ class OracleSdeTable(object):
 
                 val_rows = []
                 cur_stmt = stmt
-        self.db.cursor.executemany(None, val_rows, batcherrors=False)
-        er = self.db.cursor.getbatcherrors()
-        self.db.dbo.commit()
+
+        if val_rows:
+            self.db.cursor.executemany(None, val_rows, batcherrors=False)
+            er = self.db.cursor.getbatcherrors()
+            self.db.dbo.commit()
 
     def truncate(self, cascade=False):
         """Delete all rows."""
