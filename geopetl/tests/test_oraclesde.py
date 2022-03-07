@@ -272,7 +272,6 @@ def test_polygon_assertion(oraclesde_db, schema,srid, create_polygon_table):
 
 #csv_data1 = list, cxcursor= cx cursor object
 def assert_write_tests(csv_data1, cxcursor,srid, schema, table):
-    print('assert_write_tests ')
     csv_header = csv_data1[0]
     db_header = [column[0] for column in cxcursor.description]
     cxdata1 = cxcursor.fetchall()
@@ -294,7 +293,7 @@ def assert_write_tests(csv_data1, cxcursor,srid, schema, table):
             if key == 'objectid':
                 continue
             # assert shape field
-            elif key.upper() == column_def.get('ST_GEOMETRY'):
+            elif key == column_def.get('ST_GEOMETRY').lower():
                 if csv_val == 'POINT EMPTY' or csv_val == '':
                     # reading with cx oracle
                     assert str(db_val) == 'POINT EMPTY'
