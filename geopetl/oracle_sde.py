@@ -327,10 +327,10 @@ class OracleSdeTable(object):
             self.schema = comps[0]
             self.name = comps[1]
         else:
-            self.schema = self.db.user
-            self.name = name
-        self.geom_field = self._get_geom_field()
-        self.geom_type = self._get_geom_type()
+            self.schema = self.db.user.lower()
+            self.name = name.lower()
+        self.geom_field = self._get_geom_field().lower()
+        self.geom_type = self._get_geom_type().lower()
         self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
         self.timezone_fields = self._timezone_fields()
         self.increment = increment
@@ -657,7 +657,7 @@ class OracleSdeTable(object):
         _tz_list = []
         for key, value in self.metadata.items():
             if value.get('type') == 'timestamp with time zone':
-                _tz_list.append(key)
+                _tz_list.append(key.lower())
         return _tz_list
 
     @property
@@ -678,8 +678,7 @@ class OracleSdeTable(object):
         # If there's a schema we have to double quote the owner and the table
         # name, but also make them uppercase.
         if self.schema:
-            comps = [_quote(self.schema.upper()), _quote(self.name.upper())]
-            #comps = [self.schema.upper(), self.name.upper()]
+            comps = [self.schema, self.name]
             return '.'.join(comps)
         return self.name
 
@@ -698,7 +697,6 @@ class OracleSdeTable(object):
         """Prepare a value for entry into the DB."""
         if val is None:
             return None
-
         # TODO handle types. Seems to be working without this for most cases.
         if type_ == 'text':
             pass
@@ -874,6 +872,9 @@ class OracleSdeTable(object):
                 geom_rows = rows.selectnotnone(rows_geom_field).records()
                 geom_row = geom_rows[0]
                 geom = geom_row[rows_geom_field]
+                # if geom value is empty in staging data, insert "point table"
+                if not geom:
+                    geom = 'POINT EMPTY'
                 try:
                     row_geom_type = re.match('[A-Z]+', geom).group()
                 # For "bytes-like objects"
@@ -1083,21 +1084,22 @@ class OracleSdeQuery(SpatialQuery):
         # get petl iterator
         dbo = self.db.dbo
         db_view = etl.fromdb(dbo, stmt)
+        header = [h.lower() for h in db_view.header()]
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
-        if self.geom_field and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
+        if self.geom_field  and self.geom_field in header and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             db_view = db_view.convert(self.geom_field.upper(), 'read')
 
-        if self.geom_with_srid and self.geom_field and self.srid:
+        if self.geom_with_srid and self.geom_field and self.geom_field in header and self.srid:
             db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
-
-        if len(self.table.timezone_fields) > 0:
-            db_view = db_view.convert([s.upper() for s in self.table.timezone_fields],
+        # checks tz field in table not view
+        selected_ts_fields = [f for f in self.table.timezone_fields if f in header]
+        if len(selected_ts_fields) > 0:
+            db_view = db_view.convert([s.upper() for s in selected_ts_fields],
                                       lambda timezone_field: dt_parser().parse(timezone_field))
         # lowercase headers
-        headers = db_view.header()
-        db_view = etl.setheader(db_view, [x.lower() for x in headers])
+        # headers = db_view.header()
+        db_view = etl.setheader(db_view, [x.lower() for x in header])
         iter_fn = db_view.__iter__()
-
         return iter_fn
 
     @property
@@ -1152,5 +1154,4 @@ class OracleSdeQuery(SpatialQuery):
 
         if self.limit:
             stmt += ' WHERE ROWNUM < {}'.format(self.limit + 1)
-
         return stmt
