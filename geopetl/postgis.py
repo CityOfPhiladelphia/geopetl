@@ -723,17 +723,14 @@ class PostgisQuery(Table):
             db_view = db_view.convert(self.table.geom_field, lambda g: 'SRID={srid};{g}'.format(srid=self.table.srid, g=g) if g not in ('', None) else '')
         iter_fn = db_view.__iter__()
 
-        return iter_
+        return iter_fn
 
-    q
 
     def stmt(self):
         # handle fields
         fields = self.fields
         if fields is None:
             fields = self.table.fields
-#            # default to non geom fields
-#            fields = self.table.non_geom_fields
 
         fields = [_quote(field) for field in fields]
 
