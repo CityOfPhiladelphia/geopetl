@@ -44,8 +44,8 @@ GEOM_TYPE_MAP = {
 }
 
 
-def frompostgis(dbo, table_name, fields=None, return_geom=True, where=None,
-                limit=None, sql=None):
+def frompostgis(dbo, table_name, fields=None, return_geom=True, geom_with_srid=False,
+                where=None, limit=None, sql=None):
     """
     Returns an iterable query container.
     Params
@@ -66,8 +66,8 @@ def frompostgis(dbo, table_name, fields=None, return_geom=True, where=None,
     table = db.table(table_name)
 
     # return a query container
-    return table.query(fields=fields, return_geom=return_geom, where=where,
-                       limit=limit, sql=sql)
+    return table.query(fields=fields, return_geom=return_geom, geom_with_srid=geom_with_srid,
+                       where=where, limit=limit, sql=sql)
 
 etl.frompostgis = frompostgis
 
@@ -155,13 +155,14 @@ class PostgisDatabase(object):
             # otherwise assume it's a postgres connection string
             except ValueError:
                 dbo = psycopg2.connect(dbo)
-        elif isinstance(dbo,psycopg2.extensions.connection):
-            print('163 connection')
-        # is it a callable?
-        elif callable(dbo):
-            print('callable object ')
 
+        # elif isinstance(dbo,psycopg2.extensions.connection):
+        #     pass
         # REVIEW petl already handles db api connections?
+        # # is it a callable?
+        # elif callable(dbo):
+        #     dbo = dbo()
+
         # elif callable(dbo):
         #     dbo = dbo()
 
@@ -186,14 +187,13 @@ class PostgisDatabase(object):
             cursor.execute('rollback;') # abort failed transaction
             print('DB not SDE enabled')
 
-        # Check if DB is postgis is enabled
+        # Check if DB is postgis enabled
             try:
                 cursor.execute('select Postgis_version()')
                 res = cursor.fetchall()
                 postgis_version = res[0][0]
                 self.postgis_version = postgis_version.split(' ')[0]
             except:
-                #self.postgis_version = ''
                 cursor.execute('rollback;') # abort failed transaction        #
         # # TODO use petl dbo check/validation
         # self.dbo = dbo
@@ -243,6 +243,7 @@ class PostgisDatabase(object):
         cur.execute('select distinct schema_name FROM information_schema.schemata')
         schemas = [t[0] for t in cur.fetchall()]
         return schemas
+
     def table(self, name):
         return PostgisTable(self, name)
 
@@ -335,6 +336,9 @@ FIELD_TYPE_MAP = {
 }
 
 class PostgisTable(object):
+
+    _srid = None
+
     def __init__(self, db, name):
         self.db = db
 
@@ -420,15 +424,19 @@ class PostgisTable(object):
             geom_getter = 'ST_Transform({}, {})'.format(geom_getter, to_srid)
         return 'ST_AsText({}) AS {}'.format(geom_getter, geom_field)
 
-    def get_srid(self):
-        if self.db.sde_version is None:
-            stmt = "SELECT Find_SRID('{}', '{}', '{}')"\
+    @property
+    def srid(self):
+        if self._srid is None:
+            if self.db.sde_version is None:
+                stmt = "SELECT Find_SRID('{}', '{}', '{}')" \
                     .format(self.schema, self.name, self.geom_field)
-            return self.db.fetch(stmt)[0]['find_srid']
-        else:
-            stmt = "select srid from sde.st_geometry_columns where schema_name = '{}' and table_name = '{}'" \
+                self._srid = self.db.fetch(stmt)[0]['find_srid']
+            else:
+                stmt = "select srid from sde.st_geometry_columns where schema_name = '{}' and table_name = '{}'" \
                     .format(self.schema, self.name)
-            return self.db.fetch(stmt)[0]['srid']
+                self._srid = self.db.fetch(stmt)[0]['srid']
+        return self._srid
+
 
     @property
     def geom_type(self):
@@ -460,9 +468,9 @@ class PostgisTable(object):
     def non_geom_fields(self):
         return [x for x in self.fields if x != self.geom_field]
 
-    def query(self, fields=None, return_geom=None, where=None, limit=None, sql=None):
-        return PostgisQuery(self.db, self, fields=fields,
-                           return_geom=return_geom, where=where, limit=limit, sql=sql)
+    def query(self, fields=None, return_geom=None, geom_with_srid=None, where=None, limit=None, sql=None):
+        return PostgisQuery(self.db, self, fields=fields, return_geom=return_geom,
+                            geom_with_srid=geom_with_srid, where=where, limit=limit, sql=sql)
 
     def prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
@@ -569,7 +577,7 @@ class PostgisTable(object):
         rows = etl.records(rows)
         # Get geom metadata
         if geom_field:
-            srid = from_srid or self.get_srid()
+            srid = from_srid or self.srid
             #row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
             #    if geom_field and rows[0][geom_field] else None
             match = re.match('[A-Z]+', rows[0][geom_field])
@@ -688,12 +696,13 @@ class PostgisTable(object):
 ################################################################################
 
 class PostgisQuery(Table):
-    def __init__(self, db, table, fields=None, return_geom=True, to_srid=None,
-                 where=None, limit=None, sql=None):
+    def __init__(self, db, table, fields=None, return_geom=True, geom_with_srid=False,
+                 to_srid=None, where=None, limit=None, sql=None):
         self.db = db
         self.table = table
         self.fields = fields
         self.return_geom = return_geom
+        self.geom_with_srid = geom_with_srid
         self.to_srid = to_srid
         self.where = where
         self.limit = limit
@@ -709,9 +718,14 @@ class PostgisQuery(Table):
         # get petl iterator
         dbo = self.db.dbo
         db_view = etl.fromdb(dbo, stmt)
+        header = [h.lower() for h in db_view.header()]
+        if self.geom_with_srid and self.table.geom_field and self.table.geom_field in header and self.table.srid:
+            db_view = db_view.convert(self.table.geom_field, lambda g: 'SRID={srid};{g}'.format(srid=self.table.srid, g=g) if g not in ('', None) else '')
         iter_fn = db_view.__iter__()
 
-        return iter_fn
+        return iter_
+
+    q
 
     def stmt(self):
         # handle fields
