@@ -10,7 +10,7 @@ from dateutil import parser as dt_parser
 import re
 from pytz import timezone, utc
 import tests_config as config
-from tests_config import remove_whitespace, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name, point_csv_dir, fields
+from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name, point_csv_dir, fields
 
 
 ############################################# FIXTURES ################################################################
@@ -160,7 +160,7 @@ def db_data(oraclesde_db, schema, srid):
 #loads staging data using geopetl
 @pytest.fixture
 def create_test_table_noid(oraclesde_db, schema,srid):
-    csv_data = etl.fromcsv(point_csv_dir).cutout('objectid')
+    csv_data = etl.fromcsv(point_csv_dir).cutout(fields.get('object_id_field_name'))
     csv_data.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema,point_table_name,srid))
 
 
@@ -196,9 +196,9 @@ def assert_data_method(csv_data1, db_data1, srid1, read, schema=None, table=None
                 if csv_val is None or csv_val == 'POINT EMPTY' or csv_val == '':
                     assert (db_val is None  or  str(db_val) == 'POINT EMPTY')
                 else:
-                    csv_val = remove_whitespace(csv_val, srid1)
-                    db_val = remove_whitespace(db_val, srid1)
-                    assert csv_val == db_val
+                    csv_geom, csv_coords = geom_parser(csv_val, srid1)
+                    db_geom, db_coords = geom_parser(db_val, srid1)
+                    assert (csv_geom == db_geom and db_geom == csv_geom)
             elif key == fields.get('timezone_field_name'):
                 if not read:
                     db_val = dt_parser.parse(db_val)
@@ -372,16 +372,32 @@ def test_assert_data_no_id(create_test_table_noid,csv_data,schema, db_data,oracl
     csv_data1 = csv_data
     cursor = oraclesde_db.cursor()
     cursor.execute('''
-        select objectid,textfield,numericfield,timestamp,datefield,
-        to_char(timezone, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as timezone,
-        sde.st_astext(shape) as shape from {}.{}_{}'''.format(schema, point_table_name, srid))
+        select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
+        to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name},
+        sde.st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
+        schema,
+        point_table_name,
+        srid,
+        objectid_field_name=fields.get('object_id_field_name'),
+        text_field_name=fields.get('text_field_name'),
+        numeric_field_name=fields.get('numeric_field_name'),
+        timestamp_field_name=fields.get('timestamp_field_name'),
+        date_field_name=fields.get('date_field_name'),
+        shape_field_name=fields.get('shape_field_name'),
+        timezone_field_name=fields.get('timezone_field_name')
+        ))
     assert_data_method(csv_data1, cursor, srid,schema=schema, table=point_table_name, read=False)
 
 def test_polygon_assertion_write(oraclesde_db, schema,srid, create_polygon_table):
     csv_data = etl.fromcsv(polygon_csv_dir).convert(['objectid'], int)
     csv_data.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema, polygon_table_name, srid), srid=srid)
     # read data from test DB using petl
-    stmt = '''select objectid, SDE.ST_AsText(shape) as shape from {}.{}_{}'''.format(schema, polygon_table_name,srid)
+    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
+        schema,
+        polygon_table_name,
+        srid,
+        objectid_field_name = fields.get('object_id_field_name'),
+        shape_field_name = fields.get('shape_field_name'))
     cursor = oraclesde_db.cursor()
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid,schema=schema, table=point_table_name, read=False)
@@ -390,7 +406,13 @@ def test_line_assertion_write(oraclesde_db, schema,srid):
     csv_data = etl.fromcsv(line_csv_dir).convert(['objectid'], int)
     csv_data.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema, line_table_name, srid), srid=srid)
     # read data from test DB using petl
-    stmt = '''select objectid, SDE.ST_AsText(shape) as shape from {}.{}_{}'''.format(schema, line_table_name,srid)
+    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
+        schema,
+        line_table_name,
+        srid,
+        objectid_field_name = fields.get('object_id_field_name'),
+        shape_field_name = fields.get('shape_field_name')
+    )
     cursor = oraclesde_db.cursor()
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid,schema=schema, table=point_table_name, read=False)
