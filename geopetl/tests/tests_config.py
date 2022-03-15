@@ -15,19 +15,19 @@ polygon_column_definition = 'geopetl/tests/fixtures_data/schemas/polygon.json'
 line_column_definition = 'geopetl/tests/fixtures_data/schemas/line.json'
 
 srid_precision = {'2272':1,
-                  '4326':1,}
+                  '4326':1}
 
 fields= {
-    'text_field_name':'',
-    'numeric_field_name':'',
-    'date_field_name':'',
-    'timestamp_field_name':'',
-    'timezone_field_name':'',
-    'object_id_field_name':'',
-    'shape_field_name':''
+    'text_field_name': '',
+    'numeric_field_name': '',
+    'date_field_name': '',
+    'timestamp_field_name': '',
+    'timezone_field_name': '',
+    'object_id_field_name': '',
+    'shape_field_name': ''
           }
 
-def remove_whitespace(geom_wkt,srid):
+def geom_parser(geom_wkt,srid):
     geom_wkt = str(geom_wkt)
     geom_type = re.findall("[A-Z]{1,12}", geom_wkt)[0]
     coordinates = re.findall(r"[-+]?\d*\.\d+|\d+", geom_wkt)
