@@ -712,8 +712,9 @@ class OracleSdeTable(object):
                 splitval = val.split(' ')
                 if ' ' in val and ':' in splitval[1] and 'T' not in val:
                     val =splitval[0] + 'T' + splitval[1]
-                val=dt_parser().parse(val)
-                val = val.strftime("%Y-%m-%d %H:%M:%S")
+                if val:
+                    val = dt_parser().parse(val)
+                    val = val.strftime("%Y-%m-%d %H:%M:%S")
             if isinstance(val, datetime):
                 val = val.strftime("%Y-%m-%d %H:%M:%S")
         elif type_ == 'nclob':
