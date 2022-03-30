@@ -639,7 +639,8 @@ class OracleSdeTable(object):
         #     - therefore choose query based on max length of geom
         #     - for not use geom_type as proxy for length of geom (handle POINT geom_type conversions in the database
         #     - TODO: make determination based on max geom field length
-
+        if self.max_num_points_in_geom is None:
+            self.max_num_points_in_geom = 0
 ##        if self.geom_type == 'POINT':
         if self.max_num_points_in_geom <= MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
             return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else TO_CHAR(SDE.ST_AsText({})) end AS {}" \
