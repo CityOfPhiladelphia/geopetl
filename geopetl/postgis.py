@@ -332,7 +332,8 @@ FIELD_TYPE_MAP = {
     'timestamp without time zone': 'timestamp',
     'boolean':                  'boolean',
     'uuid':                     'uuid',
-    'money':                    'money'
+    'money':                    'money',
+    'bytea':                    'text'
 }
 
 class PostgisTable(object):
@@ -367,6 +368,15 @@ class PostgisTable(object):
             where table_schema = '{}' and table_name = '{}'
         """.format(self.schema, self.name)
         fields = self.db.fetch(stmt)
+        # RealDictRows don't accept normal key removals like .pop for whatever reason
+        # only removal by index number works.
+        # gdb_geomattr_data is a postgis specific column added automatically by arc programs
+        # we don't need to worry about this field so we should remove it.
+        # docs: https://support.esri.com/en/technical-article/000001196
+        for i, field in enumerate(fields):
+            if field['name'] == 'gdb_geomattr_data':
+                del fields[i]
+
         for field in fields:
             field['type'] = FIELD_TYPE_MAP[field['type']]
         return fields
