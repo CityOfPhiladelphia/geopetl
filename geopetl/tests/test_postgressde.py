@@ -19,27 +19,6 @@ def postgis(db, user, pw, host):
     postgis_db = PostgisDatabase(dsn)
     return postgis_db
 
-@pytest.fixture
-def create_line_table(srid, postgis,schema):
-    stmt = '''	
-    INSERT INTO {schema}.LINE_TABLE_{sr} ({shape_field_name}, {objectid_field_name}) 
-    VALUES
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'line_table_{sr}')),
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'line_table_{sr}')),
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'line_table_{sr}')),
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'line_table_{sr}')),
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'line_table_{sr}')), 
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'line_table_{sr}'))
-    '''.format(schema=schema,
-                sr=srid,
-                objectid_field_name=fields.get('object_id_field_name'),
-                shape_field_name=fields.get('shape_field_name'))
-    connection = postgis.dbo
-    cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.LINE_TABLE_{sr}'''.format(schema= schema, sr=srid))
-    cursor.execute(stmt)
-    connection.commit()
-
 # create new table and write csv staging data to it
 @pytest.fixture
 def load_point_table(postgis,schema, srid):
@@ -48,8 +27,8 @@ def load_point_table(postgis,schema, srid):
     populate_table_stmt = ''' INSERT INTO {schema}.point_table_{sr} ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}) 
     VALUES 
      (sde.next_rowid('{schema}', 'point_table_{sr}'), 'eeeefwe', TIMESTAMP '2019-05-15 15:53:53.522000' , 5654, TIMESTAMPTZ '2008-12-25 10:23:54+00' , null, ' 2017-06-26'),
-    (sde.next_rowid('{schema}', 'point_table_{sr}'), 'ab#$%c', null , 12, TIMESTAMPTZ '2011-11-22 10:23:54-04' , ST_GEOMETRY('POINT(2712205.71100539 259685.27615705)', {sr}), ' 2005-01-01'),
-    (sde.next_rowid('{schema}', 'point_table_{sr}'), 'd!@^&*?-=+ef', TIMESTAMP '2019-05-14 15:53:53.522000' , 1, null, ST_GEOMETRY('POINT(2672818.51681407 231921.15681663)', {sr}), ' 2015-03-01'),
+     (sde.next_rowid('{schema}', 'point_table_{sr}'), 'ab#$%c', null , 12, TIMESTAMPTZ '2011-11-22 10:23:54-04' , ST_GEOMETRY('POINT(2712205.71100539 259685.27615705)', {sr}), ' 2005-01-01'),
+     (sde.next_rowid('{schema}', 'point_table_{sr}'), 'd!@^&*?-=+ef', TIMESTAMP '2019-05-14 15:53:53.522000' , 1, null, ST_GEOMETRY('POINT(2672818.51681407 231921.15681663)', {sr}), ' 2015-03-01'),
      (sde.next_rowid('{schema}', 'point_table_{sr}'), 'fij()dcfwef', TIMESTAMP '2019-05-14 15:53:53.522000' , 2132134342, TIMESTAMPTZ '2014-04-11 10:23:54+05' , ST_GEOMETRY('POINT(2704440.74884506 251030.69241638)', {sr}), null),
      (sde.next_rowid('{schema}', 'point_table_{sr}'), 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 11, TIMESTAMPTZ '2021-08-23 10:23:54-02' , ST_GEOMETRY('POINT(2674410.98607007 233770.15508713)', {sr}), ' 2008-08-11'),
      (sde.next_rowid('{schema}', 'point_table_{sr}'), 'v[]im', TIMESTAMP '2019-05-14 15:53:53.522000' , 1353, TIMESTAMPTZ '2015-03-21 10:23:54-01' , ST_GEOMETRY('POINT(2694352.72374555 250468.93894671)', {sr}), ' 2005-09-07'),
@@ -133,72 +112,58 @@ def create_test_table_noid(postgis, schema,column_definition,srid):
     csv_data = etl.fromcsv(point_csv_dir).cutout('objectid')
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), column_definition_json=column_definition, from_srid=srid)
 
-def assert_data_method(csv_data1, db_data1, srid1, field=None): # , read, schema=None, table=None, field=None
-    db_header = db_data1[0]
-    csv_header = csv_data1[0]
-    i=1
-    keys = db_header
 
-    for row in db_data1[1:]:
-        # create dictionary for each row of data using same set of keys
-        etl_dict = dict(zip(db_header, row))                # dictionary from etl data
-        csv_dict = dict(zip(csv_header, csv_data1[i]))       # dictionary from csv data
-        # iterate through each keys
+# assert
+def assert_data_method(csv_data1, db_data1, srid1, field=None):
+    keys = csv_data1[0]
+
+    try:
+        db_header = [column[0] for column in db_data1.description]
+        db_data1 = db_data1.fetchall()
+        i=0
+    except:
+        db_header = db_data1[0]
+        i=1
+
+    for row in csv_data1[1:]:
+        etl_dict = dict(zip(db_header, db_data1[i]))  # dictionary from etl data
+        csv_dict = dict(zip(csv_data1[0], row))  # dictionary from csv data
         if field:
             keys = list(field)
         for key in keys:
+            csv_val = csv_dict.get(key)
+            db_val = etl_dict.get(key)
             # assert shape field
             if key == fields.get('shape_field_name'):
-                csv_geom = csv_dict.get(key)
-                pg_geom = etl_dict.get(key)
-                if csv_geom == '':
-                    assert pg_geom is None
+                if csv_val == '':
+                    assert db_val is None
                 else:
-                    pg_geom = geom_parser(str(etl_dict.get(key)), srid1)
-                    csv_geom = geom_parser(str(csv_dict.get(key)), srid1)
+                    pg_geom = geom_parser(str(csv_val), srid1)
+                    csv_geom = geom_parser(str(db_val), srid1)
                     assert csv_geom == pg_geom
             elif key == fields.get('object_id_field_name'):
                 continue
+            elif key == fields.get('timezone_field_name'):
+                if csv_val == None or csv_val == '':
+                    assert db_val is None
+                else:
+                    try:
+                        db_val = dt_parser.parse(db_val)
+                    except:
+                        db_val = db_val
+                    try:
+                        csv_val = dt_parser.parse(csv_val)
+                    except:
+                        csv_val = csv_val
+                    assert db_val == csv_val
             # compare values from each key
             else:
-                assert csv_dict.get(key) == etl_dict.get(key)
+                assert csv_val == db_val
         i=i+1
-
 
 ######################################   TESTS   ####################################################################
 
-#read_data test
-# compare csv data with postgres data using psycopg2
-# def test_assert_point_table(postgis, csv_data, schema,srid, db_data,create_point_table):
-#     csv_data = csv_data
-#     csv_header = csv_data[0]
-#     # read data using postgres
-#     db_header = db_data[0]
-#     i=1
-#     # iterate through each row of data
-#     for row in db_data[1:]:
-#         # create dictionary for each row of data
-#         csv_dict = dict(zip(csv_header, csv_data[i]))       # dictionary from csv data
-#         pg_dict = dict(zip(db_header, row))                 # dictionary from postgres data
-#         # iterate through each keys
-#         for key in db_header:
-#             # compare values from each key
-#             if key==fields.get('shape_field_name'):
-#                 csv_geom = csv_dict.get(key)
-#                 pg_geom = pg_dict.get(key)
-#                 if csv_geom == '':
-#                     assert pg_geom is None
-#                 else:
-#                     pg_geom = geom_parser(str(pg_dict.get(key)), srid)
-#                     csv_geom = geom_parser(str(csv_dict.get(key)), srid)
-#                     assert csv_geom == pg_geom
-#             elif key == fields.get('object_id_field_name'):
-#                 continue
-#             else:
-#                 assert csv_dict.get(key) == pg_dict.get(key)
-#         i=i+1
 #------------------READING TESTS
-#3
 #compare csv data with postgres data using geopetl
 def test_read_point_table(load_point_table, postgis,csv_data,db_data,srid):
     assert_data_method(csv_data, db_data, srid)
@@ -245,11 +210,9 @@ def test_assert_timezone(csv_data, db_data,srid):
     csv_data1 = csv_data
     assert_data_method(csv_data1, db_data1, srid, field=key)
 
-
 # #compare csv data with postgres data using geopetl
 def test_reading_polygons(postgis, load_polygon_table,schema, srid):
     csv_data = etl.fromcsv(polygon_csv_dir)
-    # list of column names
     # read data from test DB using petl
     db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,polygon_table_name,srid))
     assert_data_method(csv_data, db_data1, srid)
@@ -261,44 +224,7 @@ def test_reading_linestrings(postgis, load_line_table,schema, srid):
     assert_data_method(csv_data, db_data1, srid)
 
 
-########Writing tests
-
-def assert_data_write(csv_data, cursor,srid):
-    pg_data = cursor.fetchall()
-    pg_header = [column[0] for column in cursor.description]
-    # list of column names
-    keys = csv_data[0]
-    i = 1
-    # iterate through each row of data
-    for row in pg_data:
-        # create dictionary for each row of data using same set of keys
-        etl_dict = dict(zip(pg_header, row))  # dictionary from etl data
-        csv_dict = dict(zip(keys, csv_data[i]))  # dictionary from csv data
-        # iterate through each keys
-        for key in keys:
-            db_val = etl_dict.get(key)
-            csv_val = csv_dict.get(key)
-            if key == fields.get('object_id_field_name'):
-                continue
-                # assert shape field
-            elif key == fields.get('shape_field_name'):
-                if csv_val == None or csv_val == '':
-                    assert db_val is None
-                else:
-                    db_geom, db_coords = geom_parser(db_val, srid)
-                    db_geom2, db_coords2 = geom_parser(csv_val, srid)
-                    assert (db_geom == db_geom2 and db_coords == db_coords2)
-            elif key == fields.get('timezone_field_name'):
-                if csv_val == None:
-                    assert db_val is None
-                else:
-                    db_val = dt_parser.parse(db_val)
-                    assert db_val == csv_val
-            # compare values from each key
-            else:
-                assert csv_val == db_val
-        i = i + 1
-        
+#------------------WRITING TESTS
 def test_write_without_schema(db_data, postgis, csv_data, schema, srid,column_definition):
     connection = postgis.dbo
     csv_data.topostgis(
@@ -323,7 +249,7 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid,column_de
         timezone_field_name=fields.get('timezone_field_name')
     )
     cursor.execute(stmt)
-    assert_data_write(csv_data, cursor,srid)
+    assert_data_method(csv_data, cursor,srid)
 
 # # # WRITING tests write using a string connection to db
 def test_write_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,schema,srid):
@@ -351,7 +277,7 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis, column_defini
         timezone_field_name=fields.get('timezone_field_name')
     )
     cursor.execute(stmt)
-    assert_data_write(csv_data, cursor, srid)
+    assert_data_method(csv_data, cursor, srid)
 
 # # # WRITING TEST load csv data to postgressde db without an objectid field using geopetl and assert data
 def test_write_data_no_id(csv_data, db_data,srid, postgis,schema, column_definition):
@@ -379,7 +305,7 @@ def test_write_data_no_id(csv_data, db_data,srid, postgis,schema, column_definit
         timezone_field_name=fields.get('timezone_field_name')
         )
     cursor.execute(stmt)
-    assert_data_write(csv_data, cursor, srid)
+    assert_data_method(csv_data, cursor, srid)
 
 
 # WRITING TEST?
@@ -408,10 +334,37 @@ def test_null_times(postgis, csv_data, schema, column_definition, srid):
         timezone_field_name=fields.get('timezone_field_name')
     )
     cursor.execute(stmt)
-    assert_data_write(csv_data, cursor, srid)
+    assert_data_method(csv_data, cursor, srid)
 
 
+def test_polygon_assertion_write(postgis, schema, srid):
+    csv_data = etl.fromcsv(polygon_csv_dir)
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, polygon_table_name, srid),from_srid=srid)
+    # read data from test DB using petl
+    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
+        schema,
+        polygon_table_name,
+        srid,
+        objectid_field_name = fields.get('object_id_field_name'),
+        shape_field_name = fields.get('shape_field_name'))
+    cursor = postgis.dbo.cursor()
+    cursor.execute(stmt)
+    assert_data_method(csv_data, cursor, srid)
 
+def test_line_assertion_write(postgis, schema,srid):
+    csv_data = etl.fromcsv(line_csv_dir)
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, line_table_name, srid), from_srid=srid)
+    # read data from test DB
+    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
+        schema,
+        line_table_name,
+        srid,
+        objectid_field_name = fields.get('object_id_field_name'),
+        shape_field_name = fields.get('shape_field_name')
+    )
+    cursor = postgis.dbo.cursor()
+    cursor.execute(stmt)
+    assert_data_method(csv_data, cursor, srid)
 
 # read and write
 # debug!!--------
@@ -432,37 +385,10 @@ def test_null_times(postgis, csv_data, schema, column_definition, srid):
 #     #               column_definition_json=column_definition,
 #     #               from_srid=srid
 #     # )
-#     etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema,point_table_name,srid), column_definition_json=column_definition,  from_srid=srid)
+#     #etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema,point_table_name,srid), column_definition_json=column_definition,  from_srid=srid)
 #     #etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name,srid), column_definition_json=column_definition)
+#     etl.topostgis(data1,postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name, srid), from_srid=srid)
 #
 #     # extract from second test table
 #     data2 = etl.frompostgis(dbo=postgis.dbo,
 #                             table_name='{}.{}_{}_2'.format(schema,point_table_name,srid))
-#     i = 1
-#     # iterate through each row of DB data
-#     for row in data1[1:]:
-#         # create dictionary with header and each row of data
-#         db_dict1 = dict(zip(data1[0], data1[i]))
-#         db_dict2 = dict(zip(data2[0], data2[i]))
-#         # iterate through each keys
-#         for key in db_data[0]:
-#             # assert shape field
-#             if key == fields.get('object_id_field_name'):
-#                 continue
-#             if key == fields.get('shape'):
-#                 # assert values from each key
-#                 db_val = db_dict1.get(key)
-#                 csv_val = db_dict2.get(key)
-#                 if csv_val == '':
-#                     assert db_val is None
-#                 else:
-#                     db_geom, db_coords=geom_parser(db_val, srid)
-#                     db_geom2, db_coords2=geom_parser(csv_val, srid)
-#                     assert (db_geom == db_geom2 and db_coords == db_coords2)
-#             else:
-#                 assert db_dict1.get(key) == db_dict2.get(key)
-#         i = i + 1
-
-
-
-
