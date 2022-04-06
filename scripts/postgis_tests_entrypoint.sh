@@ -46,6 +46,7 @@ pytest geopetl/tests/test_postgis.py \
   --port=5432 \
   --schema="public" \
   --column_definition="geopetl/tests/fixtures_data/schemas/point.json"
+  --srid=2272
 POSTGIS_EXIT_CODE=$?
 echo "Postgis test done."
 echo "#########################################"
