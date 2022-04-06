@@ -90,14 +90,14 @@ def load_polygon_table(srid, postgis, schema):
     )
     connection = postgis.dbo
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.POLYGON_TABLE_{sr}'''.format(sr=srid,schema=schema))
+    cursor.execute('''truncate table {schema}.{polygon_table_name}_{sr}'''.format(sr=srid,schema=schema,polygon_table_name=polygon_table_name))
     cursor.execute(stmt)
     connection.commit()
 
 @pytest.fixture
 def load_line_table(srid, postgis, schema):
     stmt = '''	
-    INSERT INTO {schema}.LINE_TABLE_{sr} ({shape_field_name}, {objectid_field_name}) 
+    INSERT INTO {schema}.{line_table_name}_{sr} ({shape_field_name}, {objectid_field_name}) 
     VALUES 
     (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 1),
     (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 2),
@@ -107,11 +107,12 @@ def load_line_table(srid, postgis, schema):
     (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 6)
     '''.format(schema=schema,
                sr=srid,
+               line_table_name=line_table_name,
                 objectid_field_name=fields.get('object_id_field_name'),
                 shape_field_name=fields.get('shape_field_name'))
     connection = postgis.dbo
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.LINE_TABLE'''.format(schema=schema, sr=srid))
+    cursor.execute('''truncate table {schema}.{line_table_name}_{srid}'''.format(schema=schema, srid=srid,line_table_name=line_table_name))
     cursor.execute(stmt)
     connection.commit()
 
@@ -184,66 +185,6 @@ def assert_data_method(csv_data1, db_data1, srid1, field=None):
         i=i+1
 
 ######################################   TESTS   ####################################################################
-
-#------------------READING TESTS
-#compare csv data with postgres data using geopetl
-def test_read_point_table(load_point_table, postgis,csv_data,db_data,srid):
-    assert_data_method(csv_data, db_data, srid)
-
-def test_read_without_schema(postgis, csv_data, schema, srid):
-    data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,point_table_name,srid))
-    assert_data_method(csv_data, data, srid)
-
-#4
-def test_read_timestamp(csv_data, db_data,srid):
-    key = fields.get('timestamp_field_name')
-    assert_data_method(csv_data,db_data, srid, field=key)
-
-#5
-def test_read_numericfield(csv_data, db_data,srid):
-    key = fields.get('numeric_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-#6
-def test_read_datefield(csv_data, db_data, srid):
-    key = fields.get('date_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-
-#7
-def test_read_shape(csv_data, db_data,srid):
-    key = fields.get('shape_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-
-# #8
-def test_assert_textfield(csv_data, db_data,srid):
-    key = fields.get('text_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-# #9
-def test_assert_timezone(csv_data, db_data,srid):
-    key = fields.get('timezone_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-
-# #compare csv data with postgres data using geopetl
-def test_reading_polygons(postgis, load_polygon_table,schema, srid):
-    csv_data = etl.fromcsv(polygon_csv_dir)
-    # read data from test DB using petl
-    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,polygon_table_name,srid))
-    assert_data_method(csv_data, db_data1, srid)
-
-def test_reading_linestrings(postgis, load_line_table,schema, srid):
-    csv_data = etl.fromcsv(line_csv_dir)
-    # read data from test DB using petl
-    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,line_table_name,srid))
-    assert_data_method(csv_data, db_data1, srid)
 
 
 #------------------WRITING TESTS
@@ -375,3 +316,63 @@ def test_with_types(db_data, postgis, column_definition, schema, srid,csv_data):
                             table_name='{}.{}_2'.format(schema,point_table_name))
 
     assert_data_method(data1, data2, srid)
+
+#------------------READING TESTS
+#load staging data extarct using geopetle compare csv data with postgres table data
+def test_read_point_table(load_point_table, postgis,csv_data,db_data,srid):
+    assert_data_method(csv_data, db_data, srid)
+
+def test_read_without_schema(postgis, csv_data, schema, srid):
+    data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,point_table_name,srid))
+    assert_data_method(csv_data, data, srid)
+
+#4
+def test_read_timestamp(csv_data, db_data,srid):
+    key = fields.get('timestamp_field_name')
+    assert_data_method(csv_data,db_data, srid, field=key)
+
+#5
+def test_read_numericfield(csv_data, db_data,srid):
+    key = fields.get('numeric_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+#6
+def test_read_datefield(csv_data, db_data, srid):
+    key = fields.get('date_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+
+#7
+def test_read_shape(csv_data, db_data,srid):
+    key = fields.get('shape_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+
+# #8
+def test_assert_textfield(csv_data, db_data,srid):
+    key = fields.get('text_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+# #9
+def test_assert_timezone(csv_data, db_data,srid):
+    key = fields.get('timezone_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+
+# #compare csv data with postgres data using geopetl
+def test_reading_polygons(postgis, load_polygon_table,schema, srid):
+    csv_data = etl.fromcsv(polygon_csv_dir)
+    # read data from test DB using petl
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,polygon_table_name,srid))
+    assert_data_method(csv_data, db_data1, srid)
+
+def test_reading_linestrings(postgis, load_line_table,schema, srid):
+    csv_data = etl.fromcsv(line_csv_dir)
+    # read data from test DB using petl
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,line_table_name,srid))
+    assert_data_method(csv_data, db_data1, srid)
