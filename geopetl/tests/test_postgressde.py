@@ -24,7 +24,7 @@ def postgis(db, user, pw, host):
 def load_point_table(postgis,schema, srid):
     # write staging data to test table using oracle query
     connection = postgis.dbo
-    populate_table_stmt = ''' INSERT INTO {schema}.point_table_{sr} ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}) 
+    populate_table_stmt = ''' INSERT INTO {schema}.{point_table_name}_{sr} ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}) 
     VALUES 
      (sde.next_rowid('{schema}', 'point_table_{sr}'), 'eeeefwe', TIMESTAMP '2019-05-15 15:53:53.522000' , 5654, TIMESTAMPTZ '2008-12-25 10:23:54+00' , null, ' 2017-06-26'),
      (sde.next_rowid('{schema}', 'point_table_{sr}'), 'ab#$%c', null , 12, TIMESTAMPTZ '2011-11-22 10:23:54-04' , ST_GEOMETRY('POINT(2712205.71100539 259685.27615705)', {sr}), ' 2005-01-01'),
@@ -45,7 +45,8 @@ def load_point_table(postgis,schema, srid):
         timezone_field_name=fields.get('timezone_field_name'),
         shape_field_name=fields.get('shape_field_name'),
         date_field_name=fields.get('date_field_name'),
-        sr=srid, schema=schema)
+        sr=srid, schema=schema,
+        point_table_name= point_table_name )
     cursor = connection.cursor()
     cursor.execute('''truncate table {schema}.POINT_TABLE_{sr}'''.format(schema=schema, sr=srid))
     cursor.execute(populate_table_stmt)
@@ -54,7 +55,7 @@ def load_point_table(postgis,schema, srid):
 @pytest.fixture
 def load_polygon_table(srid, postgis, schema):
     stmt = '''
-    INSERT INTO {schema}.POLYGON_TABLE_{sr} ({shape_field_name}, {objectid_field_name}) 
+    INSERT INTO {schema}.{polygon_table_name}_{sr} ({shape_field_name}, {objectid_field_name}) 
     VALUES
     (SDE.ST_GEOMETRY('POLYGON(( 2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), SDE.NEXT_ROWID('{schema}', 'polygon_table_{sr}')),
     (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), SDE.NEXT_ROWID('{schema}', 'polygon_table_{sr}')),
@@ -64,6 +65,7 @@ def load_polygon_table(srid, postgis, schema):
     (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), SDE.NEXT_ROWID('{schema}', 'polygon_table_{sr}'))
     '''.format(schema=schema,
                 sr=srid,
+               polygon_table_name=polygon_table_name,
                 objectid_field_name = fields.get('object_id_field_name'),
                 shape_field_name = fields.get('shape_field_name')
     )
@@ -76,7 +78,7 @@ def load_polygon_table(srid, postgis, schema):
 @pytest.fixture
 def load_line_table(srid, postgis, schema):
     stmt = '''	
-    INSERT INTO {schema}.LINE_TABLE_{sr} ({shape_field_name}, {objectid_field_name}) 
+    INSERT INTO {schema}.{line_table_name}_{sr} ({shape_field_name}, {objectid_field_name}) 
     VALUES 
     (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.NEXT_ROWID('{schema}', 'line_table_{sr}')),
     (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.NEXT_ROWID('{schema}', 'line_table_{sr}')),
@@ -86,6 +88,7 @@ def load_line_table(srid, postgis, schema):
     (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.NEXT_ROWID('{schema}', 'line_table_{sr}'))
     '''.format(schema=schema,
                sr=srid,
+               line_table_name=line_table_name,
                 objectid_field_name=fields.get('object_id_field_name'),
                 shape_field_name=fields.get('shape_field_name'))
     connection = postgis.dbo
@@ -116,7 +119,6 @@ def create_test_table_noid(postgis, schema,column_definition,srid):
 # assert
 def assert_data_method(csv_data1, db_data1, srid1, field=None):
     keys = csv_data1[0]
-
     try:
         db_header = [column[0] for column in db_data1.description]
         db_data1 = db_data1.fetchall()
@@ -236,10 +238,10 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid,column_de
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
             to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name},
-            sde.st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
-        schema,
-        point_table_name,
-        srid,
+            sde.st_astext({shape_field_name}) as {shape_field_name} from {schema}.{point_table_name}_{srid}'''.format(
+        schema=schema,
+        point_table_name=point_table_name,
+        srid=srid,
         objectid_field_name=fields.get('object_id_field_name'),
         text_field_name=fields.get('text_field_name'),
         numeric_field_name=fields.get('numeric_field_name'),
