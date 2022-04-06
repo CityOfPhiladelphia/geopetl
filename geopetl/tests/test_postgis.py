@@ -271,9 +271,9 @@ def test_null_times(postgis, csv_data, schema, column_definition, srid):
     assert_data_method(csv_data, cursor, srid)
 
 
-def test_polygon_assertion_write(postgis, schema, srid):
+def test_polygon_assertion_write(postgis, schema, srid,column_definition):
     csv_data = etl.fromcsv(polygon_csv_dir)
-    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, polygon_table_name,srid),from_srid=srid)
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, polygon_table_name,srid),from_srid=srid,column_definition_json=column_definition)
     # read data from test DB using petl
     stmt = '''select {objectid_field_name}, ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{polygon_table_name}_{srid}'''.format(
         schema=schema,
@@ -285,9 +285,9 @@ def test_polygon_assertion_write(postgis, schema, srid):
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
 
-def test_line_assertion_write(postgis, schema,srid):
+def test_line_assertion_write(postgis, schema,srid,column_definition):
     csv_data = etl.fromcsv(line_csv_dir)
-    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, line_table_name,srid), from_srid=srid)
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, line_table_name,srid), from_srid=srid,column_definition_json=column_definition)
     # read data from test DB
     stmt = '''select {objectid_field_name}, ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{line_table_name}_{srid}'''.format(
         srid=srid,
