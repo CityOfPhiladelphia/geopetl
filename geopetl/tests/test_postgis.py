@@ -66,7 +66,9 @@ def load_point_table(postgis,schema, srid):
         point_table_name=point_table_name,
         srid=srid)
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.POINT_TABLE'''.format(schema=schema))
+    cursor.execute('''truncate table {schema}.{point_table_name}_{srid}'''.format(schema=schema,
+        point_table_name=point_table_name,
+        srid=srid))
     cursor.execute(populate_table_stmt)
     connection.commit()
 
