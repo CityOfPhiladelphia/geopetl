@@ -315,7 +315,7 @@ def test_with_types(db_data, postgis, column_definition, schema, srid,csv_data):
 
     # extract from second test table
     data2 = etl.frompostgis(dbo=postgis.dbo,
-                            table_name='{}.{}_2'.format(schema,point_table_name))
+                            table_name='{}.{}_{}_2'.format(schema,point_table_name,srid))
 
     assert_data_method(data1, data2, srid)
 
