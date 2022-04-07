@@ -52,7 +52,6 @@ pytest geopetl/tests/test_postgressde.py \
   --host=$SDE_HOST \
   --port=5432 \
   --schema=$SDE_USER \
-  --column_definition="geopetl/tests/fixtures_data/schemas/point.json"\
   --srid=4326
 
 SDE_EXIT_CODE=$?
@@ -80,7 +79,6 @@ pytest geopetl/tests/test_postgressde.py \
   --host=$SDE_HOST \
   --port=5432 \
   --schema=$SDE_USER \
-  --column_definition="geopetl/tests/fixtures_data/schemas/point.json"\
   --srid=2272
 
 SDE_EXIT_CODE=$?

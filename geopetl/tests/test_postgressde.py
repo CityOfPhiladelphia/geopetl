@@ -111,9 +111,9 @@ def db_data(postgis,schema,srid):
     return db_col
 
 @pytest.fixture
-def create_test_table_noid(postgis, schema,column_definition,srid):
+def create_test_table_noid(postgis, schema,srid):
     csv_data = etl.fromcsv(point_csv_dir).cutout('objectid')
-    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), column_definition_json=column_definition, from_srid=srid)
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), from_srid=srid)
 
 
 # assert
@@ -227,13 +227,13 @@ def test_reading_linestrings(postgis, load_line_table,schema, srid):
 
 
 #------------------WRITING TESTS
-def test_write_without_schema(db_data, postgis, csv_data, schema, srid,column_definition):
+def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
     connection = postgis.dbo
     csv_data.topostgis(
             connection,
             '{}_{}'.format(point_table_name, srid),
-            from_srid=srid,
-            column_definition_json=column_definition)
+            from_srid=srid
+    )
     cursor = connection.cursor()
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
@@ -254,13 +254,12 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid,column_de
     assert_data_method(csv_data, cursor,srid)
 
 # # # WRITING tests write using a string connection to db
-def test_write_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,schema,srid):
+def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
     my_dsn = '''dbname={db} user={user} password={pw} host={host}'''.format(db=db,user=user,pw=pw,host=host)
     etl.topostgis(csv_data,
                   my_dsn,
                   '{}.{}_{}'.format(schema, point_table_name, srid),
-                  from_srid=srid,
-                  column_definition_json=column_definition)
+                  from_srid=srid)
     connection = postgis.dbo
     cursor = connection.cursor()
     stmt = '''
@@ -282,13 +281,12 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis, column_defini
     assert_data_method(csv_data, cursor, srid)
 
 # # # WRITING TEST load csv data to postgressde db without an objectid field using geopetl and assert data
-def test_write_data_no_id(csv_data, db_data,srid, postgis,schema, column_definition):
+def test_write_data_no_id(csv_data, db_data,srid, postgis,schema):
     data = etl.fromcsv(point_csv_dir).cutout(fields.get('object_id_field_name'))
     data.topostgis(
                   postgis.dbo,
                   '{}.{}_{}'.format(schema, point_table_name, srid),
-                  from_srid=srid,
-                  column_definition_json=column_definition)
+                  from_srid=srid)
     connection = postgis.dbo
     cursor = connection.cursor()
     stmt = '''
@@ -311,12 +309,11 @@ def test_write_data_no_id(csv_data, db_data,srid, postgis,schema, column_definit
 
 
 # WRITING TEST?
-def test_null_times(postgis, csv_data, schema, column_definition, srid):
+def test_null_times(postgis, csv_data, schema, srid):
     csv_data['timestamp'] = ''
     csv_data['timezone'] = ''
     csv_data['datefield'] = ''
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid),
-                       column_definition_json=column_definition,
                        from_srid=srid)
     connection = postgis.dbo
     cursor = connection.cursor()
@@ -371,26 +368,40 @@ def test_line_assertion_write(postgis, schema,srid):
 # read and write
 # debug!!--------
 # # # # assert DB data with itself
-# def test_with_types(db_data, postgis, column_definition, schema, srid):
-#     # read data from db
-#     data1 = db_data
-#     print("etl.look(data1)")
-#     print(etl.look(data1))
-#     #load to second test table
-#     # etl.topostgis(db_data,
-#     #               postgis.dbo,
-#     #               '{}.{}_{}_2'.format(schema,point_table_name,srid),
-#     #               column_definition_json=column_definition,
-#     #               from_srid=srid)
-#     # db_data.topostgis(postgis.dbo,
-#     #               '{}.{}_{}_2'.format(schema,point_table_name,srid),
-#     #               column_definition_json=column_definition,
-#     #               from_srid=srid
-#     # )
-#     #etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema,point_table_name,srid), column_definition_json=column_definition,  from_srid=srid)
-#     #etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name,srid), column_definition_json=column_definition)
-#     etl.topostgis(data1,postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name, srid), from_srid=srid)
-#
-#     # extract from second test table
-#     data2 = etl.frompostgis(dbo=postgis.dbo,
-#                             table_name='{}.{}_{}_2'.format(schema,point_table_name,srid))
+def test_with_types(db_data, postgis, schema, srid):
+    # read data from db
+    data1 = db_data
+    #load to second test table
+    # etl.topostgis(db_data,
+    #               postgis.dbo,
+    #               '{}.{}_{}_2'.format(schema,point_table_name,srid),
+    #               from_srid=srid)
+    # db_data.topostgis(postgis.dbo,
+    #               '{}.{}_{}_2'.format(schema,point_table_name,srid),
+    #               from_srid=srid
+    # )
+    #etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema,point_table_name,srid), column_definition_json=column_definition,  from_srid=srid)
+    #etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name,srid), column_definition_json=column_definition)
+    etl.topostgis(data1,postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name, srid), from_srid=srid)
+    data2 = etl.frompostgis(dbo=postgis.dbo,
+                            table_name='{}.{}_{}_2'.format(schema, point_table_name, srid))
+    assert_data_method(data1, data2, srid)
+
+
+    # # extract from second test table
+    # data2 = etl.frompostgis(dbo=postgis.dbo,
+    #                         table_name='{}.{}_{}_2'.format(schema,point_table_name,srid))
+    #
+    # csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, point_table_name, srid),
+    #                    column_definition_json=point_column_definition, from_srid=srid)
+    # data1 = etl.frompostgis(dbo=postgis.dbo,
+    #                         table_name='{}.{}_{}'.format(schema, point_table_name, srid))
+    # # load to second test table
+    # data1.topostgis(postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name, srid), from_srid=srid,
+    #                 column_definition_json=point_column_definition)
+    #
+    # # extract from second test table
+    # data2 = etl.frompostgis(dbo=postgis.dbo,
+    #                         table_name='{}.{}_{}_2'.format(schema, point_table_name, srid))
+    #
+    # assert_data_method(data1, data2, srid)
