@@ -5,7 +5,7 @@ import psycopg2
 from pytz import timezone
 import csv
 from dateutil import parser as dt_parser
-from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name, point_table_name, point_csv_dir,fields
+from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name, point_table_name, point_csv_dir,fields, line_column_definition, polygon_column_definition, point_column_definition
 
 
 ############################################# FIXTURES ################################################################
@@ -24,29 +24,6 @@ def postgis(db, user, pw, host):
 def load_point_table(postgis,schema, srid):
     # write staging data to test table using oracle query
     connection = postgis.dbo
-    # populate_table_stmt = ''' INSERT INTO {schema}.point_table_{srid} ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name})
-    # VALUES
-    #  (1, 'eeeefwe', TIMESTAMP '2019-05-15 15:53:53.522000' , 5654, TIMESTAMPTZ '2008-12-25 10:23:54+00' , null, ' 2017-06-26'),
-    #  (2, 'ab#$%c', null , 12, TIMESTAMPTZ '2011-11-22 10:23:54-04' , ST_GeomFromText('POINT(2712205.71100539 259685.27615705)'), ' 2005-01-01'),
-    #  (3, 'd!@^&*?-=+ef', TIMESTAMP '2019-05-14 15:53:53.522000' , 1, null, ST_GeomFromText('POINT(2672818.51681407 231921.15681663)'), ' 2015-03-01'),
-    #  (4, 'fij()dcfwef', TIMESTAMP '2019-05-14 15:53:53.522000' , 2132134342, TIMESTAMPTZ '2014-04-11 10:23:54+05' , ST_GeomFromText('POINT(2704440.74884506 251030.69241638)'), null),
-    #  (5, 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 11, TIMESTAMPTZ '2021-08-23 10:23:54-02' , ST_GeomFromText('POINT(2674410.98607007 233770.15508713)'), ' 2008-08-11'),
-    #  (6, 'v[]im', TIMESTAMP '2019-05-14 15:53:53.522000' , 1353, TIMESTAMPTZ '2015-03-21 10:23:54-01' , ST_GeomFromText('POINT(2694352.72374555 250468.93894671)'), ' 2005-09-07'),
-    #  (7, 'he_llo', TIMESTAMP '2019-05-14 15:53:53.522000' , 49053, TIMESTAMPTZ '2020-06-12 10:23:54+03' , ST_GeomFromText('POINT(2675096.08410931 231074.64210546)'), ' 2003-11-23'),
-    #  (8, 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06' , 123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , ST_GeomFromText('POINT(2694560.19708389 244942.81679688)'), ' 2020-04-01'),
-    #  (9, 'qwe''qeqdqw', TIMESTAMP '2019-01-05 10:53:52' , 456, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GeomFromText('POINT(2680866.32552156 241245.62340388)'), ' 2018-07-19'),
-    #  (10, 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GeomFromText('POINT(2692140.13630722 231409.33008438)'), ' 2017-06-26'),
-    #  (11, 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GeomFromText('POINT EMPTY'), ' 2017-06-26')'''.format(
-    #     '''{}''',
-    #     objectid_field_name=fields.get('object_id_field_name'),
-    #     text_field_name=fields.get('text_field_name'),
-    #     timestamp_field_name=fields.get('timestamp_field_name'),
-    #     numeric_field_name=fields.get('numeric_field_name'),
-    #     timezone_field_name=fields.get('timezone_field_name'),
-    #     shape_field_name=fields.get('shape_field_name'),
-    #     date_field_name=fields.get('date_field_name'),
-    #     schema=schema,
-    #     srid=srid)
     populate_table_stmt ='''INSERT INTO {schema}.{point_table_name}_{srid} 
     (objectid, textfield, timestamp, numericfield, timezone, shape, datefield)
      VALUES
@@ -130,9 +107,9 @@ def db_data(postgis,schema,srid):
     return db_col
 
 @pytest.fixture
-def create_test_table_noid(postgis, schema,column_definition,srid):
+def create_test_table_noid(postgis, schema,srid):
     csv_data = etl.fromcsv(point_csv_dir).cutout('objectid')
-    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), column_definition_json=column_definition, from_srid=srid)
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), column_definition_json=point_column_definition, from_srid=srid)
 
 
 # assert
@@ -188,13 +165,13 @@ def assert_data_method(csv_data1, db_data1, srid1, field=None):
 
 
 #------------------WRITING TESTS
-def test_write_without_schema(db_data, postgis, csv_data, schema, srid,column_definition):
+def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
     connection = postgis.dbo
     csv_data.topostgis(
             connection,
             '{}_{}'.format(point_table_name, srid),
             from_srid=srid,
-            column_definition_json=column_definition)
+            column_definition_json=point_column_definition)
     cursor = connection.cursor()
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
@@ -215,13 +192,13 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid,column_de
     assert_data_method(csv_data, cursor,srid)
 
 # # # WRITING tests write using a string connection to db
-def test_write_dsn_connection(csv_data,db, user, pw, host,postgis, column_definition,schema,srid):
+def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
     my_dsn = '''dbname={db} user={user} password={pw} host={host}'''.format(db=db,user=user,pw=pw,host=host)
     etl.topostgis(csv_data,
                   my_dsn,
                   '{}.{}_{}'.format(schema, point_table_name,srid),
                   from_srid=srid,
-                  column_definition_json=column_definition)
+                  column_definition_json=point_column_definition)
     connection = postgis.dbo
     cursor = connection.cursor()
     stmt = '''
@@ -244,12 +221,12 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis, column_defini
 
 
 # WRITING TEST?
-def test_null_times(postgis, csv_data, schema, column_definition, srid):
+def test_null_times(postgis, csv_data, schema, srid):
     csv_data['timestamp'] = ''
     csv_data['timezone'] = ''
     csv_data['datefield'] = ''
     csv_data.topostgis(postgis.dbo, '{}.{}'.format(schema,point_table_name,srid),
-                       column_definition_json=column_definition,
+                       column_definition_json=point_column_definition,
                        )
     connection = postgis.dbo
     cursor = connection.cursor()
@@ -271,10 +248,9 @@ def test_null_times(postgis, csv_data, schema, column_definition, srid):
     assert_data_method(csv_data, cursor, srid)
 
 
-def test_polygon_assertion_write(postgis, schema, srid,column_definition):
+def test_polygon_assertion_write(postgis, schema, srid):
     csv_data = etl.fromcsv(polygon_csv_dir)
-    #csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, polygon_table_name,srid),from_srid=srid,column_definition_json=column_definition)
-    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, polygon_table_name,srid),from_srid=srid,column_definition_json="geopetl/tests/fixtures_data/schemas/polygon.json")
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, polygon_table_name,srid),from_srid=srid,column_definition_json=polygon_column_definition)
     # read data from test DB using petl
     stmt = '''select {objectid_field_name}, ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{polygon_table_name}_{srid}'''.format(
         schema=schema,
@@ -286,10 +262,9 @@ def test_polygon_assertion_write(postgis, schema, srid,column_definition):
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
 
-def test_line_assertion_write(postgis, schema,srid,column_definition):
+def test_line_assertion_write(postgis, schema,srid):
     csv_data = etl.fromcsv(line_csv_dir)
-    #csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, line_table_name,srid), from_srid=srid,column_definition_json=column_definition)
-    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, line_table_name,srid), from_srid=srid,column_definition_json="geopetl/tests/fixtures_data/schemas/line.json")
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, line_table_name,srid), from_srid=srid,column_definition_json=line_column_definition)
     # read data from test DB
     stmt = '''select {objectid_field_name}, ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{line_table_name}_{srid}'''.format(
         srid=srid,
@@ -304,14 +279,14 @@ def test_line_assertion_write(postgis, schema,srid,column_definition):
 
 
 #
-def test_with_types(db_data, postgis, column_definition, schema, srid,csv_data):
+def test_with_types(db_data, postgis, schema, srid,csv_data):
     # read data from db
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, point_table_name,srid),
-                       column_definition_json=column_definition, from_srid=srid)
+                       column_definition_json=point_column_definition, from_srid=srid)
     data1 = etl.frompostgis(dbo=postgis.dbo,
                             table_name='{}.{}_{}'.format(schema,point_table_name,srid))
     #load to second test table
-    data1.topostgis(postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name,srid), from_srid=srid, column_definition_json=column_definition)
+    data1.topostgis(postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name,srid), from_srid=srid, column_definition_json=point_column_definition)
 
     # extract from second test table
     data2 = etl.frompostgis(dbo=postgis.dbo,
