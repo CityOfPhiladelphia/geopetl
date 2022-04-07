@@ -470,7 +470,7 @@ class PostgisTable(object):
                 and f_geometry_column = '{}';
                 """.format(self.schema, self.name, self.geom_field)
             a = self.db.fetch(stmt)
-            geomtype = a[0].pop('geometry_type') # this returns an int value which represents a geom type
+            geomtype = a[0].pop('geometry_type') #this returns an int value which represents a geom type
             geomtype = geom_dict[geomtype]
             return geomtype
 
@@ -587,12 +587,16 @@ class PostgisTable(object):
         rows = etl.records(rows)
         # Get geom metadata
         if geom_field:
+            # if first geom val fill with empty string (creates error if geom val is multigeom)
+            first_geom_val = rows[0][geom_field] or ''
             srid = from_srid or self.srid
             #row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
             #    if geom_field and rows[0][geom_field] else None
-            match = re.match('[A-Z]+', rows[0][geom_field])
+            # if rows[0][geom_field]:
+            #     match = re.match('[A-Z]+', rows[0][geom_field])
+            #     row_geom_type = match.group() if match else None
+            match = re.match('[A-Z]+', first_geom_val)
             row_geom_type = match.group() if match else None
-            table_geom_type = self.geom_type if geom_field else None
 
         # Do we need to cast the geometry to a MULTI type? (Assuming all rows
         # have the same geom type.)
