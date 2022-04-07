@@ -371,37 +371,8 @@ def test_line_assertion_write(postgis, schema,srid):
 def test_with_types(db_data, postgis, schema, srid):
     # read data from db
     data1 = db_data
-    #load to second test table
-    # etl.topostgis(db_data,
-    #               postgis.dbo,
-    #               '{}.{}_{}_2'.format(schema,point_table_name,srid),
-    #               from_srid=srid)
-    # db_data.topostgis(postgis.dbo,
-    #               '{}.{}_{}_2'.format(schema,point_table_name,srid),
-    #               from_srid=srid
-    # )
-    #etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema,point_table_name,srid), column_definition_json=column_definition,  from_srid=srid)
-    #etl.topostgis(db_data, postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name,srid), column_definition_json=column_definition)
     etl.topostgis(data1,postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name, srid), from_srid=srid)
     data2 = etl.frompostgis(dbo=postgis.dbo,
                             table_name='{}.{}_{}_2'.format(schema, point_table_name, srid))
     assert_data_method(data1, data2, srid)
 
-
-    # # extract from second test table
-    # data2 = etl.frompostgis(dbo=postgis.dbo,
-    #                         table_name='{}.{}_{}_2'.format(schema,point_table_name,srid))
-    #
-    # csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, point_table_name, srid),
-    #                    column_definition_json=point_column_definition, from_srid=srid)
-    # data1 = etl.frompostgis(dbo=postgis.dbo,
-    #                         table_name='{}.{}_{}'.format(schema, point_table_name, srid))
-    # # load to second test table
-    # data1.topostgis(postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name, srid), from_srid=srid,
-    #                 column_definition_json=point_column_definition)
-    #
-    # # extract from second test table
-    # data2 = etl.frompostgis(dbo=postgis.dbo,
-    #                         table_name='{}.{}_{}_2'.format(schema, point_table_name, srid))
-    #
-    # assert_data_method(data1, data2, srid)
