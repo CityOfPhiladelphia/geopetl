@@ -41,13 +41,13 @@ def create_test_tables(srid, oraclesde_db):
         ( 'eeeefwe', '2019-05-15 15:53:53.522000', '5654', TO_TIMESTAMP_TZ('2008-12-25T10:23:54+00:00', 'YYYY-MM-DD"T"HH24:MI:SS.FFTZH:TZM'),SDE.ST_GEOMETRY('POINT EMPTY',{sr}), '2017-06-26 00:00:00',SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'point_table_{sr}'))
         INTO GIS_TEST.POINT_TABLE_{sr} ({text_field_name}, {timestamp_field_name}, {numericfield_field_name}, {timezone_field_name}, {shape_field_name}, {datefield_field_name}, {objectid_field_name})
         VALUES
-        ('ab#$%c', '2019-05-14 15:53:53.522000', '12', TO_TIMESTAMP_TZ('2011-11-22T10:23:54-04', 'YYYY-MM-DD"T"HH24:MI:SS.FFTZH:TZM'), SDE.ST_GEOMETRY('POINT(2712205.71100539 259685.27615705)', {sr}), '2005-01-01', SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'point_table_{sr}'))
+        ('ab#$%c', null, '12', TO_TIMESTAMP_TZ('2011-11-22T10:23:54-04', 'YYYY-MM-DD"T"HH24:MI:SS.FFTZH:TZM'), SDE.ST_GEOMETRY('POINT(2712205.71100539 259685.27615705)', {sr}), '2005-01-01', SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'point_table_{sr}'))
         INTO GIS_TEST.POINT_TABLE_{sr} ({text_field_name}, {timestamp_field_name}, {numericfield_field_name}, {timezone_field_name}, {shape_field_name}, {datefield_field_name}, {objectid_field_name})
         VALUES
-        ('d!@^&*?-=+ef', '2019-05-14 15:53:53.522000', '1', TO_TIMESTAMP_TZ('2009-10-02T10:23:54+03:00', 'YYYY-MM-DD"T"HH24:MI:SS.FFTZH:TZM'), SDE.ST_GEOMETRY('POINT(2672818.51681407 231921.15681663)', {sr}), '2015-03-01 00:00:00',SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'point_table_{sr}'))
+        ('d!@^&*?-=+ef', '2019-05-14 15:53:53.522000', '1', null, SDE.ST_GEOMETRY('POINT(2672818.51681407 231921.15681663)', {sr}), '2015-03-01 00:00:00',SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'point_table_{sr}'))
         INTO GIS_TEST.POINT_TABLE_{sr} ({text_field_name}, {timestamp_field_name}, {numericfield_field_name}, {timezone_field_name}, {shape_field_name}, {datefield_field_name}, {objectid_field_name})
         VALUES
-        ('fij()dcfwef', '2019-05-14 15:53:53.522000', '2132134342', TO_TIMESTAMP_TZ('2014-04-11T10:23:54+05:00', 'YYYY-MM-DD"T"HH24:MI:SS.FFTZH:TZM'), SDE.ST_GEOMETRY('POINT(2704440.74884506 251030.69241638)', {sr}) , '2009-11-21 00:00:00',SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'point_table_{sr}'))
+        ('fij()dcfwef', '2019-05-14 15:53:53.522000', '2132134342', TO_TIMESTAMP_TZ('2014-04-11T10:23:54+05:00', 'YYYY-MM-DD"T"HH24:MI:SS.FFTZH:TZM'), SDE.ST_GEOMETRY('POINT(2704440.74884506 251030.69241638)', {sr}) , null ,SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'point_table_{sr}'))
         INTO GIS_TEST.POINT_TABLE_{sr} ({text_field_name}, {timestamp_field_name}, {numericfield_field_name}, {timezone_field_name}, {shape_field_name}, {datefield_field_name}, {objectid_field_name})
         VALUES
         ('po{}tato','2019-05-14 15:53:53.522000','11', TO_TIMESTAMP_TZ('2021-08-23T10:23:54-02:00', 'YYYY-MM-DD"T"HH24:MI:SS.FFTZH:TZM'),SDE.ST_GEOMETRY('POINT(2674410.98607007 233770.15508713)', {sr}), '2008-08-11 00:00:00',SDE.GDB_UTIL.NEXT_ROWID('GIS_TEST', 'point_table_{sr}'))
@@ -184,6 +184,7 @@ def assert_data_method(csv_data1, db_data1, srid1, read, schema=None, table=None
             oracle_dict = dict(zip(db_header, db_data1[i+1]))     # dictionary from Oracle data
         else:
             oracle_dict = dict(zip(db_header, db_data1[i]))         # dictionary from Oracle data
+
         for key in csv_header:
             if read:
                 db_val = oracle_dict.get(key)
@@ -200,9 +201,18 @@ def assert_data_method(csv_data1, db_data1, srid1, read, schema=None, table=None
                     db_geom, db_coords = geom_parser(db_val, srid1)
                     assert (csv_geom == db_geom and db_geom == csv_geom)
             elif key == fields.get('timezone_field_name'):
-                if not read:
-                    db_val = dt_parser.parse(db_val)
-                assert csv_val == db_val
+                if csv_val == None or csv_val == '':
+                    assert db_val is None
+                else:
+                    try:
+                        db_val = dt_parser.parse(db_val)
+                    except:
+                        db_val = db_val
+                    try:
+                        csv_val = dt_parser.parse(csv_val)
+                    except:
+                        csv_val = csv_val
+                    assert db_val == csv_val
             else:
                 assert csv_val == db_val
 
@@ -224,7 +234,7 @@ def test_all_rows_written(host, port, service_name,user, pw,schema, create_test_
             result = cursor.fetchall()
     except cx_Oracle.Error as error:
         print('Error occurred')
-        print(error)
+        raise(error)
 
     # get number of rows from query
     oracle_num_rows = len(result)

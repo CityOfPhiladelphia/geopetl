@@ -2,8 +2,8 @@ import pytest
 import petl as etl
 from geopetl.postgis import PostgisDatabase
 import psycopg2
-from pytz import timezone
-import csv
+# from pytz import timezone
+# import csv
 from dateutil import parser as dt_parser
 from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name, point_table_name, point_csv_dir,fields
 
@@ -22,7 +22,7 @@ def postgis(db, user, pw, host):
 # create new table and write csv staging data to it
 @pytest.fixture
 def load_point_table(postgis,schema, srid):
-    # write staging data to test table using oracle query
+    # write staging data to test table using sql query
     connection = postgis.dbo
     populate_table_stmt = ''' INSERT INTO {schema}.{point_table_name}_{sr} ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}) 
     VALUES 
@@ -48,7 +48,7 @@ def load_point_table(postgis,schema, srid):
         sr=srid, schema=schema,
         point_table_name= point_table_name )
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.POINT_TABLE_{sr}'''.format(schema=schema, sr=srid))
+    cursor.execute('''truncate table {schema}.{point_table_name}_{sr}'''.format(schema=schema,point_table_name=point_table_name, sr=srid))
     cursor.execute(populate_table_stmt)
     connection.commit()
 
@@ -71,7 +71,7 @@ def load_polygon_table(srid, postgis, schema):
     )
     connection = postgis.dbo
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.POLYGON_TABLE_{sr}'''.format(schema=schema, sr=srid))
+    cursor.execute('''truncate table {schema}.{polygon_table_name}_{srid}'''.format(schema=schema, polygon_table_name=polygon_table_name,srid=srid))
     cursor.execute(stmt)
     connection.commit()
 
@@ -93,7 +93,7 @@ def load_line_table(srid, postgis, schema):
                 shape_field_name=fields.get('shape_field_name'))
     connection = postgis.dbo
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.LINE_TABLE_{sr}'''.format(schema=schema, sr=srid))
+    cursor.execute('''truncate table {schema}.{line_table_name}_{sr}'''.format(schema=schema,line_table_name=line_table_name, sr=srid))
     cursor.execute(stmt)
     connection.commit()
 
@@ -112,7 +112,7 @@ def db_data(postgis,schema,srid):
 
 @pytest.fixture
 def create_test_table_noid(postgis, schema,srid):
-    csv_data = etl.fromcsv(point_csv_dir).cutout('objectid')
+    csv_data = etl.fromcsv(point_csv_dir).cutout(fields.get('object_id_field_name'))
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), from_srid=srid)
 
 
