@@ -327,13 +327,14 @@ FIELD_TYPE_MAP = {
     'text':                     'text',
     'character varying':        'text',
     'date':                     'date',
-    'USER-DEFINED':             'geometry',
+    'user-defined':             'geometry',
     'timestamp with time zone': 'timestamptz',
     'timestamp without time zone': 'timestamp',
     'boolean':                  'boolean',
     'uuid':                     'uuid',
     'money':                    'money',
-    'bytea':                    'text'
+    'bytea':                    'text',
+    'array':                    'text'
 }
 
 class PostgisTable(object):
@@ -378,7 +379,7 @@ class PostgisTable(object):
                 del fields[i]
 
         for field in fields:
-            field['type'] = FIELD_TYPE_MAP[field['type']]
+            field['type'] = FIELD_TYPE_MAP[field['type'].lower()]
         return fields
 
     @property
