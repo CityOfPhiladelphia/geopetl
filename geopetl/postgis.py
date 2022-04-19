@@ -340,6 +340,7 @@ FIELD_TYPE_MAP = {
 class PostgisTable(object):
 
     _srid = None
+    _geom_field = None
 
     def __init__(self, db, name):
         self.db = db
@@ -399,20 +400,22 @@ class PostgisTable(object):
 
     @property
     def geom_field(self):
-        if self.db.sde_version is not None:
-            stmt = "select column_name from sde.st_geometry_columns where table_name = '{}'".format(self.name)
-            r = self.db.fetch(stmt)
-            if r:
-                return r[0].pop('column_name')
+        if self._geom_field is None:
+            if self.db.sde_version is not None:
+                stmt = "select column_name from sde.st_geometry_columns where table_name = '{}'".format(self.name)
+                r = self.db.fetch(stmt)
+                if r:
+                    self._geom_field = r[0].pop('column_name')
+                else:
+                    self._geom_field = None
             else:
-                return None
-        else:
-            f = [x for x in self.metadata if x['type'] == 'geometry']
-            if len(f) == 0:
-                return None
-            elif len(f) > 1:
-                raise LookupError('Multiple geometry fields')
-            return f[0]['name']
+                f = [x for x in self.metadata if x['type'] == 'geometry']
+                if len(f) == 0:
+                    self._geom_field = None
+                elif len(f) > 1:
+                    raise LookupError('Multiple geometry fields')
+                self._geom_field = f[0]['name']
+        return self._geom_field
 
     @property
     def objectid_field(self):
