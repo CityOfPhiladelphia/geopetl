@@ -329,8 +329,8 @@ class OracleSdeTable(object):
         else:
             self.schema = self.db.user.lower()
             self.name = name.lower()
-        self.geom_field = self._get_geom_field().lower()
-        self.geom_type = self._get_geom_type().lower()
+        self.geom_field = self._get_geom_field()
+        self.geom_type = self._get_geom_type()
         self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
         self.timezone_fields = self._timezone_fields()
         self.increment = increment
