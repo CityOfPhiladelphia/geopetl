@@ -235,57 +235,40 @@ def test_all_rows_written(host, port, service_name,user, pw,schema, create_test_
     except cx_Oracle.Error as error:
         print('Error occurred')
         raise(error)
-
     # get number of rows from query
     oracle_num_rows = len(result)
     assert csv_row_count == oracle_num_rows
 
 
 # # compare csv data with oracle data using geopetl
-def test_assert_data_2(oraclesde_db, db_data,csv_data, srid):
-    db_data1=db_data
-    csv_data1=csv_data
-    assert_data_method(csv_data1,db_data1, srid, read=True)
-
-def test_assert_data_3( oraclesde_db, db_data,csv_data, srid):
+def test_reading_point_table(oraclesde_db, db_data,csv_data, srid):
     db_data1=db_data
     csv_data1=csv_data
     assert_data_method(csv_data1,db_data1, srid, read=True)
 
 def test_reading_timestamp(db_data,csv_data, srid):
     key = fields.get('timestamp_field_name')
-    assert_data_method(csv_data, db_data, srid,field = key, read=True)
-
+    assert_data_method(csv_data, db_data, srid,field=key, read=True)
 
 def test_reading_numericfield(csv_data, db_data,srid):
     key = fields.get('numeric_field_name')
-    assert_data_method(csv_data, db_data, srid,field = key, read=True)
+    assert_data_method(csv_data, db_data, srid,field=key, read=True)
 
 def test_reading_datefield(csv_data, db_data,srid):
     key = fields.get('date_field_name')
-    assert_data_method(csv_data, db_data, srid,field = key, read=True)
+    assert_data_method(csv_data, db_data, srid,field=key, read=True)
 
 def test_reading_shape(db_data,csv_data, srid):
     key = fields.get('shape_field_name')
-    assert_data_method(csv_data, db_data, srid,field = key, read=True)
+    assert_data_method(csv_data, db_data, srid,field=key, read=True)
 
 def test_reading_textfield(db_data,csv_data,srid):
     key = fields.get('text_field_name')
     assert_data_method(csv_data, db_data, srid,field = key, read=True)
 
-
 def test_reading_timezone(csv_data, db_data,srid):
     key = fields.get('text_field_name')
     assert_data_method(csv_data, db_data, srid,field = key, read=True)
-
-# # assert DB data with itself
-def test_reading_with_types(db_data,oraclesde_db, schema, srid):
-    data1 = db_data
-    # load to second test table
-    db_data.tooraclesde(oraclesde_db, '{}.{}_{}_2'.format(schema,point_table_name,srid), srid=srid)
-    # extract from second test table
-    data2 = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}.{}_{}_2'.format(schema,point_table_name,srid))
-    assert_data_method(data1, data2, srid, read=True)
 
 # # assert point table data by loading and extracting data without providing schema
 def test_reading_without_schema(oraclesde_db, csv_data,srid,):
@@ -293,66 +276,21 @@ def test_reading_without_schema(oraclesde_db, csv_data,srid,):
     db_data2 = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}_{}'.format(point_table_name,srid))
     assert_data_method(csv_data, db_data2, srid, read=True)
 
-
-
 # #compare csv data with postgres data using geopetl
-def test_line_assertion(oraclesde_db, schema,srid, create_line_table):
+def test_reading_line_table(oraclesde_db, schema,srid, create_line_table):
     csv_data = etl.fromcsv(line_csv_dir).convert(['objectid'], int)
     # read data from test DB using petl
     db_data = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}.{}_{}'.format(schema,line_table_name, srid))
     assert_data_method(csv_data, db_data, srid, read=True)
 
-
-
-def test_polygon_assertion(oraclesde_db, schema,srid, create_polygon_table):
+def test_reading_polygon_table(oraclesde_db, schema,srid, create_polygon_table):
     csv_data = etl.fromcsv(polygon_csv_dir).convert(['objectid'], int)
     # read data from test DB using petl
     db_data = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}.{}_{}'.format(schema, polygon_table_name,srid))
     assert_data_method(csv_data, db_data, srid, read=True)
 
 
-
 ############################ WRITING TESTS #######################################
-
-#csv_data1 = list, cxcursor= cx cursor object
-# def assert_write_tests(csv_data1, cxcursor,srid, schema, table):
-#     csv_header = csv_data1[0]
-#     db_header = [column[0] for column in cxcursor.description]
-#     cxdata1 = cxcursor.fetchall()
-#     # get column definiton
-#     stmt = '''select DATA_TYPE, COLUMN_NAME   FROM ALL_TAB_COLS
-#                     WHERE OWNER = '{}' AND
-#                     TABLE_NAME = '{}_{}' AND
-#                     HIDDEN_COLUMN = 'NO' '''.format(schema, table.upper(), srid)
-#     cxcursor.execute(stmt)
-#     res = cxcursor.fetchall()
-#     column_def = dict(res)
-#     for i, row in enumerate(cxdata1[0:]):
-#         csv_dict = dict(zip(csv_header, csv_data1[i+1]))    # dictionary from csv data
-#         oracle_dict = dict(zip(db_header, row))             # dictionary from Oracle data
-#         for key in csv_header:
-#             csv_val = csv_dict.get(key)
-#             db_val = oracle_dict.get(key.upper())
-#             # shape_column =
-#             if key == 'objectid':
-#                 continue
-#             # assert shape field
-#             elif key == column_def.get('ST_GEOMETRY').lower():
-#                 if csv_val == 'POINT EMPTY' or csv_val == '':
-#                     # reading with cx oracle
-#                     assert str(db_val) == 'POINT EMPTY'
-#                 else:
-#                     csv_val = remove_whitespace(csv_val,srid)
-#                     db_val = remove_whitespace(db_val,srid)
-#                     assert csv_val == db_val
-#             # assert timestamps with time timezone' :
-#             elif key.upper() == column_def.get('TIMESTAMP(6) WITH TIME ZONE'):
-#                 db_val = dt_parser.parse(db_val)
-#                 assert csv_val == db_val
-#             # compare values from each key
-#             else:
-#                 assert csv_val == db_val
-
 
 # load staging data with geopetl, extract with cxOracle, assert with csv data
 def test_assert_written_data(oraclesde_db, csv_data, schema,srid):
@@ -378,7 +316,7 @@ def test_assert_written_data(oraclesde_db, csv_data, schema,srid):
     assert_data_method(csv_data, cursor, srid,schema=schema, table=point_table_name, read=False)
 
 # load csv data to oracle db without an objectid field using geopetl and assert data
-def test_assert_data_no_id(create_test_table_noid,csv_data,schema, db_data,oraclesde_db, srid):
+def test_wrting_data_no_id(create_test_table_noid,csv_data,schema, db_data,oraclesde_db, srid):
     csv_data1 = csv_data
     cursor = oraclesde_db.cursor()
     cursor.execute('''
@@ -426,3 +364,12 @@ def test_line_assertion_write(oraclesde_db, schema,srid):
     cursor = oraclesde_db.cursor()
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid,schema=schema, table=point_table_name, read=False)
+
+# # assert DB data with itself
+def test_reading_with_types(db_data,oraclesde_db, schema, srid):
+    data1 = db_data
+    # load to second test table
+    db_data.tooraclesde(oraclesde_db, '{}.{}_{}_2'.format(schema,point_table_name,srid), srid=srid)
+    # extract from second test table
+    data2 = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}.{}_{}_2'.format(schema,point_table_name,srid))
+    assert_data_method(data1, data2, srid, read=True)
