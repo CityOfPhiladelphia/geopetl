@@ -414,7 +414,8 @@ class PostgisTable(object):
                     self._geom_field = None
                 elif len(f) > 1:
                     raise LookupError('Multiple geometry fields')
-                self._geom_field = f[0]['name']
+                else:
+                    self._geom_field = f[0]['name']
         return self._geom_field
 
     @property
