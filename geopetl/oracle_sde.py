@@ -224,10 +224,8 @@ class OracleSdeDatabase(object):
         """.format(self._user_p)
         self.cursor.execute(stmt)
         table_names = [x[0] for x in self.cursor.fetchall()]
-
         # filter out sde business tables
         table_names_filtered = self._exclude_sde_tables(table_names)
-
         # sort
         table_names_sorted = sorted(table_names_filtered)
 
@@ -695,7 +693,7 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if val is None:
+        if val is None or val == '':
             return None
         # TODO handle types. Seems to be working without this for most cases.
         if type_ == 'text':
@@ -722,7 +720,7 @@ class OracleSdeTable(object):
         elif type_ == 'timestamp with time zone':
             if isinstance(val, datetime):
                 val = val.isoformat()
-            elif isinstance(val, str):
+            elif isinstance(val, str) and val:
                 val=dt_parser().parse(val)
                 val = val.isoformat()
 
@@ -730,7 +728,7 @@ class OracleSdeTable(object):
             # var = self._c.var(cx_Oracle.NCLOB)
             # var.setvalue(0, val)
             # val = var
-        elif type_ == 'timestamp without time zone': 
+        elif type_ == 'timestamp without time zone':
             pass
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
@@ -1025,7 +1023,6 @@ class OracleSdeTable(object):
 
                 val_rows = []
                 cur_stmt = stmt
-
         # if there are remaining rows, write them:
         if val_rows:
             self.db.cursor.executemany(None, val_rows, batcherrors=False)
@@ -1073,8 +1070,7 @@ class OracleSdeQuery(SpatialQuery):
             rown_num = etl.nrows(db_view)
         except Exception as e:
             print(e)
-            print('ERROR: table is empty')
-            raise
+            raise('ERROR: table is empty')
 
     def __iter__(self):
         """Proxy iteration to core petl."""
