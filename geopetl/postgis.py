@@ -464,7 +464,8 @@ class PostgisTable(object):
                 AND f_table_name = '{}'
                 and f_geometry_column = '{}';
                 """.format(self.schema, self.name, self.geom_field)
-            return self.db.fetch(stmt)[0].pop('type')
+            a = self.db.fetch(stmt)[0].pop('type')
+            return a
         else: # sde enabled
             geom_dict = {1:"POINT", 9:"LINE",4:"POLYGON", 11:"MULTIPOLYGON"}
             stmt = """
@@ -510,7 +511,10 @@ class PostgisTable(object):
             else:
                 val = 'NULL'
         elif type_ == 'geometry':
-            val = str(val)
+            if val:
+                val = str(val)
+            else:
+                val='NULL'
         elif type_ == 'timestamp':
             val=str(val)
             if not val or val == 'None':
@@ -588,12 +592,18 @@ class PostgisTable(object):
         geom_field = self.geom_field
         objectid_field = self.objectid_field
 
+        # convert '' values to None in geom column
+        rows_temp = etl.convert(rows, geom_field, lambda v: None, where = lambda r: r.shape == '')
+        # sele
+        rowsnotnone = rows_temp.selectnotnone(geom_field)
         # convert rows to records (hybrid objects that can behave like dicts)
         rows = etl.records(rows)
+        # convert rows to records (hybrid objects that can behave like dicts))
+        rows2 = etl.records(rowsnotnone)
         # Get geom metadata
         if geom_field:
             # if first geom val fill with empty string (creates error if geom val is multigeom)
-            first_geom_val = rows[0][geom_field] or ''
+            first_geom_val = rows2[0][geom_field] or ''
             srid = from_srid or self.srid
             #row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
             #    if geom_field and rows[0][geom_field] else None
