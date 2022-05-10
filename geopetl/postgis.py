@@ -501,7 +501,7 @@ class PostgisTable(object):
                 a = self.db.fetch(stmt)
             if a:
                 geomtype = a[0].pop('geometry_type')  # this returns an int value which represents a geom type
-                if type(geomtype) == 'int':
+                if type(geomtype) == int:
                     geomtype = geom_dict[geomtype]
             else:
                 geomtype = None
@@ -620,7 +620,7 @@ class PostgisTable(object):
 
         # convert '' values to None in geom column
         rows_temp = etl.convert(rows, geom_field, lambda v: None, where = lambda r: r.shape == '')
-        # sele
+        # select rows where shape col is not none
         rowsnotnone = rows_temp.selectnotnone(geom_field)
         # convert rows to records (hybrid objects that can behave like dicts)
         rows = etl.records(rows)
