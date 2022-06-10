@@ -214,12 +214,8 @@ class PostgisDatabase(object):
 
     def fetch(self, stmt):
         """Run a SQL statement and fetch all rows."""
-        try:
-            self.cursor.execute(stmt)
-            return self.cursor.fetchall()
-        except Exception as e:
-            self.cursor.execute("ROLLBACK")
-            raise e
+        self.cursor.execute(stmt)
+        return self.cursor.fetchall()
 
     # @property
     # def tables(self, schema='public'):
@@ -407,12 +403,7 @@ class PostgisTable(object):
         if self._geom_field is None:
             if self.db.sde_version is not None:
                 stmt = "select column_name from sde.st_geometry_columns where table_name = '{}'".format(self.name)
-                try:
-                    r = self.db.fetch(stmt)
-                except:
-                    stmt = "select f_geometry_column as column_name from geometry_columns where f_table_name = '{}' and f_table_schema = '{}'".format(
-                        self.name, self.schema)
-                    r = self.db.fetch(stmt)
+                r = self.db.fetch(stmt)
                 if r:
                     self._geom_field = r[0].pop('column_name')
                 else:
@@ -456,18 +447,9 @@ class PostgisTable(object):
                     .format(self.schema, self.name, self.geom_field)
                 self._srid = self.db.fetch(stmt)[0]['find_srid']
             else:
-                try:
-                    stmt = "select srid from sde.st_geometry_columns where schema_name = '{}' and table_name = '{}'" \
-                        .format(self.schema, self.name)
-                    r = self.db.fetch(stmt)
-                except:
-                    stmt = "select srid from geometry_columns where f_table_name = '{}' and f_table_schema = '{}'".format(
-                        self.name, self.schema)
-                    r = self.db.fetch(stmt)
-                if r:
-                    self._srid = r[0]['srid']
-                else:
-                    self._srid = None
+                stmt = "select srid from sde.st_geometry_columns where schema_name = '{}' and table_name = '{}'" \
+                    .format(self.schema, self.name)
+                self._srid = self.db.fetch(stmt)[0]['srid']
         return self._srid
 
 
@@ -493,18 +475,9 @@ class PostgisTable(object):
                 AND f_table_name = '{}'
                 and f_geometry_column = '{}';
                 """.format(self.schema, self.name, self.geom_field)
-            try:
-                a = self.db.fetch(stmt)
-            except:
-                stmt = "select geometry_type from geometry_type('{}', '{}', '{}')".format(
-                    self.schema, self.name, self.geom_field)
-                a = self.db.fetch(stmt)
-            if a:
-                geomtype = a[0].pop('geometry_type')  # this returns an int value which represents a geom type
-                if type(geomtype) == int:
-                    geomtype = geom_dict[geomtype]
-            else:
-                geomtype = None
+            a = self.db.fetch(stmt)
+            geomtype = a[0].pop('geometry_type') #this returns an int value which represents a geom type
+            geomtype = geom_dict[geomtype]
             return geomtype
 
     @property
@@ -595,7 +568,8 @@ class PostgisTable(object):
         #   geom = "ST_GeomFromText('{}', {})".format(geom, from_srid)
 
         if multi_geom:
-            geom = 'ST_Multi({})'.format(geom)
+            if not self.db.sde_version:
+                geom = 'ST_Multi({})'.format(geom)
         return geom
 
     def write(self, rows, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
@@ -620,7 +594,7 @@ class PostgisTable(object):
 
         # convert '' values to None in geom column
         rows_temp = etl.convert(rows, geom_field, lambda v: None, where = lambda r: r.shape == '')
-        # select rows where shape col is not none
+        # sele
         rowsnotnone = rows_temp.selectnotnone(geom_field)
         # convert rows to records (hybrid objects that can behave like dicts)
         rows = etl.records(rows)
