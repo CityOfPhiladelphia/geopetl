@@ -820,8 +820,9 @@ class OracleSdeTable(object):
         TODO: it might be faster to call NEXTVAL on the DB sequence for OBJECTID
         rather than use the SDE helper function.
         """
-        # if len(rows) == 0:
-        #     return
+        # If the dataframe is empty or only has a header, exit
+        if len(rows) < 2:
+            raise Exception("Dataframe is empty, exiting...")
 
         # if table doesn't have a srid (probably because it isn't registered
         # with sde) and none was passed in, error
