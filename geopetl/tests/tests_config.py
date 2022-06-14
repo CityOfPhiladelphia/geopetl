@@ -1,18 +1,20 @@
 import re
-import re
+
 point_table_name = 'point_table'
 point_csv_dir = 'geopetl/tests/fixtures_data/staging/point.csv'
+point_column_definition = 'geopetl/tests/fixtures_data/schemas/point.json'
 
 polygon_table_name = 'polygon_table'
 polygon_csv_dir = 'geopetl/tests/fixtures_data/staging/polygon.csv'
+polygon_column_definition = 'geopetl/tests/fixtures_data/schemas/polygon.json'
 
 line_table_name = 'line_table'
 line_csv_dir = 'geopetl/tests/fixtures_data/staging/line.csv'
-
-
-point_column_definition = 'geopetl/tests/fixtures_data/schemas/point.json'
-polygon_column_definition = 'geopetl/tests/fixtures_data/schemas/polygon.json'
 line_column_definition = 'geopetl/tests/fixtures_data/schemas/line.json'
+
+multipolygon_table_name = 'multipolygon_table'
+multipolygon_csv_dir = 'geopetl/tests/fixtures_data/staging/multipolygon.csv'
+multipolygon_column_definition = 'geopetl/tests/fixtures_data/schemas/multipolygon.json'
 
 srid_precision = {'2272':3,
                   '4326':8}
