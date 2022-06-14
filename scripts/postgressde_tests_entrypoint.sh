@@ -42,30 +42,30 @@ echo "sde database ready and accepting conections."
 # Note: the hostname postgis is a docker-made DNS record
 # When you specify the container name in docker-compose.yml
 
-echo "##########################################"
-echo "Running postgressde tests 4326 against Esri SDE database..."
-# test for postgres-sde
-pytest geopetl/tests/test_postgressde.py \
-  --user=$SDE_USER \
-  --pw=$SDE_PASSWORD \
-  --db=$SDE_DB \
-  --host=$SDE_HOST \
-  --port=5432 \
-  --schema=$SDE_USER \
-  --srid=4326
-
-SDE_EXIT_CODE=$?
-echo "postgres 4326 tests done."
-echo "##########################################"
-echo ""
-
-if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
-    echo "Errors encountered in tests."
-    exit 1
-else
-    echo "postgres 4326 tests passed!"
-    exit 0
-fi
+#echo "##########################################"
+#echo "Running postgressde tests 4326 against Esri SDE database..."
+## test for postgres-sde
+#pytest geopetl/tests/test_postgressde.py \
+#  --user=$SDE_USER \
+#  --pw=$SDE_PASSWORD \
+#  --db=$SDE_DB \
+#  --host=$SDE_HOST \
+#  --port=5432 \
+#  --schema=$SDE_USER \
+#  --srid=4326
+#
+#SDE_EXIT_CODE=$?
+#echo "postgres 4326 tests done."
+#echo "##########################################"
+#echo ""
+#
+#if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
+#    echo "Errors encountered in tests."
+#    exit 1
+#else
+#    echo "postgres 4326 tests passed!"
+#    exit 0
+#fi
 
 
 
