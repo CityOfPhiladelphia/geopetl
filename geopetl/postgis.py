@@ -595,7 +595,8 @@ class PostgisTable(object):
         #   geom = "ST_GeomFromText('{}', {})".format(geom, from_srid)
 
         if multi_geom:
-            geom = 'ST_Multi({})'.format(geom)
+            if not self.db.sde_version:
+                geom = 'ST_Multi({})'.format(geom)
         return geom
 
     def write(self, rows, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):

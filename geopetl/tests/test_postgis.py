@@ -5,7 +5,9 @@ import psycopg2
 from pytz import timezone
 import csv
 from dateutil import parser as dt_parser
-from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name, point_table_name, point_csv_dir,fields, line_column_definition, polygon_column_definition, point_column_definition
+from tests_config import geom_parser, line_csv_dir, line_table_name,line_column_definition,\
+    polygon_csv_dir, polygon_table_name, polygon_column_definition, \
+    point_table_name, point_csv_dir, point_column_definition,fields
 
 
 ############################################# FIXTURES ################################################################
@@ -54,7 +56,7 @@ def load_polygon_table(srid, postgis, schema):
     stmt = '''
     INSERT INTO {schema}.POLYGON_TABLE_{sr} ({shape_field_name}, {objectid_field_name}) 
     VALUES
-    (NULL,NULL),
+    (NULL,1),
     (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), 2),
     (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), 3),
     (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), 4),
@@ -76,7 +78,7 @@ def load_line_table(srid, postgis, schema):
     stmt = '''	
     INSERT INTO {schema}.{line_table_name}_{sr} ({shape_field_name}, {objectid_field_name}) 
     VALUES 
-    (NULL, NUll),
+    (NULL, 1),
     (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 2),
     (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 3),
     (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 4),

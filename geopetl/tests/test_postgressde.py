@@ -5,7 +5,7 @@ import psycopg2
 # from pytz import timezone
 # import csv
 from dateutil import parser as dt_parser
-from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name, point_table_name, point_csv_dir,fields
+from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name, point_table_name, point_csv_dir,fields, multipolygon_table_name, multipolygon_csv_dir
 
 
 ############################################# FIXTURES ################################################################
@@ -96,6 +96,48 @@ def load_line_table(srid, postgis, schema):
     connection = postgis.dbo
     cursor = connection.cursor()
     cursor.execute('''truncate table {schema}.{line_table_name}_{sr}'''.format(schema=schema,line_table_name=line_table_name, sr=srid))
+    cursor.execute(stmt)
+    connection.commit()
+
+@pytest.fixture
+def load_multipolygon_table(srid, postgis, schema):
+    stmt = '''INSERT INTO {multipolygon_table_name}_{srid} ({objectid_field_name}, {shape_field_name})
+            VALUES 
+            (SDE.NEXT_ROWID('{schema}', '{multipolygon_table_name}_{srid}'),
+            sde.st_multipolygon ('multipolygon ((
+            (2697048.194000 243967.352750, 2697049.194000 243968.352750, 2697050.194000 243968.352750, 2697048.194000 243967.352750),
+            (2697046.119000 244007.289250, 2697048.119000 244009.289250, 2697046.119000 244007.289250),
+            (2697059.924000 243874.435000, 2697057.924000 243872.435000, 2697058.924000 243871.435000, 2697059.924000 243872.435000,2697059.924000 243874.435000)
+            ))', {srid})),
+
+            (SDE.NEXT_ROWID('{schema}', '{multipolygon_table_name}_{srid}'),
+            sde.st_multipolygon ('multipolygon ((
+            (2697048.094000 243967.352750, 2697049.194000 243968.352750, 2697050.194000 243968.352750, 2697048.094000 243967.352750),
+            (2697046.019000 244007.289250, 2697048.119000 244009.289250, 2697046.019000 244007.289250),
+            (2697059.824000 243874.435000, 2697057.924000 243872.435000, 2697058.924000 243871.435000, 2697059.924000 243872.435000,2697059.824000 243874.435000)
+            ))', {srid})),
+
+            (SDE.NEXT_ROWID('{schema}', '{multipolygon_table_name}_{srid}'),
+            sde.st_multipolygon ('multipolygon ((
+            (2697048.294000 243967.352750, 2697049.194000 243968.352750, 2697050.194000 243968.352750, 2697048.294000 243967.352750),
+            (2697046.219000 244007.289250, 2697048.119000 244009.289250, 2697046.219000 244007.289250),
+            (2697059.984000 243874.435000, 2697057.924000 243872.435000, 2697058.924000 243871.435000, 2697059.924000 243872.435000,2697059.984000 243874.435000)
+            ))', {srid})),
+
+            (SDE.NEXT_ROWID('{schema}', '{multipolygon_table_name}_{srid}'),
+            sde.st_multipolygon ('multipolygon ((
+            (2697048.194000 243967.452750, 2697049.194000 243968.352750, 2697050.194000 243968.352750, 2697048.194000 243967.452750),
+            (2697046.119000 244007.389250, 2697048.119000 244009.289250, 2697046.119000 244007.389250),
+            (2697059.924000 243874.535000, 2697057.924000 243872.435000, 2697058.924000 243871.435000, 2697059.924000 243872.435000,2697059.924000 243874.535000)
+            ))', {srid}))'''.format(schema=schema,
+                                    multipolygon_table_name=multipolygon_table_name,
+                                    objectid_field_name=fields.get('object_id_field_name'),
+                                    shape_field_name=fields.get('shape_field_name'),
+                                    srid=srid)
+
+    connection = postgis.dbo
+    cursor = connection.cursor()
+    cursor.execute('''truncate table {schema}.{table_name}_{srid}'''.format(schema=schema, srid=srid,table_name=multipolygon_table_name))
     cursor.execute(stmt)
     connection.commit()
 
@@ -224,6 +266,12 @@ def test_reading_line_table(postgis, load_line_table,schema, srid):
     csv_data = etl.fromcsv(line_csv_dir)
     # read data from test DB using petl
     db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,line_table_name,srid))
+    assert_data_method(csv_data, db_data1, srid)
+
+def test_reading_multipolygon(postgis, load_multipolygon_table, schema, srid):
+    csv_data = etl.fromcsv(multipolygon_csv_dir)
+    # read data from test DB using petl
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, multipolygon_table_name, srid))
     assert_data_method(csv_data, db_data1, srid)
 
 
@@ -361,6 +409,20 @@ def test_line_assertion_write(postgis, schema,srid):
         srid,
         objectid_field_name = fields.get('object_id_field_name'),
         shape_field_name = fields.get('shape_field_name')
+    )
+    cursor = postgis.dbo.cursor()
+    cursor.execute(stmt)
+    assert_data_method(csv_data, cursor, srid)
+
+def test_multipolygon_assertion_write(postgis, load_multipolygon_table, schema, srid):
+    csv_data = etl.fromcsv(multipolygon_csv_dir)
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, multipolygon_table_name, srid), from_srid=srid)
+    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
+        schema,
+        multipolygon_table_name,
+        srid,
+        objectid_field_name=fields.get('object_id_field_name'),
+        shape_field_name=fields.get('shape_field_name')
     )
     cursor = postgis.dbo.cursor()
     cursor.execute(stmt)
