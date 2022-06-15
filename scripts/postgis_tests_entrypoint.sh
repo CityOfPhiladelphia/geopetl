@@ -52,10 +52,33 @@ echo "#########################################"
 echo ""
 
 if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
-    echo "Errors encountered in tests."
+    echo "Errors encountered in 2272 postgis tests."
     exit 1
 else
-    echo "All tests passed!"
+    echo "2272 postgis tests passed!"
     exit 0
 fi
 
+
+echo "#########################################"
+echo "Running tests against PostGIS database..."
+pytest geopetl/tests/test_postgis.py \
+  --user=$POSTGIS_USER \
+  --pw=$POSTGIS_PASSWORD \
+  --db=$POSTGIS_DB \
+  --host=$POSTGIS_HOST \
+  --port=5432 \
+  --schema="public" \
+  --srid=4326
+POSTGIS_EXIT_CODE=$?
+echo "Postgis test done."
+echo "#########################################"
+echo ""
+
+if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
+    echo "Errors encountered in 4326 postgis tests."
+    exit 1
+else
+    echo "4326 postgis tests passed!"
+    exit 0
+fi
