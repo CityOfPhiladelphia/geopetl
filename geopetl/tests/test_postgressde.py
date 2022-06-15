@@ -105,30 +105,26 @@ def load_multipolygon_table(srid, postgis, schema):
             VALUES 
             (SDE.NEXT_ROWID('{schema}', '{multipolygon_table_name}_{srid}'),
             sde.st_multipolygon ('multipolygon ((
-            (2697048.194000 243967.352750, 2697049.194000 243968.352750, 2697050.194000 243968.352750, 2697048.194000 243967.352750),
-            (2697046.119000 244007.289250, 2697048.119000 244009.289250, 2697046.119000 244007.289250),
-            (2697059.924000 243874.435000, 2697057.924000 243872.435000, 2697058.924000 243871.435000, 2697059.924000 243872.435000,2697059.924000 243874.435000)
+            ( 2697059.92403972 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.92403972 243874.43507531)),
+            (( 2697048.19407630 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.19407630 243967.35286848)
             ))', {srid})),
 
             (SDE.NEXT_ROWID('{schema}', '{multipolygon_table_name}_{srid}'),
             sde.st_multipolygon ('multipolygon ((
-            (2697048.094000 243967.352750, 2697049.194000 243968.352750, 2697050.194000 243968.352750, 2697048.094000 243967.352750),
-            (2697046.019000 244007.289250, 2697048.119000 244009.289250, 2697046.019000 244007.289250),
-            (2697059.824000 243874.435000, 2697057.924000 243872.435000, 2697058.924000 243871.435000, 2697059.924000 243872.435000,2697059.824000 243874.435000)
+            ( 2697059.82397431 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.82397431 243874.43507531)),
+            (( 2697048.09401089 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.09401089 243967.35286848)
             ))', {srid})),
 
             (SDE.NEXT_ROWID('{schema}', '{multipolygon_table_name}_{srid}'),
             sde.st_multipolygon ('multipolygon ((
-            (2697048.294000 243967.352750, 2697049.194000 243968.352750, 2697050.194000 243968.352750, 2697048.294000 243967.352750),
-            (2697046.219000 244007.289250, 2697048.119000 244009.289250, 2697046.219000 244007.289250),
-            (2697059.984000 243874.435000, 2697057.924000 243872.435000, 2697058.924000 243871.435000, 2697059.924000 243872.435000,2697059.984000 243874.435000)
+            ( 2697059.98407897 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.98407897 243874.43507531)),
+            (( 2697048.29414172 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.29414172 243967.35286848)
             ))', {srid})),
 
             (SDE.NEXT_ROWID('{schema}', '{multipolygon_table_name}_{srid}'),
             sde.st_multipolygon ('multipolygon ((
-            (2697048.194000 243967.452750, 2697049.194000 243968.352750, 2697050.194000 243968.352750, 2697048.194000 243967.452750),
-            (2697046.119000 244007.389250, 2697048.119000 244009.289250, 2697046.119000 244007.389250),
-            (2697059.924000 243874.535000, 2697057.924000 243872.435000, 2697058.924000 243871.435000, 2697059.924000 243872.435000,2697059.924000 243874.535000)
+            ( 2697059.92403972 243874.53514072, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.92403972 243874.53514072)),
+            (( 2697048.19407630 243967.45260581, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.19407630 243967.45260581)
             ))', {srid}))'''.format(schema=schema,
                                     multipolygon_table_name=multipolygon_table_name,
                                     objectid_field_name=fields.get('object_id_field_name'),
@@ -183,8 +179,9 @@ def assert_data_method(csv_data1, db_data1, srid1, field=None):
                 if csv_val == '':
                     assert db_val is None
                 else:
-                    pg_geom = geom_parser(str(csv_val), srid1)
-                    csv_geom = geom_parser(str(db_val), srid1)
+                    pg_geom = geom_parser(str(db_val), srid1)
+                    csv_geom = geom_parser(str(csv_val), srid1)
+
                     assert csv_geom == pg_geom
             elif key == fields.get('object_id_field_name'):
                 continue
@@ -272,6 +269,10 @@ def test_reading_multipolygon(postgis, load_multipolygon_table, schema, srid):
     csv_data = etl.fromcsv(multipolygon_csv_dir)
     # read data from test DB using petl
     db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, multipolygon_table_name, srid))
+    print('etl.look(csv_data)')
+    print(etl.look(csv_data))
+    print('etl.look(db_data1)')
+    print(etl.look(db_data1))
     assert_data_method(csv_data, db_data1, srid)
 
 
@@ -314,10 +315,10 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
     stmt = '''
                     select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
                     to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name},
-                    sde.st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
-        schema,
-        point_table_name,
-        srid,
+                    sde.st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
+        schema=schema,
+        table_name=point_table_name,
+        srid=srid,
         objectid_field_name=fields.get('object_id_field_name'),
         text_field_name=fields.get('text_field_name'),
         numeric_field_name=fields.get('numeric_field_name'),
@@ -341,10 +342,10 @@ def test_write_data_no_id(csv_data, db_data,srid, postgis,schema):
     stmt = '''
         select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
         to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name},
-        sde.st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
-        schema,
-        point_table_name,
-        srid,
+        sde.st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
+        schema=schema,
+        table_name=point_table_name,
+        srid=srid,
         objectid_field_name=fields.get('object_id_field_name'),
         text_field_name=fields.get('text_field_name'),
         numeric_field_name=fields.get('numeric_field_name'),
@@ -369,10 +370,10 @@ def test_null_times(postgis, csv_data, schema, srid):
     stmt = '''
                 select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
                 to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name},
-                sde.st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
-        schema,
-        point_table_name,
-        srid,
+                sde.st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
+        schema =schema,
+        table_name=point_table_name,
+        srid=srid,
         objectid_field_name=fields.get('object_id_field_name'),
         text_field_name=fields.get('text_field_name'),
         numeric_field_name=fields.get('numeric_field_name'),
@@ -389,10 +390,10 @@ def test_polygon_assertion_write(postgis, schema, srid):
     csv_data = etl.fromcsv(polygon_csv_dir)
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, polygon_table_name, srid),from_srid=srid)
     # read data from test DB using petl
-    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
-        schema,
-        polygon_table_name,
-        srid,
+    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
+        schema=schema,
+        table_name=polygon_table_name,
+        srid=srid,
         objectid_field_name = fields.get('object_id_field_name'),
         shape_field_name = fields.get('shape_field_name'))
     cursor = postgis.dbo.cursor()
@@ -403,10 +404,10 @@ def test_line_assertion_write(postgis, schema,srid):
     csv_data = etl.fromcsv(line_csv_dir)
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, line_table_name, srid), from_srid=srid)
     # read data from test DB
-    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
-        schema,
-        line_table_name,
-        srid,
+    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
+        schema=schema,
+        table_name=line_table_name,
+        srid=srid,
         objectid_field_name = fields.get('object_id_field_name'),
         shape_field_name = fields.get('shape_field_name')
     )
@@ -417,10 +418,10 @@ def test_line_assertion_write(postgis, schema,srid):
 def test_multipolygon_assertion_write(postgis, load_multipolygon_table, schema, srid):
     csv_data = etl.fromcsv(multipolygon_csv_dir)
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, multipolygon_table_name, srid), from_srid=srid)
-    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
-        schema,
-        multipolygon_table_name,
-        srid,
+    stmt = '''select {objectid_field_name}, SDE.ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
+        schema=schema,
+        table_name=multipolygon_table_name,
+        srid=srid,
         objectid_field_name=fields.get('object_id_field_name'),
         shape_field_name=fields.get('shape_field_name')
     )

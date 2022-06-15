@@ -7,7 +7,7 @@ import csv
 from dateutil import parser as dt_parser
 from tests_config import geom_parser, line_csv_dir, line_table_name,line_column_definition,\
     polygon_csv_dir, polygon_table_name, polygon_column_definition, \
-    point_table_name, point_csv_dir, point_column_definition,fields
+    point_table_name, point_csv_dir, point_column_definition,fields, multipolygon_table_name, multipolygon_csv_dir,multipolygon_column_definition
 
 
 ############################################# FIXTURES ################################################################
@@ -26,8 +26,21 @@ def postgis(db, user, pw, host):
 def load_point_table(postgis,schema, srid):
     # write staging data to test table using oracle query
     connection = postgis.dbo
-    populate_table_stmt ='''INSERT INTO {schema}.{point_table_name}_{srid} 
-    (objectid, textfield, timestamp, numericfield, timezone, shape, datefield)
+    populate_table_stmt ='''
+    DROP TABLE IF EXISTS {schema}.{point_table_name}_{srid};
+    CREATE TABLE {schema}.{point_table_name}_{srid}
+    (
+    objectid numeric,
+    textfield text,
+    "timestamp" timestamp without time zone,
+    numericfield numeric,
+    timezone timestamp with time zone,
+    shape geometry(Point,{srid}),
+    datefield date
+    );
+    
+    INSERT INTO {schema}.{point_table_name}_{srid} 
+    ({objectid_field_name}, textfield, timestamp, numericfield, timezone, {shape_field_name}, datefield)
      VALUES
     (1,'',NULL,NULL,NULL, null,NULL),
     (2, 'ab#$%c', '2019-05-15 15:53:53.522000', 12, TIMESTAMPTZ '2011-11-22 10:23:54-04' , ST_GeomFromText('POINT(2712205.71100539 259685.27615705)', {srid}), ' 2005-01-01'),
@@ -43,57 +56,102 @@ def load_point_table(postgis,schema, srid):
         '''{}''',
         schema=schema,
         point_table_name=point_table_name,
+        objectid_field_name=fields.get('object_id_field_name'),
+        shape_field_name=fields.get('shape_field_name'),
         srid=srid)
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.{point_table_name}_{srid}'''.format(schema=schema,
-        point_table_name=point_table_name,
-        srid=srid))
+    # cursor.execute('''truncate table {schema}.{point_table_name}_{srid}'''.format(schema=schema,
+    #     point_table_name=point_table_name,
+    #     srid=srid))
     cursor.execute(populate_table_stmt)
     connection.commit()
 
 @pytest.fixture
 def load_polygon_table(srid, postgis, schema):
     stmt = '''
-    INSERT INTO {schema}.POLYGON_TABLE_{sr} ({shape_field_name}, {objectid_field_name}) 
+        DROP TABLE IF EXISTS {schema}.POLYGON_TABLE_{srid};
+    CREATE TABLE {schema}.POLYGON_TABLE_{srid}
+    (
+    {objectid_field_name} numeric,
+    {shape_field_name} geometry(Polygon,{srid})
+    );
+
+    INSERT INTO {schema}.{polygon_table_name}_{srid} ({shape_field_name}, {objectid_field_name}) 
     VALUES
     (NULL,1),
-    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), 2),
-    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), 3),
-    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), 4),
-    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), 5),
-    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), 6)
+    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}), 2),
+    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}), 3),
+    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}), 4),
+    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}), 5),
+    (ST_GeomFromText('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}), 6)
     '''.format(schema=schema,
-                sr=srid,
+               polygon_table_name=polygon_table_name,
+                srid=srid,
                 objectid_field_name = fields.get('object_id_field_name'),
                 shape_field_name = fields.get('shape_field_name')
     )
     connection = postgis.dbo
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.{polygon_table_name}_{sr}'''.format(sr=srid,schema=schema,polygon_table_name=polygon_table_name))
+    # cursor.execute('''truncate table {schema}.{polygon_table_name}_{sr}'''.format(sr=srid,schema=schema,polygon_table_name=polygon_table_name))
     cursor.execute(stmt)
     connection.commit()
 
 @pytest.fixture
 def load_line_table(srid, postgis, schema):
     stmt = '''	
-    INSERT INTO {schema}.{line_table_name}_{sr} ({shape_field_name}, {objectid_field_name}) 
+        DROP TABLE IF EXISTS {schema}.{line_table_name}_{srid};
+    CREATE TABLE {schema}.{line_table_name}_{srid}
+    (
+    {objectid_field_name} numeric,
+    {shape_field_name} geometry(LineString,{srid})
+    );
+    INSERT INTO {schema}.{line_table_name}_{srid} ({shape_field_name}, {objectid_field_name}) 
     VALUES 
     (NULL, 1),
-    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 2),
-    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 3),
-    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 4),
-    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 5),
-    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), 6)
+    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), 2),
+    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), 3),
+    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), 4),
+    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), 5),
+    (ST_GeomFromText('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), 6)
     '''.format(schema=schema,
-               sr=srid,
+               srid=srid,
                line_table_name=line_table_name,
                 objectid_field_name=fields.get('object_id_field_name'),
                 shape_field_name=fields.get('shape_field_name'))
     connection = postgis.dbo
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.{line_table_name}_{srid}'''.format(schema=schema, srid=srid,line_table_name=line_table_name))
+    # cursor.execute('''truncate table {schema}.{line_table_name}_{srid}'''.format(schema=schema, srid=srid,line_table_name=line_table_name))
     cursor.execute(stmt)
     connection.commit()
+
+@pytest.fixture
+def load_multipolygon_table(srid, postgis, schema):
+    stmt = '''
+    DROP TABLE IF EXISTS {schema}.{multipolygon_table_name}_{srid};
+    CREATE TABLE {schema}.{multipolygon_table_name}_{srid}
+    (
+    {objectid_field_name} numeric,
+    {shape_field_name} geometry(MultiPolygon,{srid})
+    );
+    
+    INSERT INTO {schema}.{multipolygon_table_name}_{srid} ({objectid_field_name}, {shape_field_name}) 
+VALUES 
+(1, ST_GeomFromText('MULTIPOLYGON ((( 2697059.92403972 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.92403972 243874.43507531)),(( 2697048.19407630 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.19407630 243967.35286848)))', {srid})),
+(2, ST_GeomFromText('MULTIPOLYGON ((( 2697059.82397431 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.82397431 243874.43507531)),(( 2697048.09401089 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.09401089 243967.35286848)))', {srid})),
+(3, ST_GeomFromText('MULTIPOLYGON ((( 2697059.98407897 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.98407897 243874.43507531)),(( 2697048.29414172 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.29414172 243967.35286848)))', {srid})),
+(4, ST_GeomFromText('MULTIPOLYGON ((( 2697059.92403972 243874.53514072, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.92403972 243874.53514072)),(( 2697048.19407630 243967.45260581, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.19407630 243967.45260581)))', {srid}))
+'''.format(schema=schema,
+                                    multipolygon_table_name=multipolygon_table_name,
+                                    objectid_field_name=fields.get('object_id_field_name'),
+                                    shape_field_name=fields.get('shape_field_name'),
+                                    srid=srid)
+    connection = postgis.dbo
+    cursor = connection.cursor()
+    #cursor.execute('''truncate table {schema}.{table_name}_{srid}'''.format(schema=schema, srid=srid,
+                                                                                 #table_name=multipolygon_table_name))
+    cursor.execute(stmt)
+    connection.commit()
+
 
 @pytest.fixture
 def csv_data():
@@ -164,6 +222,73 @@ def assert_data_method(csv_data1, db_data1, srid1, field=None):
         i=i+1
 
 ######################################   TESTS   ####################################################################
+
+#------------------READING TESTS
+#load staging data extarct using geopetle compare csv data with postgres table data
+def test_read_point_table(load_point_table, postgis,csv_data,db_data,srid):
+    assert_data_method(csv_data, db_data, srid)
+
+def test_read_without_schema(postgis, csv_data, schema, srid):
+    data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,point_table_name,srid))
+    assert_data_method(csv_data, data, srid)
+
+#4
+def test_read_timestamp(csv_data, db_data,srid):
+    key = fields.get('timestamp_field_name')
+    assert_data_method(csv_data,db_data, srid, field=key)
+
+#5
+def test_read_numericfield(csv_data, db_data,srid):
+    key = fields.get('numeric_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+#6
+def test_read_datefield(csv_data, db_data, srid):
+    key = fields.get('date_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+
+#7
+def test_read_shape(csv_data, db_data,srid):
+    key = fields.get('shape_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+
+# #8
+def test_assert_textfield(csv_data, db_data,srid):
+    key = fields.get('text_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+# #9
+def test_assert_timezone(csv_data, db_data,srid):
+    key = fields.get('timezone_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+
+# #compare csv data with postgres data using geopetl
+def test_reading_polygons(postgis, load_polygon_table,schema, srid):
+    csv_data = etl.fromcsv(polygon_csv_dir)
+    # read data from test DB using petl
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,polygon_table_name,srid))
+    assert_data_method(csv_data, db_data1, srid)
+
+def test_reading_linestrings(postgis, load_line_table,schema, srid):
+    csv_data = etl.fromcsv(line_csv_dir)
+    # read data from test DB using petl
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,line_table_name,srid))
+    assert_data_method(csv_data, db_data1, srid)
+
+# #compare csv data with postgres data using geopetl
+def test_reading_multipolygons(postgis, load_multipolygon_table,schema, srid):
+    csv_data = etl.fromcsv(multipolygon_csv_dir)
+    # read data from test DB using petl
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,multipolygon_table_name,srid))
+    assert_data_method(csv_data, db_data1, srid)
 
 
 #------------------WRITING TESTS
@@ -280,6 +405,21 @@ def test_line_assertion_write(postgis, schema,srid):
     assert_data_method(csv_data, cursor, srid)
 
 
+def test_multipolygon_assertion_write(postgis, schema,srid):
+    csv_data = etl.fromcsv(multipolygon_csv_dir)
+    csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, multipolygon_table_name,srid), from_srid=srid)
+    # read data from test DB
+    stmt = '''select {objectid_field_name}, ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
+        srid=srid,
+        schema=schema,
+        table_name=multipolygon_table_name,
+        objectid_field_name = fields.get('object_id_field_name'),
+        shape_field_name = fields.get('shape_field_name')
+    )
+    cursor = postgis.dbo.cursor()
+    cursor.execute(stmt)
+    assert_data_method(csv_data, cursor, srid)
+
 #
 def test_with_types(db_data, postgis, schema, srid,csv_data):
     # read data from db
@@ -296,62 +436,3 @@ def test_with_types(db_data, postgis, schema, srid,csv_data):
 
     assert_data_method(data1, data2, srid)
 
-#------------------READING TESTS
-#load staging data extarct using geopetle compare csv data with postgres table data
-def test_read_point_table(load_point_table, postgis,csv_data,db_data,srid):
-    assert_data_method(csv_data, db_data, srid)
-
-def test_read_without_schema(postgis, csv_data, schema, srid):
-    data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,point_table_name,srid))
-    assert_data_method(csv_data, data, srid)
-
-#4
-def test_read_timestamp(csv_data, db_data,srid):
-    key = fields.get('timestamp_field_name')
-    assert_data_method(csv_data,db_data, srid, field=key)
-
-#5
-def test_read_numericfield(csv_data, db_data,srid):
-    key = fields.get('numeric_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-#6
-def test_read_datefield(csv_data, db_data, srid):
-    key = fields.get('date_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-
-#7
-def test_read_shape(csv_data, db_data,srid):
-    key = fields.get('shape_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-
-# #8
-def test_assert_textfield(csv_data, db_data,srid):
-    key = fields.get('text_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-# #9
-def test_assert_timezone(csv_data, db_data,srid):
-    key = fields.get('timezone_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
-
-# #compare csv data with postgres data using geopetl
-def test_reading_polygons(postgis, load_polygon_table,schema, srid):
-    csv_data = etl.fromcsv(polygon_csv_dir)
-    # read data from test DB using petl
-    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,polygon_table_name,srid))
-    assert_data_method(csv_data, db_data1, srid)
-
-def test_reading_linestrings(postgis, load_line_table,schema, srid):
-    csv_data = etl.fromcsv(line_csv_dir)
-    # read data from test DB using petl
-    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,line_table_name,srid))
-    assert_data_method(csv_data, db_data1, srid)
