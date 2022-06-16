@@ -21,11 +21,11 @@ on:
       - 'scripts/postgis_tests_entrypoint.sh'
     pull_request:
       branches:
-      - main
+      - master
       - dev-pass
     push:
       branches:
-      - main
+      - master
       - dev-pass
 
 

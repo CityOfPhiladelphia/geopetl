@@ -7,8 +7,8 @@ name: test_oracle.py
 on:
   push:
     branches:
-      - main
       - dev-pass
+      - main
   pull_request:
     branches:
       - main
