@@ -269,7 +269,7 @@ FIELD_TYPE_MAP = {
     'character varying':        'text',
     'date':                     'date',
     'USER-DEFINED':             'geometry',
-    'timestamp with time zone': 'timestamp',
+    'timestamp with time zone': 'timestamptz',
     'timestamp without time zone': 'timestamp',
     'boolean':                  'boolean',
     'uuid':                     'uuid',
@@ -394,10 +394,17 @@ class PostgisTable(object):
             val=str(val)
             if not val or val in('None', ''):
                 val = 'NULL'
-            elif 'timestamp' not in val.lower():
+            elif 'timestamp' not in str(val).lower():
                 val = '''TIMESTAMP '{}' '''.format(val)
             else:
                 val = val
+        elif type_ == 'timestamptz':
+            if not val:
+                val = 'Null'
+            elif 'timestamptz' not in str(val).lower():
+                val = '''TIMESTAMPTZ '{}' '''.format(val)
+            else:
+                val=val
         elif type_ == 'boolean':
             val = val
         else:
@@ -525,7 +532,6 @@ class PostgisTable(object):
 
                 val_rows = []
                 cur_stmt = stmt
-
         # Execute remaining rows (TODO clean this up)
         vals_joined = ['({})'.format(', '.join(vals)) for vals in val_rows]
         rows_joined = ', '.join(vals_joined)

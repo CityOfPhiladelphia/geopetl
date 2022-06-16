@@ -27,7 +27,10 @@
       "type": "geometry",
       "geometry_type": "point",
       "srid": 2272
+    },
+	{
+      "name": "timezone",
+      "type": "timestamp with time zone"
     }
-	
   ]
 }
