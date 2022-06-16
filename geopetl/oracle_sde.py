@@ -701,9 +701,8 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if val is None:
+        if val is None or val == '':
             return None
-
         # TODO handle types. Seems to be working without this for most cases.
         if type_ == 'text':
             pass
@@ -715,22 +714,29 @@ class OracleSdeTable(object):
             pass
         elif type_ == 'date':
             # Convert datetimes to ISO-8601
+            if isinstance(val, str):
+                splitval = val.split(' ')
+                if ' ' in val and ':' in splitval[1] and 'T' not in val:
+                    val =splitval[0] + 'T' + splitval[1]
+                if val:
+                    val = dt_parser().parse(val)
+                    val = val.strftime("%Y-%m-%d %H:%M:%S")
             if isinstance(val, datetime):
-                # val = val.isoformat()
-                # Force microsecond output
-                val = val.strftime('%Y-%m-%dT%H:%M:%S.%f+00:00')
-
+                val = val.strftime("%Y-%m-%d %H:%M:%S")
         elif type_ == 'nclob':
             pass
-        # Timestamptz not writing millisecond data
-        elif type_ == 'timestamp with time zone':
-            val = val.isoformat()
-            #val = val.strftime('YYYY-MM-DD HH24:MI:SSXFF TZR')
 
-            # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
-            # var = self._c.var(cx_Oracle.NCLOB)
-            # var.setvalue(0, val)
-            # val = var
+        elif type_ == 'timestamp with time zone':
+            if type(val) == str:
+                val = dt_parser.parse(val)
+            #val = val.isoformat()
+            val = val.strftime("%Y-%m-%d %H:%M:%S %z")
+
+        elif type_ == 'timestamp without time zone':
+            if type(val) == str:
+                val = dt_parser.parse(val)
+            #val = val.isoformat()
+            val = val.strftime("%Y-%m-%d %H:%M:%S")
 
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
@@ -739,7 +745,7 @@ class OracleSdeTable(object):
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
 
-        if geom is None:
+        if geom is None or geom == '':
             # TODO: should this use the `EMPTY` keyword?
             return '{} EMPTY'.format(self.geom_type)
 
