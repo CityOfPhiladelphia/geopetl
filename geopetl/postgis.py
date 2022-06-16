@@ -75,7 +75,6 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     """
     # create db wrappers
     db = PostgisDatabase(dbo)
-
     # do we need to create the table?
 
     table = db.table(table_name)
@@ -392,7 +391,8 @@ class PostgisTable(object):
         elif type_ == 'geometry':
             val = str(val)
         elif type_ == 'timestamp':
-            if not val:
+            val=str(val)
+            if not val or val in('None', ''):
                 val = 'NULL'
             elif 'timestamp' not in val.lower():
                 val = '''TIMESTAMP '{}' '''.format(val)
