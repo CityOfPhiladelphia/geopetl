@@ -6,6 +6,9 @@ name: test_oracle.py
 
 on:
   push:
+    branches:
+      - dev-pass
+      - main
     paths:
       - './geopetl/tests/test_oracle.py'
       - './.github/workflows/oracle_tests.yml'
