@@ -1,0 +1,78 @@
+FROM ubuntu:18.04
+
+# Never prompts the user for choices on installation/configuration of packages
+ENV DEBIAN_FRONTEND noninteractive
+ENV TERM linux
+
+# Solve annoying locale problems in docker
+# C.UTF-8 should have better availablility then the default
+# we like to use, "en_US.UTF-8"
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+
+# Oracle environment variables
+ENV ORACLE_HOME=/usr/lib/oracle/12.1/client64
+ENV LD_LIBRARY_PATH=$ORACLE_HOME/lib
+ENV PATH=$ORACLE_HOME/bin:$PATH
+ENV HOSTALIASES=/tmp/HOSTALIASES
+
+#RUN set -ex \
+#    && apt-get update -yqq \
+#    && apt-get install -yqq --no-install-recommends \
+#    locales
+
+RUN set -ex \
+    && apt-get update -yqq \
+    && buildDeps=' \
+        python3-dev \
+        locales \
+    ' \
+    && apt-get install -yqq --no-install-recommends \
+        $buildDeps \
+        locales  \
+        alien \
+        awscli \
+        python3 \
+        python3-pip \
+        libaio1 \ 
+        dnsutils \
+    && useradd -ms /bin/bash worker
+
+RUN pip3 install -U setuptools \
+    && pip3 install -U wheel \
+    && pip3 install --upgrade pip setuptools wheel
+
+RUN set -ex \
+    && apt-get remove --purge -yqq $buildDeps \
+    && apt-get clean \
+    && rm -rf \
+        /var/lib/apt/lists/* \
+        /tmp/* \
+        /var/tmp/* \
+        /usr/share/man \
+        /usr/share/doc \
+        /usr/share/doc-base
+
+COPY oracle-instantclient18.5-basiclite-18.5.0.0.0-3.x86_64.rpm ./
+
+# instant basic-lite instant oracle client
+RUN alien -i oracle-instantclient18.5-basiclite-18.5.0.0.0-3.x86_64.rpm \
+    && rm oracle-instantclient18.5-basiclite-18.5.0.0.0-3.x86_64.rpm
+
+# Install necessary modules for our pytest functions
+# that will test geopetl
+COPY pytest-requirements.txt /pytest-requirements.txt
+RUN pip3 install -r pytest-requirements.txt
+
+# Setup and install geopetl
+COPY geopetl /geopetl
+COPY setup.py /setup.py
+
+# Install geopetl via setup.py
+RUN pip3 install -e .
+
+COPY scripts/oracle_entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["entrypoint.sh", "$ORACLE_USER", "$ORACLE_PASSWORD", "$ORACE_DB", "$ORACLE_HOST"]
+CMD ["sleep", "9000"]

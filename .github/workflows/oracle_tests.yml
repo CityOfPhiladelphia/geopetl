@@ -7,64 +7,52 @@ name: test_oracle.py
 on:
   push:
     branches:
-      - main
+      - master
       - dev-pass
-  pull_request:
-    branches:
-      - main
-      - dev-pass
+    # Reference: https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#onpushpull_requestpaths
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore
+    paths:
+      - 'geopetl/tests/test_oracle.py'
+      # Trigger on changes to geopetl code-base
+      - 'geopetl/**'
+      # changes to this workflow file itself.
+      - '.github/workflows/oracle_tests.yml'
+      # changes to the geopetl setup.py
+      - 'setup.py'
+      # changes to oracle-specific docker stuff
+      - 'oracle-docker-compose.yml'
+      - 'oracle_Dockerfile'
+      # changes to the docker entrypoint.sh script that runs our pytest commands
+      - 'scripts/*'
+
 
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    name: Build and Deploy
+    name: Build and Test Geopetl against PostGIS db
     # The type of runner that the job will run on
     runs-on: self-hosted
+    steps: 
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    # This is a github function? Ref doc: https://github.com/actions/checkout#checkout-a-different-branch
-    - uses: actions/checkout@v2
-      with:
-        ref: add_tests
-    #- uses: actions/geopetl_pytest@add_tests
+    - uses: actions/checkout@v1
 
-    - name: Pull Oracle Instant Client rpm from S3
-      id: pull-oracle-rpm 
-      run: bash ./pull-oracle-rpm.sh
-      env: 
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    - name: Build and bring up the Docker image using docker-compose
+      # Abort when any coontainer exits, and return the exit code from geopetl.
+      # Otherwise docker-compose won't stop because postgis doesn't exit.
+      run: docker-compose -f oracle-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
+      env:
+        ORACLE_USER: ${{ secrets.pg_user }}
+        ORACLE_PASSWORD: ${{ secrets.pg_pw }}
+        ORACLE_DB: ${{ secrets.pg_db }}
+        ORACLE_HOST: ${{ secrets.host }}
 
-    - name: build image
-      run: |
-       echo $PWD
-       docker build -t geo_image .
-
-    - name: run container
-      run: docker run --name geopetl_container -itd geo_image
-
-    - name: Check running containers
-      run: sleep 5; docker ps
-
-    - name: Run pytest in container
-      run: |
-        docker exec -it geopetl_container \
-          pytest geopetl/tests/test_oraclesde.py \
-          --host=${{ secrets.oracle_host }} \
-          --port=${{ secrets.oracle_port }} \
-          --user=${{ secrets.oracle_user }} \
-          --pw=${{ secrets.oracle_pw }} \
-          --service_name=${{ secrets.oracle_service_name }} \
+# TODO: push image to ECR?
+#    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
+#      env: 
+#        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#        REPOSITORY_URL: 
 
 
-#    # RUN
-#    - name: Docker Action Stuff
-#      description: build and run image
-#      env:
-#        oracle_user: ${{secrets.oracle_user}}
-#        oracle_pw: ${{secrets.oracle_pw}}
-#        oracle_host: ${{secrets.oracle_host}}
-#        oracle_service_name: ${{secrets.oracle_service_name}}
-#        oracle_port: ${{secrets.oracle_port}}
+
+
+

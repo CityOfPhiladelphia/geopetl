@@ -1,0 +1,15 @@
+version: '3.7'
+services:
+
+# Docker-compose for testing postgis geopetl tests against postgresql with postgis
+
+  geopetl:
+    build:
+      context: .
+      dockerfile: oracle_Dockerfile
+    container_name: geopetl
+    environment:
+      - ORACLE_USER
+      - ORACLE_PASSWORD
+      - ORACLE_DB
+      - ORACLE_HOST
