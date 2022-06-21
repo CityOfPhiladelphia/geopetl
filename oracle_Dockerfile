@@ -74,5 +74,7 @@ RUN pip3 install -e .
 COPY scripts/oracle_entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+WORKDIR /geopetl
+
 ENTRYPOINT ["entrypoint.sh", "$ORACLE_USER", "$ORACLE_PASSWORD", "$ORACE_DB", "$ORACLE_HOST"]
 CMD ["sleep", "9000"]

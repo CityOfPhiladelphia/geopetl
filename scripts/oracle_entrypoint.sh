@@ -15,12 +15,10 @@ export ORACLE_HOST
 echo ""
 echo "#########################################"
 echo "Running tests against Oracle database..."
-pytest geopetl/tests/test_oracle.py \
+pytest /geopetl/tests/test_oraclesde.py \
   --user=$ORACLE_USER \
   --pw=$ORACLE_PASSWORD \
   --service_name=$ORACLE_DB \
   --host=$ORACLE_HOST \
-  --port=1521
-
-ORACLE_EXIT_CODE=$?
-exit $?
+  --port=1521 \
+  --srid=2272
