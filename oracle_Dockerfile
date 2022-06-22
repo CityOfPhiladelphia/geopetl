@@ -11,7 +11,7 @@ ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 
 # Oracle environment variables
-ENV ORACLE_HOME=/usr/lib/oracle/12.1/client64
+ENV ORACLE_HOME=/usr/lib/oracle/18.5/client64
 ENV LD_LIBRARY_PATH=$ORACLE_HOME/lib
 ENV PATH=$ORACLE_HOME/bin:$PATH
 ENV HOSTALIASES=/tmp/HOSTALIASES

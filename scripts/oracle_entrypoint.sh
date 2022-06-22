@@ -15,7 +15,7 @@ export ORACLE_HOST
 echo ""
 echo "#########################################"
 echo "Running tests against Oracle database..."
-pytest /geopetl/tests/test_oraclesde.py \
+pytest -v /geopetl/tests/test_oraclesde.py \
   --user=$ORACLE_USER \
   --pw=$ORACLE_PASSWORD \
   --service_name=$ORACLE_DB \
