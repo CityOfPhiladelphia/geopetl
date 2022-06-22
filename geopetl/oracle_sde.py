@@ -286,7 +286,7 @@ FIELD_TYPE_MAP = {
     # date
     'DATE':         'date',
     'TIMESTAMP':    'timestamp without time zone',
-    'timestamp with time zone':'timestamp with time zone',
+    'TIMESTAMP WITH TIME ZONE': 'timestamp with time zone',
 
     # clob
     # TODO clean these up - how will they get used?
@@ -376,7 +376,7 @@ class OracleSdeTable(object):
             type_ = row[1]
             type_without_length = re.match('[A-Z0-9_]+', type_).group()
             if type_ == 'TIMESTAMP(6) WITH TIME ZONE':
-                type_without_length = 'timestamp with time zone'
+                type_without_length = 'TIMESTAMP WITH TIME ZONE'
             length = row[2]
             nullable = row[3]
             scale = row[4]
@@ -693,7 +693,17 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if val is None or val == '':
+        if val is None or val == '' or val == 'None':
+            # cx_Oracle doesn't seem to properly handle None fields for dates so we must preempt it
+            # and return an empty string if it's a timestamp.
+            # To explain, this query will work:
+            # SELECT TO_TIMESTAMP_TZ('', 'YYYY-MM-DD HH24:MI:SS TZH:TZM') FROM DUAL 
+            # But if we pass cx_Oracle a None, we'll get this error:
+            # TypeError: expecting date or datetime
+            if type_ == 'timestamp with time zone':
+                return ''
+            if type_ == 'timestamp without time zone':
+                return ''
             return None
         # TODO handle types. Seems to be working without this for most cases.
         if type_ == 'text':
@@ -704,6 +714,9 @@ class OracleSdeTable(object):
             pass
         elif type_ == 'geom':
             pass
+        elif type_ == 'nclob':
+            pass
+
         elif type_ == 'date':
             # Convert datetimes to ISO-8601
             if isinstance(val, str):
@@ -715,21 +728,29 @@ class OracleSdeTable(object):
                     val = val.strftime("%Y-%m-%d %H:%M:%S")
             if isinstance(val, datetime):
                 val = val.strftime("%Y-%m-%d %H:%M:%S")
-        elif type_ == 'nclob':
-            pass
         elif type_ == 'timestamp with time zone':
-            if isinstance(val, datetime):
-                val = val.isoformat()
-            elif isinstance(val, str) and val:
-                val=dt_parser().parse(val)
-                val = val.isoformat()
+            if type(val) == str:
+                val = dt_parser().parse(val)
+            # The value will ultimately get passed to oracle like this:
+            # SELECT TO_TIMESTAMP_TZ('2022-06-15 11:03:27 -0400', 'YYYY-MM-DD HH24:MI:SS TZHTZM') FROM DUAL 
+            # so we need it to be a string and NOT a datetime object.
+            #val = val.isoformat()
+            val = val.strftime("%Y-%m-%d %H:%M:%S %z")
+
+        elif type_ == 'timestamp without time zone':
+            date_parser = dt_parser()
+            if type(val) == str:
+                val = dt_parser().parse(val)
+            # The value will ultimately get passed to oracle like this:
+            # SELECT TO_TIMESTAMP('2022-06-15 11:03:27', 'YYYY-MM-DD HH24:MI:SS') FROM DUAL 
+            # so we need it to be a string and NOT a datetime object.
+            #val = val.isoformat()
+            val = val.strftime("%Y-%m-%d %H:%M:%S")
 
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
             # var = self._c.var(cx_Oracle.NCLOB)
             # var.setvalue(0, val)
             # val = var
-        elif type_ == 'timestamp without time zone':
-            pass
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -938,7 +959,9 @@ class OracleSdeTable(object):
             #     # Insert an ISO-8601 timestring
             #     #placeholders.append("TO_TIMESTAMP(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FF\"+00:00\"')".format(field))
             elif type_ == 'timestamp with time zone':
-                placeholders.append('''to_timestamp_tz(:{}, 'YYYY-MM-DD\"T\"HH24:MI:SS.FFTZH:TZM')'''.format(field))
+                placeholders.append('''TO_TIMESTAMP_TZ(:{}, 'YYYY-MM-DD HH24:MI:SS TZHTZM')'''.format(field))
+            elif type_ == 'timestamp without time zone':
+                placeholders.append('''TO_TIMESTAMP(:{}, 'YYYY-MM-DD HH24:MI:SS')'''.format(field))
             else:
                 placeholders.append(':' + field)
 
