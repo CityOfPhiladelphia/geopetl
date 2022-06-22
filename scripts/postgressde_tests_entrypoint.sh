@@ -43,9 +43,9 @@ echo "sde database ready and accepting conections."
 # When you specify the container name in docker-compose.yml
 
 echo "##########################################"
-echo "Running postgressde tests 4326 against Esri SDE database..."
+echo "Running 4326 postgressde tests against Esri SDE database..."
 # test for postgres-sde
-pytest geopetl/tests/test_postgressde.py \
+pytest --showlocals --tb=native geopetl/tests/test_postgressde.py \
   --user=$SDE_USER \
   --pw=$SDE_PASSWORD \
   --db=$SDE_DB \
@@ -59,20 +59,17 @@ echo "postgres 4326 tests done."
 echo "##########################################"
 echo ""
 
-if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
+if [[ "$SDE_EXIT_CODE" -ne "0" ]]; then
     echo "Errors encountered in tests."
     exit 1
-else
-    echo "postgres 4326 tests passed!"
-    exit 0
 fi
 
 
 
 echo "##########################################"
-echo "Running postgressde tests 2272 against Esri SDE database..."
+echo "Running 2272 postgressde tests against Esri SDE database..."
 # test for postgres-sde
-pytest geopetl/tests/test_postgressde.py \
+pytest --showlocals --tb=native geopetl/tests/test_postgressde.py \
   --user=$SDE_USER \
   --pw=$SDE_PASSWORD \
   --db=$SDE_DB \
@@ -80,17 +77,4 @@ pytest geopetl/tests/test_postgressde.py \
   --port=5432 \
   --schema=$SDE_USER \
   --srid=2272
-
-SDE_EXIT_CODE=$?
-echo "postgres 2272 tests done."
-echo "##########################################"
-echo ""
-
-if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
-    echo "Errors encountered in tests."
-    exit 1
-else
-    echo "postgres 2272  passed!"
-    exit 0
-fi
 

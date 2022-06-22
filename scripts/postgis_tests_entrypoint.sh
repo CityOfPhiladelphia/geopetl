@@ -37,8 +37,8 @@ python -m pytest
 # When you specify the container name in docker-compose.yml
 echo ""
 echo "#########################################"
-echo "Running tests against PostGIS database..."
-pytest geopetl/tests/test_postgis.py \
+echo "Running 2272 tests against PostGIS database..."
+pytest --showlocals --tb=native geopetl/tests/test_postgis.py \
   --user=$POSTGIS_USER \
   --pw=$POSTGIS_PASSWORD \
   --db=$POSTGIS_DB \
@@ -47,22 +47,16 @@ pytest geopetl/tests/test_postgis.py \
   --schema="public" \
   --srid=2272
 POSTGIS_EXIT_CODE=$?
-echo "Postgis test done."
-echo "#########################################"
-echo ""
 
-if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
+if [[ "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
     echo "Errors encountered in 2272 postgis tests."
     exit 1
-else
-    echo "2272 postgis tests passed!"
-    exit 0
 fi
 
 
 echo "#########################################"
-echo "Running tests against PostGIS database..."
-pytest geopetl/tests/test_postgis.py \
+echo "Running 4326 tests against PostGIS database..."
+pytest --showlocals --tb=native geopetl/tests/test_postgis.py \
   --user=$POSTGIS_USER \
   --pw=$POSTGIS_PASSWORD \
   --db=$POSTGIS_DB \
@@ -70,15 +64,3 @@ pytest geopetl/tests/test_postgis.py \
   --port=5432 \
   --schema="public" \
   --srid=4326
-POSTGIS_EXIT_CODE=$?
-echo "Postgis test done."
-echo "#########################################"
-echo ""
-
-if [[ "$SDE_EXIT_CODE" -ne "0" || "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
-    echo "Errors encountered in 4326 postgis tests."
-    exit 1
-else
-    echo "4326 postgis tests passed!"
-    exit 0
-fi
