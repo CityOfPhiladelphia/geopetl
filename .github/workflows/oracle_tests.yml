@@ -57,10 +57,10 @@ jobs:
       # Otherwise docker-compose won't stop because postgis doesn't exit.
       run: docker-compose -f oracle-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
       env:
-        ORACLE_USER: ${{ secrets.pg_user }}
-        ORACLE_PASSWORD: ${{ secrets.pg_pw }}
-        ORACLE_DB: ${{ secrets.pg_db }}
-        ORACLE_HOST: ${{ secrets.host }}
+        ORACLE_USER: ${{ secrets.ORACLE_USER }}
+        ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
+        ORACLE_DB: ${{ secrets.ORACLE_DB }}
+        ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
 
 # TODO: push image to ECR?
 #    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
