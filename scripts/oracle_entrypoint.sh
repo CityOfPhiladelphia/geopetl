@@ -21,4 +21,5 @@ pytest -v /geopetl/tests/test_oraclesde.py \
   --service_name=$ORACLE_DB \
   --host=$ORACLE_HOST \
   --port=1521 \
+  --schema=$ORACLE_USER
   --srid=2272
