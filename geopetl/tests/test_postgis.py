@@ -422,6 +422,24 @@ def test_multipolygon_assertion_write(postgis, schema,srid):
 
 #
 def test_with_types(db_data, postgis, schema, srid,csv_data):
+    create_table_stmt = '''
+        DROP TABLE IF EXISTS {schema}.{point_table_name}_{srid}_2;
+        CREATE TABLE {schema}.{point_table_name}_{srid}_2
+        (
+        objectid numeric,
+        textfield text,
+        "timestamp" timestamp without time zone,
+        numericfield numeric,
+        timezone timestamp with time zone,
+        shape geometry(Point,{srid}),
+        datefield date
+        )'''.format(
+        schema=schema,
+        point_table_name=point_table_name,
+        srid=srid)
+    connection = postgis.dbo
+    cursor = connection.cursor()
+    cursor.execute(create_table_stmt)
     # read data from db
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, point_table_name,srid),
                        column_definition_json=point_column_definition, from_srid=srid)
