@@ -38,7 +38,7 @@ python -m pytest
 echo ""
 echo "#########################################"
 echo "Running 2272 tests against PostGIS database..."
-pytest -vv -ra --showlocals --tb=native geopetl/tests/test_postgis.py \
+pytest -vvv -ra --showlocals --tb=native geopetl/tests/test_postgis.py \
   --user=$POSTGIS_USER \
   --pw=$POSTGIS_PASSWORD \
   --db=$POSTGIS_DB \
@@ -55,7 +55,7 @@ fi
 
 echo "#########################################"
 echo "Running 4326 tests against PostGIS database..."
-pytest -vv -ra --showlocals --tb=native geopetl/tests/test_postgis.py \
+pytest -vvv -ra --showlocals --tb=native geopetl/tests/test_postgis.py \
   --user=$POSTGIS_USER \
   --pw=$POSTGIS_PASSWORD \
   --db=$POSTGIS_DB \

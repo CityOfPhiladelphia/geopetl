@@ -11,8 +11,12 @@ on:
       - 'geopetl/tests/tests_config.py'
       - 'geopetl/tests/conftest.py'
       - 'geopetl/tests/fixtures_data/**'
-      # Trigger on changes to geopetl code-base
-      - 'geopetl/**'
+      # Trigger on changes to relevant geopetl code-base
+      - 'geopetl/postgis.py'
+      - 'geopetl/carto.py'
+      - 'geopetl/base.py'
+      - 'geopetl/__init__.py'
+      - 'geopetl/util.py'
       # changes to this workflow file itself.
       - '.github/workflows/postgressde_tests.yml'
       # changes to the geopetl setup.py
