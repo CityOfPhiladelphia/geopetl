@@ -13,13 +13,7 @@ export SDE_PASSWORD
 export SDE_DB
 export SDE_HOST
 export SDE_USER
-echo '*************  POSTGRESSDE ENTRYPOINT  *********************'
-echo 'echo sde creds'
-echo $SDE_HOST
-echo $SDE_DB
-echo $SDE_PASSWORD
-echo $SDE_USER
-echo '**************************************************'
+
 
 #pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER  -d $SDE_DB &>/dev/null; echo $? )
 #pg_sde_ready=$(pg_isready -h $SDE_HOST -U $SDE_USER -d $SDE_DB &>/dev/null; echo $? )
@@ -45,7 +39,7 @@ echo "sde database ready and accepting conections."
 echo "##########################################"
 echo "Running 4326 postgressde tests against Esri SDE database..."
 # test for postgres-sde
-pytest --showlocals --tb=native geopetl/tests/test_postgressde.py \
+pytest -vv -ra --showlocals --tb=native geopetl/tests/test_postgressde.py \
   --user=$SDE_USER \
   --pw=$SDE_PASSWORD \
   --db=$SDE_DB \
@@ -64,12 +58,10 @@ if [[ "$SDE_EXIT_CODE" -ne "0" ]]; then
     exit 1
 fi
 
-
-
 echo "##########################################"
 echo "Running 2272 postgressde tests against Esri SDE database..."
 # test for postgres-sde
-pytest --showlocals --tb=native geopetl/tests/test_postgressde.py \
+pytest -vv -ra --showlocals --tb=native geopetl/tests/test_postgressde.py \
   --user=$SDE_USER \
   --pw=$SDE_PASSWORD \
   --db=$SDE_DB \

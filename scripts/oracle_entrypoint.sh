@@ -19,7 +19,7 @@ python -m pytest
 echo ""
 echo "#########################################"
 echo "Running 2272 tests against Oracle database..."
-pytest --showlocals --tb=native /geopetl/tests/test_oraclesde.py \
+pytest -vv -ra --showlocals --tb=native /geopetl/tests/test_oraclesde.py \
   --user=$ORACLE_USER \
   --pw=$ORACLE_PASSWORD \
   --service_name=$ORACLE_DB \
@@ -40,7 +40,7 @@ fi
 
 echo "#########################################"
 echo "Running 4326 tests against Oracle database..."
-pytest --showlocals --tb=native /geopetl/tests/test_oraclesde.py \
+pytest -vv -ra --showlocals --tb=native /geopetl/tests/test_oraclesde.py \
   --user=$ORACLE_USER \
   --pw=$ORACLE_PASSWORD \
   --service_name=$ORACLE_DB \

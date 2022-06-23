@@ -38,7 +38,7 @@ python -m pytest
 echo ""
 echo "#########################################"
 echo "Running 2272 tests against PostGIS database..."
-pytest --showlocals --tb=native geopetl/tests/test_postgis.py \
+pytest -vv -ra --showlocals --tb=native geopetl/tests/test_postgis.py \
   --user=$POSTGIS_USER \
   --pw=$POSTGIS_PASSWORD \
   --db=$POSTGIS_DB \
@@ -53,10 +53,9 @@ if [[ "$POSTGIS_EXIT_CODE" -ne "0"  ]]; then
     exit 1
 fi
 
-
 echo "#########################################"
 echo "Running 4326 tests against PostGIS database..."
-pytest --showlocals --tb=native geopetl/tests/test_postgis.py \
+pytest -vv -ra --showlocals --tb=native geopetl/tests/test_postgis.py \
   --user=$POSTGIS_USER \
   --pw=$POSTGIS_PASSWORD \
   --db=$POSTGIS_DB \
