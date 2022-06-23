@@ -693,7 +693,7 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if val is None or val == '':
+        if not val: 
             return None
         # TODO handle types. Seems to be working without this for most cases.
         if type_ == 'text':
