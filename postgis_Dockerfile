@@ -61,6 +61,9 @@ RUN pip3 install -r pytest-requirements.txt
 COPY geopetl /geopetl
 COPY setup.py /setup.py
 
+# syntax check on geopetl code base
+RUN python3 -m compileall ./geopetl
+
 # Install geopetl via setup.py
 RUN pip3 install -e .
 
