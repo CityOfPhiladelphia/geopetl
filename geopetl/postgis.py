@@ -335,6 +335,7 @@ FIELD_TYPE_MAP = {
     'varchar':                  'text',
     'date':                     'date',
     'user-defined':             'geometry',
+    'st_geometry':              'geometry',
     'timestamp with time zone': 'timestamptz',
     'timestamp without time zone': 'timestamp',
     # materialized views don't specify if they use a timezone, this could be problematic.
