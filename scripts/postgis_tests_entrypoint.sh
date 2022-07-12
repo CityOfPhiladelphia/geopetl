@@ -31,14 +31,14 @@ do
 done
 echo "Postgis database is ready and accepting conections."
 
-python -m pytest
+#python -m pytest
 
 # Note: the hostname postgis is a docker-made DNS record
 # When you specify the container name in docker-compose.yml
 echo ""
 echo "#########################################"
 echo "Running 2272 tests against PostGIS database..."
-pytest -vvv -ra --showlocals --tb=native geopetl/tests/test_postgis.py \
+pytest -vvv -ra --disable-warnings --showlocals --tb=native geopetl/tests/test_postgis.py \
   --user=$POSTGIS_USER \
   --pw=$POSTGIS_PASSWORD \
   --db=$POSTGIS_DB \
@@ -55,7 +55,7 @@ fi
 
 echo "#########################################"
 echo "Running 4326 tests against PostGIS database..."
-pytest -vvv -ra --showlocals --tb=native geopetl/tests/test_postgis.py \
+pytest -vvv -ra --disable-warnings --showlocals --tb=native geopetl/tests/test_postgis.py \
   --user=$POSTGIS_USER \
   --pw=$POSTGIS_PASSWORD \
   --db=$POSTGIS_DB \

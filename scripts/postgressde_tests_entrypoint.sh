@@ -39,7 +39,7 @@ echo "sde database ready and accepting conections."
 echo "##########################################"
 echo "Running 4326 postgressde tests against Esri SDE database..."
 # test for postgres-sde
-pytest -vvv -ra --showlocals --tb=native geopetl/tests/test_postgressde.py \
+pytest -vvv -ra --disable-warnings --showlocals --tb=native geopetl/tests/test_postgressde.py \
   --user=$SDE_USER \
   --pw=$SDE_PASSWORD \
   --db=$SDE_DB \
@@ -61,7 +61,7 @@ fi
 echo "##########################################"
 echo "Running 2272 postgressde tests against Esri SDE database..."
 # test for postgres-sde
-pytest -vvv -ra --showlocals --tb=native geopetl/tests/test_postgressde.py \
+pytest -vvv -ra --disable-warnings --showlocals --tb=native geopetl/tests/test_postgressde.py \
   --user=$SDE_USER \
   --pw=$SDE_PASSWORD \
   --db=$SDE_DB \
