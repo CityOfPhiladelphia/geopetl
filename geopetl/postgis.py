@@ -458,6 +458,20 @@ class PostgisTable(object):
     @property
     def geom_field(self):
         if self._geom_field is None:
+            # If we're a view, check for a shape field this way first, as normal methods won't work.
+            if self.database_object_type == 'view' or self.database_object_type == 'materialized_view':
+                stmt = f'''
+                select column_name from information_schema.columns
+                    where table_name = '{self.name}' and (data_type = 'USER-DEFINED' or data_type = 'ST_GEOMETRY')
+                '''
+                r = self.db.fetch(stmt)
+                if r:
+                    if len(r) == 1 and r[0]:
+                        self._geom_field = r[0]['column_name']
+                        return self._geom_field
+                    elif len(r) > 1:
+                        raise LookupError('Multiple geometry fields')
+
             if self.db.sde_version is not None:
                 stmt = "select column_name from sde.st_geometry_columns where table_name = '{}'".format(self.name)
                 try:
