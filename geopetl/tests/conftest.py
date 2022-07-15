@@ -3,13 +3,14 @@ import pytest
 
 def pytest_addoption(parser):
     parser.addoption("--db", action="store", default="default_value")
-    parser.addoption("--user", action="store", default="defaukt_value")
+    parser.addoption("--user", action="store", default="default_value")
     parser.addoption("--pw", action="store", default="default_value")
-
-    parser.addoption("--host", action="store", default="default_value")
+    parser.addoption("--host", action="store", default="localhost")
     parser.addoption("--port", action="store", default="default_value")
     parser.addoption("--service_name", action="store", default="default_value")
-    parser.addoption("--schema", action="store", default="default_value")
+    parser.addoption("--schema", action="store", default="public")
+    parser.addoption("--srid", action="store", default='4326')
+
 
 def pytest_generate_tests(metafunc):
     # This is called for every test. Only get/set command line arguments
@@ -43,3 +44,8 @@ def pytest_generate_tests(metafunc):
     option_value7 = metafunc.config.option.schema
     if 'schema' in metafunc.fixturenames and option_value7 is not None:
         metafunc.parametrize("schema", [option_value7])
+
+
+    option_value9 = metafunc.config.option.srid
+    if 'srid' in metafunc.fixturenames and option_value9 is not None:
+        metafunc.parametrize("srid", [option_value9])

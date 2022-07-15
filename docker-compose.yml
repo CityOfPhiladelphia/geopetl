@@ -9,16 +9,23 @@ services:
     container_name: postgis
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD
       - POSTGRES_DB=postgres
       - POSTGRES_HOST_AUTH_METHOD=trust
+
+  # Postgres database with Esri SDE enabled on a database, "geodatabase_testing".
+  # docker will pull the image from ecr
+  postgres_sde:
+    image: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:point-v4
+    container_name: postgres-sde
 
   geopetl:
     depends_on:
       - 'postgis'
+      - 'postgres_sde'
     build:
       context: .
-      dockerfile: postgis_Dockerfile
+      dockerfile: geopetl_Dockerfile
     container_name: geopetl
     # Pass connection parameters for both databases to geopetl
     # so our pytest scripts can connect to both.
@@ -26,4 +33,7 @@ services:
       - POSTGIS_HOST=postgis
       - POSTGIS_USER=postgres
       - POSTGIS_DB=postgres
-      - POSTGIS_PASSWORD=postgres
+      - POSTGRES_PASSWORD
+      - SDE_HOST=postgres-sde
+      - SDE_USER=test_user
+      - SDE_DB=geodatabase_testing

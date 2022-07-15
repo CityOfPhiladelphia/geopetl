@@ -1,13 +1,13 @@
 # .github/workflows/postgis_tests.yml
 
-name: test_postgis.py
+name: test_postressde.py
 
 # Controls when the action will run. Triggers the workflow on push requests to certain files.
 on:
   push:
     # Reference: https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#onpushpull_requestpaths
     paths:
-      - 'geopetl/tests/test_postgis.py'
+      - 'geopetl/tests/test_postgressde.py'
       - 'geopetl/tests/tests_config.py'
       - 'geopetl/tests/conftest.py'
       - 'geopetl/tests/fixtures_data/**'
@@ -17,16 +17,15 @@ on:
       - 'geopetl/base.py'
       - 'geopetl/__init__.py'
       - 'geopetl/util.py'
-      - 'geopetl/**'
       # changes to this workflow file itself.
-      - '.github/workflows/postgis_tests.yml'
+      - '.github/workflows/postgressde_tests.yml'
       # changes to the geopetl setup.py
       - 'setup.py'
       # changes to postgis-specific docker stuff
-      - 'postgis-docker-compose.yml'
-      - 'postgis_Dockerfile'
+      - 'postgressde-docker-compose.yml'
+      - 'postgresde_Dockerfile'
       # changes to the docker entrypoint.sh script that runs our pytest commands
-      - 'scripts/postgis_tests_entrypoint.sh'
+      - 'scripts/postgressde_tests_entrypoint.sh'
 #    branches:
 #      - master
 #      - dev-pass
@@ -38,7 +37,7 @@ on:
 
 jobs:
   build:
-    name: Build and Test Geopetl against PostGIS db
+    name: Build and Test Geopetl against an ArcGIS SDE db
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     steps: 
@@ -53,11 +52,14 @@ jobs:
         username: ${{ secrets.AWS_ACCESS_KEY_ID}}
         password: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
 
+    - name: Pull down latest postgressde image from ECR
+      run: docker pull 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:latest
+
     - name: Build and bring up the Docker image using docker-compose
       # Abort when any coontainer exits, and return the exit code from geopetl.
       # Otherwise docker-compose won't stop because postgis doesn't exit.
       run: |
-        docker-compose -f postgis-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
+        docker-compose -f postgressde-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
       env:
         POSTGRES_PASSWORD: ${{ secrets.pg_pw }}
 
