@@ -609,11 +609,10 @@ class OracleSdeTable(object):
         # 2272: NAD 1983 StatePlane Pennsylvania South FIPS 3702 (US Feet)
         # 3857: WGS 1984 Web Mercator (auxiliary sphere)
         if srid:
+            bad_srid_map = {300001: 2272, 300003: 2272, 300046: 2272, 300006: 2272, 300010: 2272, 300008: 2272, 300004: 2272, 300007: 2272, 300067: 2272, 300084: 3857, 300073: 4326, 300042: 4326, 300090: 4269, 300042: 4326}
             if srid in bad_srid_map.keys():
-                bad_srid_map = {300001: 2272, 300003: 2272, 300046: 2272, 300006: 2272, 300010: 2272, 300008: 2272, 300004: 2272, 300007: 2272, 300067: 2272, 300084: 3857, 300073: 4326, 300042: 4326, 300090: 4269, 300042: 4326}
                 # Reassign our bad SRID to a typical one.
                 srid = bad_srid_map[srid]
-
             # If it's still in the 300,000 range, default to 2272.
             if str(srid)[:4] == '3000':
                     srid = 2272
