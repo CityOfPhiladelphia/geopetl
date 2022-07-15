@@ -609,22 +609,14 @@ class OracleSdeTable(object):
         # 2272: NAD 1983 StatePlane Pennsylvania South FIPS 3702 (US Feet)
         # 3857: WGS 1984 Web Mercator (auxiliary sphere)
         if srid:
-            if srid == 300001:
-                srid = 2272
-            elif srid == 300084:
-                srid = 3857
-            elif srid == 300003:
-                srid = 2272
-            elif srid == 300091:
-                srid = 4326
-            elif srid == 300091:
-                srid = 4326
-            elif srid == 300042:
-                srid = 4326
-            elif srid == 300090:
-                srid = 4269
-            elif str(srid)[:4] == '3000':
-                srid = 2272
+            if srid in bad_srid_map.keys():
+                bad_srid_map = {300001: 2272, 300003: 2272, 300046: 2272, 300006: 2272, 300010: 2272, 300008: 2272, 300004: 2272, 300007: 2272, 300067: 2272, 300084: 3857, 300073: 4326, 300042: 4326, 300090: 4269, 300042: 4326}
+                # Reassign our bad SRID to a typical one.
+                srid = bad_srid_map[srid]
+
+            # If it's still in the 300,000 range, default to 2272.
+            if str(srid)[:4] == '3000':
+                    srid = 2272
         return srid
 
     def _get_max_num_points_in_geom(self):
