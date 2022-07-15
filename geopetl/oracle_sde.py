@@ -600,8 +600,30 @@ class OracleSdeTable(object):
                 srid = row[0]
             except TypeError:
                 srid = None
+
+        # Some datasets have somehow had their SRIDs corrupted. If you look at their SRID in ArcMap, you'll
+        # get a crazy 300000 number, but if you look at it in arcpro, you'll see a typical SRID we usually use.
+        # Detect for those here.
+        # The wierd 300000+ numbers seem to be consistent themselves with what they refer to.
+        # 4269: NAD 1983
+        # 2272: NAD 1983 StatePlane Pennsylvania South FIPS 3702 (US Feet)
+        # 3857: WGS 1984 Web Mercator (auxiliary sphere)
         if srid:
-            if str(srid)[:4] == '3000':
+            if srid == 300001:
+                srid = 2272
+            elif srid == 300084:
+                srid = 3857
+            elif srid == 300003:
+                srid = 2272
+            elif srid == 300091:
+                srid = 4326
+            elif srid == 300091:
+                srid = 4326
+            elif srid == 300042:
+                srid = 4326
+            elif srid == 300090:
+                srid = 4269
+            elif str(srid)[:4] == '3000':
                 srid = 2272
         return srid
 
