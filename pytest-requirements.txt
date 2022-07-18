@@ -10,3 +10,4 @@ pyparsing==2.4.6
 pytest==5.3.5
 python-dateutil==2.8.1
 carto
+pytz==2021.3

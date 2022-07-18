@@ -11,23 +11,10 @@
       "type": "numeric"
     },
     {
-      "name": "textfield",
-      "type": "text"
-    },
-    {
-      "name": "datefield",
-      "type": "timestamp without time zone"
-    },
-    {
-      "name": "numericfield",
-      "type": "numeric"
-    },
-    {
       "name": "shape",
       "type": "geometry",
-      "geometry_type": "point",
+      "geometry_type": "polygon",
       "srid": 2272
     }
-	
   ]
 }

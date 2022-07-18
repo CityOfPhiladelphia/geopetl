@@ -1,0 +1,26 @@
+version: '3.7'
+services:
+
+# Docker-compose for testing postgis geopetl tests against postgresql with postgis
+
+  # Postgres database with postgis configured
+  postgres-sde:
+    image: 880708401960.dkr.ecr.us-east-1.amazonaws.com/postgresql-sde:latest
+    container_name: postgres-sde
+    ports:
+      - 5432:5432
+
+  geopetl:
+    depends_on:
+      - 'postgres-sde'
+    build:
+      context: .
+      dockerfile: postgressde_Dockerfile
+    container_name: geopetl
+    # Pass connection parameters for both databases to geopetl
+    # so our pytest scripts can connect to both.
+    environment:
+      - SDE_PASSWORD=secretpassword
+      - SDE_HOST=postgres-sde
+      - SDE_USER=test_user
+      - SDE_DB=geodatabase_testing

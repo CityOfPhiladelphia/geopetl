@@ -1,4 +1,4 @@
-# Geopetl testing docker container 
+# Geopetl testing docker container
 FROM ubuntu:18.04
 
 # Never prompts the user for choices on installation/configuration of packages
@@ -61,14 +61,14 @@ RUN pip3 install -r pytest-requirements.txt
 COPY geopetl /geopetl
 COPY setup.py /setup.py
 
+# syntax check on geopetl code base
+RUN python3 -m compileall ./geopetl
+
 # Install geopetl via setup.py
 RUN pip3 install -e .
 
-COPY scripts/python_pg_isready.py /usr/local/bin/python_pg_isready.py
-RUN chmod +x  /usr/local/bin/python_pg_isready.py
+# copy entry point to container
+COPY scripts/postgressde_tests_entrypoint.sh /usr/local/bin/postgressde_tests_entrypoint.sh
+RUN chmod +x /usr/local/bin/postgressde_tests_entrypoint.sh
 
-COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-ENTRYPOINT ["entrypoint.sh", "$POSTGRES_PASSWORD", "$POSTGIS_USER", "$POSTGIS_DB", "$POSTGIS_HOST", "$SDE_USER", "$SDE_DB", "$SDE_HOST"]
-#CMD ["sleep", "9000"]
+ENTRYPOINT ["postgressde_tests_entrypoint.sh", "$POSTGRES_PASSWORD", "$SDE_USER", "$SDE_DB", "$SDE_HOST"]

@@ -3,63 +3,79 @@
 name: test_oracle.py
 
 # Controls when the action will run. Triggers the workflow on push or pull request events but only for the master branch.
-
 on:
   push:
+    # Reference: https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#onpushpull_requestpaths
     paths:
-      - './geopetl/tests/test_oracle.py'
+      - 'geopetl/tests/test_oracle.py'
+      - 'geopetl/tests/tests_config.py'
+      - 'geopetl/tests/conftest.py'
+      - 'geopetl/tests/fixtures_data/**'
+      # Trigger on changes to relevant geopetl code-base
+      - 'geopetl/oracle_sde.py'
+      - 'geopetl/carto.py'
+      - 'geopetl/base.py'
+      - 'geopetl/__init__.py'
+      - 'geopetl/util.py'
+      # changes to this workflow file itself.
+      - '.github/workflows/oracle_tests.yml'
+      # changes to the geopetl setup.py
+      - 'setup.py'
+      # changes to oracle-specific docker stuff
+      - 'oracle-docker-compose.yml'
+      - 'oracle_Dockerfile'
+      # changes to the docker entrypoint.sh script that runs our pytest commands
+      - 'scripts/oracle_entrypoint.sh'
+#    branches:
+#      - master
+#      - dev-pass
+  pull_request:
+    branches:
+      - master
+      - dev-pass
+
 
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    name: Build and Deploy
+    name: Build and Test Geopetl against on-premise Oracle` db
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    steps: 
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    # This is a github function? Ref doc: https://github.com/actions/checkout#checkout-a-different-branch
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v1
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
       with:
-        ref: add_tests
-    #- uses: actions/geopetl_pytest@add_tests
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
 
     - name: Pull Oracle Instant Client rpm from S3
       id: pull-oracle-rpm 
-      run: bash ./pull-oracle-rpm.sh
+      run: bash ./scripts/pull-oracle-rpm.sh
       env: 
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-    - name: build image
-      run: |
-       echo $PWD
-       docker build -t geo_image .
+    - name: Build and bring up our oracle Docker image using docker-compose
+      # Abort when any coontainer exits, and return the exit code from geopetl.
+      # Otherwise docker-compose won't stop because postgis doesn't exit.
+      run: docker-compose -f oracle-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl
+      env:
+        ORACLE_USER: ${{ secrets.ORACLE_USER }}
+        ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
+        ORACLE_DB: ${{ secrets.ORACLE_DB }}
+        ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
 
-    - name: run container
-      run: docker run --name geopetl_container -itd geo_image
-
-    - name: Check running containers
-      run: sleep 5; docker ps
-
-    - name: Run pytest in container
-      run: |
-        docker exec -it geopetl_container \
-          pytest geopetl/tests/test_oraclesde.py \
-          --host=${{ secrets.oracle_host }} \
-          --port=${{ secrets.oracle_port }} \
-          --user=${{ secrets.oracle_user }} \
-          --pw=${{ secrets.oracle_pw }} \
-          --service_name=${{ secrets.oracle_service_name }} \
+# TODO: push image to ECR?
+#    - name: Docker Push to ECR (${{ steps.global-vars.outputs.aws_env_prefix }})
+#      env: 
+#        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#        REPOSITORY_URL: 
 
 
-#    # RUN
-#    - name: Docker Action Stuff
-#      description: build and run image
-#      env:
-#        oracle_user: ${{secrets.oracle_user}}
-#        oracle_pw: ${{secrets.oracle_pw}}
-#        oracle_host: ${{secrets.oracle_host}}
-#        oracle_service_name: ${{secrets.oracle_service_name}}
-#        oracle_port: ${{secrets.oracle_port}}
+
+
+
