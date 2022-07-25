@@ -1088,11 +1088,17 @@ class OracleSdeQuery(SpatialQuery):
     def __iter__(self):
         """Proxy iteration to core petl."""
         # form sql statement if sql isn't provided on fct call
-        stmt = self.stmt()
+        # if there is a sql arg provided
+        print(1092)
         if self.sql:
             stmt = self.sql
+        # if no sql arg, create qry
+        else:
+            stmt = self.stmt()
+
         # get petl iterator
         dbo = self.db.dbo
+        # execute qry
         db_view = etl.fromdb(dbo, stmt)
         header = [h.lower() for h in db_view.header()]
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
@@ -1105,7 +1111,9 @@ class OracleSdeQuery(SpatialQuery):
         selected_ts_fields = [f for f in self.table.timezone_fields if f in header]
         if len(selected_ts_fields) > 0:
             db_view = db_view.convert([s.upper() for s in selected_ts_fields],
-                                      lambda timezone_field: dt_parser().parse(timezone_field))
+            # db_view = db_view.convert([s.lower() for s in selected_ts_fields],
+                                       lambda timezone_field: dt_parser().parse(timezone_field))
+
         # lowercase headers
         # headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in header])

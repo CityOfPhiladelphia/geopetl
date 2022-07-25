@@ -309,6 +309,27 @@ def test_assert_written_data(oraclesde_db, csv_data, schema,srid):
     )
     assert_data_method(csv_data, cursor, srid,schema=schema, table=point_table_name)
 
+# extract data using sql arg in fromoraclesde()
+def test_stmt_arg(oraclesde_db,csv_data,schema,srid):
+    qry = '''select {objectid_field_name} ,{text_field_name} ,
+            {numeric_field_name},{timestamp_field_name}, {date_field_name} ,
+            to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name},
+             sde.st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
+        schema,
+        point_table_name,
+        srid,
+        objectid_field_name=fields.get('object_id_field_name'),
+        text_field_name=fields.get('text_field_name'),
+        numeric_field_name=fields.get('numeric_field_name'),
+        timestamp_field_name=fields.get('timestamp_field_name'),
+        date_field_name=fields.get('date_field_name'),
+        shape_field_name=fields.get('shape_field_name'),
+        timezone_field_name=fields.get('timezone_field_name')
+    )
+    db_data = etl.fromoraclesde(dbo=oraclesde_db,table_name='{}.{}_{}'.format(schema, point_table_name, srid),sql=qry)
+    assert_data_method(csv_data, db_data, srid)
+
+
 # load csv data to oracle db without an objectid field using geopetl and assert data
 def test_wrting_data_no_id(create_test_table_noid,csv_data,schema, db_data,oraclesde_db, srid):
     csv_data1 = csv_data
