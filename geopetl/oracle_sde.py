@@ -1001,7 +1001,7 @@ class OracleSdeTable(object):
 
         #Don't fail on setinputsizes error
         try:
-            c.setinputsizes(**db_types)
+            c.setinputsizes(*db_types)
         except:
             pass
 
