@@ -264,8 +264,7 @@ def test_reading_timezone(csv_data, db_data,srid):
     assert_data_method(csv_data, db_data, srid,field = key)
 
 # # assert point table data by loading and extracting data without providing schema
-def test_reading_without_schema(oraclesde_db, csv_data,srid,):
-    etl.tooraclesde(csv_data, oraclesde_db, '{}_{}'.format(point_table_name,srid), srid=srid)
+def test_reading_without_schema(oraclesde_db, csv_data,srid):
     db_data2 = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}_{}'.format(point_table_name,srid))
     assert_data_method(csv_data, db_data2, srid)
 
