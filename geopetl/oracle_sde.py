@@ -740,6 +740,11 @@ class OracleSdeTable(object):
             # var.setvalue(0, val)
             # val = var
         elif type_ == 'timestamp without time zone':
+            if isinstance(val, datetime):
+                val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
+            elif isinstance(val, str):
+                val = dt_parser().parse(val)
+                val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
             pass
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
@@ -1001,7 +1006,7 @@ class OracleSdeTable(object):
 
         #Don't fail on setinputsizes error
         try:
-            c.setinputsizes(*db_types)
+            c.setinputsizes()
         except:
             pass
 
