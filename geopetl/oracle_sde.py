@@ -1082,8 +1082,7 @@ class OracleSdeQuery(SpatialQuery):
         try:
             rown_num = etl.nrows(db_view)
         except Exception as e:
-            print(e)
-            raise('ERROR: table is empty')
+            raise Exception(f'ERROR: table is empty. Error: {str(e)}')
 
     def __iter__(self):
         """Proxy iteration to core petl."""
