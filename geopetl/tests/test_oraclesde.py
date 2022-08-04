@@ -183,7 +183,7 @@ def create_test_table_noid(oraclesde_db, schema,srid):
     csv_data.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema,point_table_name,srid))
 
 #method to compare every value in local data and DB data
-def assert_data_method(csv_data1, db_data1, srid1, schema=None, table=None, field=None):
+def assert_data_method(csv_data1, db_data1, srid1,field=None): #, schema=None, table=None,
     csv_header = csv_data1[0]
     try:
         # writing test - read with cxOracle
@@ -343,7 +343,7 @@ def test_assert_written_data(oraclesde_db, csv_data, schema,srid):
             timezone_field_name=fields.get('timezone_field_name')
             )
     )
-    assert_data_method(csv_data, cursor, srid,schema=schema, table=point_table_name)
+    assert_data_method(csv_data, cursor, srid)#schema=schema, table=point_table_name
 
 # extract data using sql arg in fromoraclesde()
 def test_stmt_arg(oraclesde_db,csv_data,schema,srid):
@@ -387,7 +387,7 @@ def test_wrting_data_no_id(create_test_table_noid,csv_data,schema, db_data,oracl
             timezone_field_name=fields.get('timezone_field_name')
         )
     )
-    assert_data_method(csv_data1, cursor, srid,schema=schema, table=point_table_name)
+    assert_data_method(csv_data1, cursor, srid) #,schema=schema, table=point_table_name
 
 def test_polygon_assertion_write(oraclesde_db, schema,srid):
     csv_data = etl.fromcsv(polygon_csv_dir).convert([fields.get('object_id_field_name')], int)
@@ -402,7 +402,7 @@ def test_polygon_assertion_write(oraclesde_db, schema,srid):
         shape_field_name = fields.get('shape_field_name'))
     cursor = oraclesde_db.cursor()
     cursor.execute(select_qry)
-    assert_data_method(csv_data, cursor, srid,schema=schema, table=polygon_table_name)
+    assert_data_method(csv_data, cursor, srid)
 
 def test_multipolygon_assertion_write(oraclesde_db, schema,srid):
     csv_data = etl.fromcsv(multipolygon_csv_dir).convert([fields.get('object_id_field_name')], int)
@@ -417,7 +417,7 @@ def test_multipolygon_assertion_write(oraclesde_db, schema,srid):
         shape_field_name = fields.get('shape_field_name'))
     cursor = oraclesde_db.cursor()
     cursor.execute(select_qry)
-    assert_data_method(csv_data, cursor, srid,schema=schema, table=multipolygon_table_name)
+    assert_data_method(csv_data, cursor, srid)
 
 def test_line_assertion_write(oraclesde_db, schema,srid):
     csv_data = etl.fromcsv(line_csv_dir).convert([fields.get('object_id_field_name')], int)
@@ -432,7 +432,7 @@ def test_line_assertion_write(oraclesde_db, schema,srid):
     )
     cursor = oraclesde_db.cursor()
     cursor.execute(stmt)
-    assert_data_method(csv_data, cursor, srid,schema=schema, table=line_table_name)
+    assert_data_method(csv_data, cursor, srid)
 
 # # assert DB data with itself
 def test_reading_with_types(db_data,oraclesde_db, schema, srid):
