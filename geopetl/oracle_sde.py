@@ -1001,12 +1001,11 @@ class OracleSdeTable(object):
             stmt_fields_joined, placeholders_joined)
         self.db.cursor.prepare(stmt)
 
-        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields}
-        # db_types_filtered.pop('ID')
+        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields if x != self.objectid_field}
 
         #Don't fail on setinputsizes error
         try:
-            c.setinputsizes()
+            c.setinputsizes(**db_types_filtered)
         except:
             pass
 
