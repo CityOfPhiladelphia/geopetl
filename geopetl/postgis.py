@@ -549,11 +549,24 @@ class PostgisTable(object):
     @property
     def srid(self):
         if self._srid is None:
-            if self.db.is_sde_enabled is False:
+            if self.db.is_postgis_enabled is False and self.db.is_sde_enabled is False:
+                print('DB is not SDE or Postgis enabled? Returning SRID as None')
+                self._srid = None
+                return self._srid
+        # A database can have postgis and be ESRI SDE, e.g. an RDS database
+        # So account for that by first trying SRID
+            if self.db.is_postgis_enabled is True:
                 stmt = "SELECT Find_SRID('{}', '{}', '{}')" \
                     .format(self.schema, self.name, self.geom_field)
-                self._srid = self.db.fetch(stmt)[0]['find_srid']
-            elif self.db.is_postgis_enabled is False:
+                try:
+                    self._srid = self.db.fetch(stmt)[0]['find_srid']
+                except Exception as e:
+                    if 'could not find the corresponding SRID' in str(e):
+                        print('PostGIS Find_SRID() did not return SRID.')
+                    else:
+                        raise e
+            # if we still haven't gotten an SRID and the db is sde_enabled, try is this way:
+            if self.db.is_sde_enabled is True and self._srid is None:
                 try:
                     stmt = "select srid from sde.st_geometry_columns where schema_name = '{}' and table_name = '{}'" \
                         .format(self.schema, self.name)
@@ -566,15 +579,13 @@ class PostgisTable(object):
                     self._srid = r[0]['srid']
                 else:
                     self._srid = None
-            else:
-                raise Exception('DB is not SDE or Postgis enabled??')
         return self._srid
 
 
     @property
     def geom_type(self):
         # if not sde enabled
-        if self.db.is_sde_enabled is False:
+        if self.db.is_postgis_enabled is True:
             stmt = """
                 SELECT type
                 FROM geometry_columns
