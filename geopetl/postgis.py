@@ -836,9 +836,10 @@ class PostgisQuery(Table):
     def __iter__(self):
         """Proxy iteration to core petl."""
         # form sql statement
-        stmt = self.stmt()
         if self.sql:
             stmt = self.sql
+        else:
+            stmt = self.stmt()
 
         # get petl iterator
         dbo = self.db.dbo
