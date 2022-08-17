@@ -9,12 +9,12 @@ export LANG=C.UTF-8
 export PGPASSWORD=$POSTGRES_PASSWORD
 # Since we're doing health checks via a subshell-made variable, we'll need to export
 # our variables so they're accessible.
-export POSTGIS_DB
-export POSTGIS_HOST
-export POSTGIS_USER
-export POSTGIS_PASSWORD
+export POSTGISSDE_DB
+export POSTGISSDE_HOST
+export POSTGISSDE_USER
+export POSTGISSDE_PASSWORD
 
-pg_postgis_ready=$(pg_isready -h $POSTGIS_HOST -U $POSTGIS_USER -d $POSTGIS_DB &>/dev/null; echo $? )
+pg_postgis_ready=$(pg_isready -h $POSTGISSDE_HOST -U $POSTGISSDE_USER -d $POSTGISSDE_DB &>/dev/null; echo $? )
 
 max_retry=20
 counter=0
@@ -23,8 +23,8 @@ do
   [[ counter -eq $max_retry ]] && echo "Failed!" && exit 1
   echo "PostGIS database is not ready yet!!"
   sleep 15
-  pg_isready -h $POSTGIS_HOST -U $POSTGIS_USER -d $POSTGIS_DB
-  pg_postgis_ready=$(pg_isready -h $POSTGIS_HOST -U $POSTGIS_USER -d $POSTGIS_DB &>/dev/null; echo $? )
+  pg_isready -h $POSTGISSDE_HOST -U $POSTGISSDE_USER -d $POSTGISSDE_DB
+  pg_postgis_ready=$(pg_isready -h $POSTGISSDE_HOST -U $POSTGISSDE_USER -d $POSTGISSDE_DB &>/dev/null; echo $? )
 #  echo "pg_postgis_ready return is:" $pg_postgis_ready
 #  echo "pg_sde_ready return is" $pg_sde_ready
   ((counter++))
@@ -39,12 +39,12 @@ echo ""
 echo "#########################################"
 echo "Running 2272 tests against PostGIS database..."
 pytest -vvv -ra --disable-warnings --showlocals --tb=native geopetl/tests/test_postgis.py \
-  --user=$POSTGIS_USER \
-  --pw=$POSTGIS_PASSWORD \
-  --db=$POSTGIS_DB \
-  --host=$POSTGIS_HOST \
+  --user=$POSTGISSDE_USER \
+  --pw=$POSTGISSDE_PASSWORD \
+  --db=$POSTGISSDE_DB \
+  --host=$POSTGISSDE_HOST \
   --port=5432 \
-  --schema="public" \
+  --schema=$POSTGISSDE_USER \
   --srid=2272
 POSTGIS_EXIT_CODE=$?
 
@@ -56,10 +56,10 @@ fi
 echo "#########################################"
 echo "Running 4326 tests against PostGIS database..."
 pytest -vvv -ra --disable-warnings --showlocals --tb=native geopetl/tests/test_postgis.py \
-  --user=$POSTGIS_USER \
-  --pw=$POSTGIS_PASSWORD \
-  --db=$POSTGIS_DB \
-  --host=$POSTGIS_HOST \
+  --user=$POSTGISSDE_USER \
+  --pw=$POSTGISSDE_PASSWORD \
+  --db=$POSTGISSDE_DB \
+  --host=$POSTGISSDE_HOST \
   --port=5432 \
   --schema="public" \
   --srid=4326

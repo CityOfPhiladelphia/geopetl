@@ -70,4 +70,4 @@ RUN pip3 install -e .
 COPY scripts/postgissde_tests_entrypoint.sh /usr/local/bin/postgissde_tests_entrypoint.sh
 RUN chmod +x /usr/local/bin/postgissde_tests_entrypoint.sh
 
-ENTRYPOINT ["postgissde_tests_entrypoint.sh", "$POSTGRES_PASSWORD", "$POSTGIS_USER", "$POSTGIS_DB", "$POSTGIS_HOST", "$SDE_USER", "$SDE_DB", "$SDE_HOST"]
+ENTRYPOINT ["postgissde_tests_entrypoint.sh", "$POSTGISSDE_PASSWORD", "$POSTGISSDE_USER", "$POSTGISSDE_DB", "$POSTGISSDE_HOST", "$POSTGISSDE_USER", "$POSTGISSDE_DB", "$POSTGISSDE_HOST"]
