@@ -6,8 +6,7 @@ from petl.util.base import Table
 from petl.io.db_utils import _quote
 from geopetl.util import parse_db_url
 import json
-from pytz import timezone
-from dateutil import parser as dt_parser
+
 
 aw = 'test2'
 DEFAULT_WRITE_BUFFER_SIZE = 1000
@@ -85,8 +84,8 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     # Create table if it doesn't exist
     if create:
         # Disable autocreate new postgres table
-        if db.is_sde_enabled:
-            print('Autocreate tables for Postgres SDE not currently implemented!!')
+        if db.sde_version:
+            print('Autocreate tables for Postgres not currently implemented!!')
             raise
         # create new postgis table
         else:
@@ -166,25 +165,41 @@ class PostgisDatabase(object):
         # elif callable(dbo):
         #     dbo = dbo()
 
-        # make a cursor for introspecting the db. not used to read/write data.
-        self.cursor = dbo.cursor(cursor_factory=RealDictCursor)
 
+        cursor = dbo.cursor()
         #a = psycopg2.ConnectionInfo(dbo)
         a = dbo.get_dsn_parameters()
 
         # TODO use petl dbo check/validation
         self.dbo = dbo
         self.user = a.get('user')
+        self.sde_version = None
+        self.postgis_version = None
         #self.schemas =
+        # Check if DB is sde registered
+        try:
+            cursor.execute('select description from sde.sde_version')
+            sde = cursor.fetchall()
+            sde_version = sde[0][0]
+            self.sde_version = sde_version.split(' ')[0]
+        except:
+            cursor.execute('rollback;') # abort failed transaction
+            print('DB not SDE enabled')
 
-        # To be used by setter properties below
-        self._is_sde_enabled = None
-        self._is_postgis_enabled = None
-
+        # Check if DB is postgis enabled
+            try:
+                cursor.execute('select Postgis_version()')
+                res = cursor.fetchall()
+                postgis_version = res[0][0]
+                self.postgis_version = postgis_version.split(' ')[0]
+            except:
+                cursor.execute('rollback;') # abort failed transaction        #
         # # TODO use petl dbo check/validation
         # self.dbo = dbo
         # self.user = dbo.user
 
+        # make a cursor for introspecting the db. not used to read/write data.
+        self.cursor = dbo.cursor(cursor_factory=RealDictCursor)
 
     def __str__(self):
         return 'PostgisDatabase: {}'.format(self.dbo.dsn)
@@ -204,42 +219,6 @@ class PostgisDatabase(object):
         except Exception as e:
             self.cursor.execute("ROLLBACK")
             raise e
-
-    @property
-    def is_sde_enabled(self):
-        # Get the value
-        if self._is_sde_enabled is not None:
-            return self._is_sde_enabled
-        # Set the value only once (saves on db calls)
-        elif self._is_sde_enabled is None:
-            sde_exists = "SELECT to_regclass('sde.sde_version') as exists"
-            self.cursor.execute(sde_exists)
-            result = self.cursor.fetchall()
-            # Result will always be in an 'exists' value of either None or the name of the table.
-            result = result[0]['exists']
-            if result:
-                self._is_sde_enabled = True
-            if not result:
-                self._is_sde_enabled = False
-            return self._is_sde_enabled
-
-    @property
-    def is_postgis_enabled(self):
-        # Get the value
-        if self._is_postgis_enabled is not None:
-            return self._is_postgis_enabled
-        # Set the value only once (saves on db calls)
-        if self._is_postgis_enabled is None:
-            self.cursor.execute("SELECT proname FROM pg_proc WHERE proname LIKE 'postgis_version';")
-            result = self.cursor.fetchall()
-            # This will return an empty string if it doesn't exist, so test like this instead.
-            if result:
-                self._is_postgis_enabled = True
-            else:
-                self._is_postgis_enabled = False
-            return self._is_postgis_enabled
-
-
 
     # @property
     # def tables(self, schema='public'):
@@ -314,7 +293,8 @@ class PostgisDatabase(object):
                 scheme_type = DATA_TYPE_MAP.get(scheme['type'].lower(), scheme['type'])
                 constraint = scheme.get('constraints', None)
                 if scheme_type == 'geometry':
-                    if self.is_sde_enabled:
+                    #if self.db.sde_version:
+                    if self.sde_version:
                         scheme_type= 'st_geometry'
                     else:
                         scheme_srid = scheme.get('srid', '')
@@ -487,17 +467,11 @@ class PostgisTable(object):
                 if r:
                     if len(r) == 1 and r[0]:
                         self._geom_field = r[0]['column_name']
-                        print(f"Geometric column name is: '{self._geom_field}'")
                         return self._geom_field
                     elif len(r) > 1:
                         raise LookupError('Multiple geometry fields')
-                # If it's an empty list, then the mv is non-geometric
-                if not r:
-                    self._geom_field = None
-                    print("Dataset appears to be non-geometric, returning geom_field as None.")
-                    return self._geom_field 
 
-            if self.db.is_sde_enabled is True:
+            if self.db.sde_version is not None:
                 stmt = "select column_name from sde.st_geometry_columns where table_name = '{}'".format(self.name)
                 try:
                     r = self.db.fetch(stmt)
@@ -507,22 +481,16 @@ class PostgisTable(object):
                     r = self.db.fetch(stmt)
                 if r:
                     self._geom_field = r[0].pop('column_name')
-                    print(f"Geometric column name is: '{self._geom_field}'")
                 else:
                     self._geom_field = None
-                    print("Dataset appears to be non-geometric, returning geom_field as None.")
-            elif self.db.is_postgis_enabled is True:
+            else:
                 f = [x for x in self.metadata if x['type'] == 'geometry']
                 if len(f) == 0:
                     self._geom_field = None
-                    print("Dataset appears to be non-geometric, returning geom_field as None.")
                 elif len(f) > 1:
                     raise LookupError('Multiple geometry fields')
                 else:
                     self._geom_field = f[0]['name']
-                    print(f"Geometric column name is: '{self._geom_field}'")
-            else:
-                raise Exception('DB is not SDE or Postgis enabled??')
         return self._geom_field
 
     @property
@@ -549,11 +517,11 @@ class PostgisTable(object):
     @property
     def srid(self):
         if self._srid is None:
-            if self.db.is_sde_enabled is False:
+            if self.db.sde_version is None:
                 stmt = "SELECT Find_SRID('{}', '{}', '{}')" \
                     .format(self.schema, self.name, self.geom_field)
                 self._srid = self.db.fetch(stmt)[0]['find_srid']
-            elif self.db.is_postgis_enabled is False:
+            else:
                 try:
                     stmt = "select srid from sde.st_geometry_columns where schema_name = '{}' and table_name = '{}'" \
                         .format(self.schema, self.name)
@@ -566,15 +534,13 @@ class PostgisTable(object):
                     self._srid = r[0]['srid']
                 else:
                     self._srid = None
-            else:
-                raise Exception('DB is not SDE or Postgis enabled??')
         return self._srid
 
 
     @property
     def geom_type(self):
         # if not sde enabled
-        if self.db.is_sde_enabled is False:
+        if self.db.sde_version is None:
             stmt = """
                 SELECT type
                 FROM geometry_columns
@@ -584,7 +550,7 @@ class PostgisTable(object):
                 """.format(self.schema, self.name, self.geom_field)
             a = self.db.fetch(stmt)[0].pop('type')
             return a
-        elif self.db.is_sde_enabled is True:
+        else: # sde enabled
             geom_dict = {1:"POINT", 9:"LINE",4:"POLYGON", 11:"MULTIPOLYGON"}
             stmt = """
                 SELECT geometry_type
@@ -606,8 +572,6 @@ class PostgisTable(object):
             else:
                 geomtype = None
             return geomtype
-        else:
-            raise Exception('DB is not SDE or Postgis enabled??')
 
     @property
     def non_geom_fields(self):
@@ -672,14 +636,14 @@ class PostgisTable(object):
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
         # if DB is sde enabled
-        if self.db.is_sde_enabled is True:
+        if self.db.sde_version is not None:
             geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
-        # if DB is postgis enabled
-        elif self.db.is_postgis_enabled is True:
+        # if DB is postgis en
+        elif self.db.postgis_version is not None:
             geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
-        else:
-            raise Exception('DB is not SDE or Postgis enabled??')
 
+        # else: # if DB is not Postgis enabled
+        #     geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
 
         # Handle 3D geometries
         # TODO: screen these with regex
@@ -697,7 +661,7 @@ class PostgisTable(object):
         #   geom = "ST_GeomFromText('{}', {})".format(geom, from_srid)
 
         if multi_geom:
-            if self.db.is_sde_enabled is False:
+            if not self.db.sde_version:
                 geom = 'ST_Multi({})'.format(geom)
         return geom
 
@@ -806,7 +770,7 @@ class PostgisTable(object):
                     val_row.append(val)
 
                 # if no object id and sde enabled, use sde index to append
-                elif field == objectid_field and self.db.is_sde_enabled: #and local_objectID_flag:
+                elif field == objectid_field and self.db.sde_version: #and local_objectID_flag:
                     val = "sde.next_rowid('{}', '{}')".format(self.schema, self.name)
                     val_row.append(val)
                 else:
@@ -872,9 +836,10 @@ class PostgisQuery(Table):
     def __iter__(self):
         """Proxy iteration to core petl."""
         # form sql statement
-        stmt = self.stmt()
         if self.sql:
             stmt = self.sql
+        else:
+            stmt = self.stmt()
 
         # get petl iterator
         dbo = self.db.dbo

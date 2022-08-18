@@ -1,16 +1,10 @@
 import pytest
 import petl as etl
 import cx_Oracle
-#from geopetl.tests.db_config import oracleDBcredentials
 from geopetl.oracle_sde import OracleSdeDatabase, OracleSdeTable
 import csv
-import os
-import datetime
 from dateutil import parser as dt_parser
-import re
-from pytz import timezone, utc
-import tests_config as config
-from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name, point_csv_dir, fields
+from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name,point_table_name, point_csv_dir, fields, multipolygon_csv_dir,multipolygon_table_name
 
 
 ############################################# FIXTURES ################################################################
@@ -141,6 +135,41 @@ def create_polygon_table(srid, oraclesde_db,schema):
     cursor.executemany(None, val_rows, batcherrors=False)
     oraclesde_db.commit()
 
+
+# Loads multipolygon staging data using insert qry
+@pytest.fixture
+def create_multipolygon_table(srid, oraclesde_db,schema):
+    insert_stmt = '''INSERT INTO {schema}.{multipolygon_table_name}_{srid} 
+        ({shape_field_name}, {objectid_field_name}) 
+        VALUES 
+        (SDE.ST_GEOMETRY(:{shape_field_name}, {srid}), SDE.GDB_UTIL.NEXT_ROWID('{schema}', '{multipolygon_table_name}_{srid}'))'''.format(
+            schema=schema, multipolygon_table_name=multipolygon_table_name,srid=srid,
+            shape_field_name=fields.get('shape_field_name'),objectid_field_name=fields.get('object_id_field_name'))
+    cursor = oraclesde_db.cursor()
+    val_rows = [
+        {fields.get('shape_field_name'): '''MULTIPOLYGON(((
+        2697059.92403972 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.92403972 243874.43507531)),
+        (( 2697048.19407630 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.19407630 243967.35286848)
+           ))'''},
+        {fields.get('shape_field_name'): '''MULTIPOLYGON((
+           ( 2697059.82397431 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.82397431 243874.43507531)),
+           (( 2697048.09401089 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.09401089 243967.35286848)
+           ))'''},
+        {fields.get('shape_field_name'): '''MULTIPOLYGON((
+           ( 2697059.98407897 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.98407897 243874.43507531)),
+           (( 2697048.29414172 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.29414172 243967.35286848)
+           ))'''},
+        {fields.get('shape_field_name'): '''MULTIPOLYGON((
+           ( 2697059.92403972 243874.53514072, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.92403972 243874.53514072)),
+           (( 2697048.19407630 243967.45260581, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.19407630 243967.45260581)
+           ))'''}
+    ]
+
+    cursor.execute('''truncate table {schema}.{multipolygon_table_name}_{srid}'''.format(schema=schema,srid=srid, multipolygon_table_name= multipolygon_table_name))
+    cursor.prepare(insert_stmt)
+    cursor.executemany(None, val_rows, batcherrors=False)
+    oraclesde_db.commit()
+
 # extracts data from db in geopetl frame
 @pytest.fixture
 def db_data(oraclesde_db, schema, srid):
@@ -153,8 +182,8 @@ def create_test_table_noid(oraclesde_db, schema,srid):
     csv_data = etl.fromcsv(point_csv_dir).cutout(fields.get('object_id_field_name'))
     csv_data.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema,point_table_name,srid))
 
-
-def assert_data_method(csv_data1, db_data1, srid1, schema=None, table=None, field=None):
+#method to compare every value in local data and DB data
+def assert_data_method(csv_data1, db_data1, srid1,field=None): #, schema=None, table=None,
     csv_header = csv_data1[0]
     try:
         # writing test - read with cxOracle
@@ -170,8 +199,8 @@ def assert_data_method(csv_data1, db_data1, srid1, schema=None, table=None, fiel
         i=1
 
     for row in csv_data1[1:]:
-        csv_dict = dict(zip(csv_header, row))  # dictionary from csv data
-        oracle_dict = dict(zip(db_header, db_data1[i]))  # dictionary from Oracle data
+        csv_dict = dict(zip(csv_header, row))               # dictionary from csv data
+        oracle_dict = dict(zip(db_header, db_data1[i]))     # dictionary from Oracle data
         for key in csv_header:
             db_val = oracle_dict.get(key)
             csv_val = csv_dict.get(key)
@@ -264,8 +293,7 @@ def test_reading_timezone(csv_data, db_data,srid):
     assert_data_method(csv_data, db_data, srid,field = key)
 
 # # assert point table data by loading and extracting data without providing schema
-def test_reading_without_schema(oraclesde_db, csv_data,srid,):
-    etl.tooraclesde(csv_data, oraclesde_db, '{}_{}'.format(point_table_name,srid), srid=srid)
+def test_reading_without_schema(oraclesde_db, csv_data,srid):
     db_data2 = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}_{}'.format(point_table_name,srid))
     assert_data_method(csv_data, db_data2, srid)
 
@@ -276,10 +304,18 @@ def test_reading_line_table(oraclesde_db, schema,srid, create_line_table):
     db_data = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}.{}_{}'.format(schema,line_table_name, srid))
     assert_data_method(csv_data, db_data, srid)
 
+
 def test_reading_polygon_table(oraclesde_db, schema,srid, create_polygon_table):
     csv_data = etl.fromcsv(polygon_csv_dir).convert([fields.get('object_id_field_name')], int)
     # read data from test DB using petl
     db_data = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}.{}_{}'.format(schema, polygon_table_name,srid))
+    assert_data_method(csv_data, db_data, srid)
+
+def test_reading_mutipolygon_table(oraclesde_db, schema,srid, create_multipolygon_table):
+    csv_data = etl.fromcsv(multipolygon_csv_dir).convert([fields.get('object_id_field_name')], int)
+    table_name = '{}.{}_{}'.format(schema, multipolygon_table_name, srid)
+    # read data from test DB using petl
+    db_data = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}.{}_{}'.format(schema, multipolygon_table_name,srid))
     assert_data_method(csv_data, db_data, srid)
 
 
@@ -307,7 +343,7 @@ def test_assert_written_data(oraclesde_db, csv_data, schema,srid):
             timezone_field_name=fields.get('timezone_field_name')
             )
     )
-    assert_data_method(csv_data, cursor, srid,schema=schema, table=point_table_name)
+    assert_data_method(csv_data, cursor, srid)#schema=schema, table=point_table_name
 
 # extract data using sql arg in fromoraclesde()
 def test_stmt_arg(oraclesde_db,csv_data,schema,srid):
@@ -351,9 +387,9 @@ def test_wrting_data_no_id(create_test_table_noid,csv_data,schema, db_data,oracl
             timezone_field_name=fields.get('timezone_field_name')
         )
     )
-    assert_data_method(csv_data1, cursor, srid,schema=schema, table=point_table_name)
+    assert_data_method(csv_data1, cursor, srid) #,schema=schema, table=point_table_name
 
-def test_polygon_assertion_write(oraclesde_db, schema,srid, create_polygon_table):
+def test_polygon_assertion_write(oraclesde_db, schema,srid):
     csv_data = etl.fromcsv(polygon_csv_dir).convert([fields.get('object_id_field_name')], int)
     csv_data.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema, polygon_table_name, srid), srid=srid)
     # read data from test DB using petl
@@ -366,7 +402,22 @@ def test_polygon_assertion_write(oraclesde_db, schema,srid, create_polygon_table
         shape_field_name = fields.get('shape_field_name'))
     cursor = oraclesde_db.cursor()
     cursor.execute(select_qry)
-    assert_data_method(csv_data, cursor, srid,schema=schema, table=point_table_name)
+    assert_data_method(csv_data, cursor, srid)
+
+def test_multipolygon_assertion_write(oraclesde_db, schema,srid):
+    csv_data = etl.fromcsv(multipolygon_csv_dir).convert([fields.get('object_id_field_name')], int)
+    csv_data.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema, multipolygon_table_name, srid), srid=srid)
+    # read data from test DB using petl
+    select_qry = '''select {objectid_field_name} as "{objectid_field_name}",
+    SDE.ST_AsText({shape_field_name}) as "{shape_field_name}" from {schema}.{table}_{srid}'''.format(
+        schema=schema,
+        table=multipolygon_table_name,
+        srid=srid,
+        objectid_field_name = fields.get('object_id_field_name'),
+        shape_field_name = fields.get('shape_field_name'))
+    cursor = oraclesde_db.cursor()
+    cursor.execute(select_qry)
+    assert_data_method(csv_data, cursor, srid)
 
 def test_line_assertion_write(oraclesde_db, schema,srid):
     csv_data = etl.fromcsv(line_csv_dir).convert([fields.get('object_id_field_name')], int)
@@ -381,7 +432,7 @@ def test_line_assertion_write(oraclesde_db, schema,srid):
     )
     cursor = oraclesde_db.cursor()
     cursor.execute(stmt)
-    assert_data_method(csv_data, cursor, srid,schema=schema, table=point_table_name)
+    assert_data_method(csv_data, cursor, srid)
 
 # # assert DB data with itself
 def test_reading_with_types(db_data,oraclesde_db, schema, srid):

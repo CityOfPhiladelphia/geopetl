@@ -740,6 +740,11 @@ class OracleSdeTable(object):
             # var.setvalue(0, val)
             # val = var
         elif type_ == 'timestamp without time zone':
+            if isinstance(val, datetime):
+                val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
+            elif isinstance(val, str):
+                val = dt_parser().parse(val)
+                val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
             pass
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
@@ -996,8 +1001,7 @@ class OracleSdeTable(object):
             stmt_fields_joined, placeholders_joined)
         self.db.cursor.prepare(stmt)
 
-        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields}
-        # db_types_filtered.pop('ID')
+        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields if x != self.objectid_field}
 
         #Don't fail on setinputsizes error
         try:
@@ -1082,7 +1086,8 @@ class OracleSdeQuery(SpatialQuery):
         try:
             rown_num = etl.nrows(db_view)
         except Exception as e:
-            raise Exception(f'ERROR: table is empty. Error: {str(e)}')
+            print(e)
+            raise('ERROR: table is empty')
 
     def __iter__(self):
         """Proxy iteration to core petl."""
