@@ -1,0 +1,75 @@
+# Geopetl testing docker container
+FROM ubuntu:18.04
+
+# Never prompts the user for choices on installation/configuration of packages
+ENV DEBIAN_FRONTEND noninteractive
+ENV TERM linux
+
+
+# Define en_US.
+ENV LANGUAGE en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
+ENV LC_CTYPE en_US.UTF-8
+ENV LC_MESSAGES en_US.UTF-8
+ENV LC_ALL  en_US.UTF-8
+
+#RUN set -ex \
+#    && apt-get update -yqq \
+#    && apt-get install -yqq --no-install-recommends \
+#    locales
+
+RUN set -ex \
+    && apt-get update -yqq \
+    && buildDeps=' \
+        python3-dev \
+        locales \
+    ' \
+    && apt-get install -yqq --no-install-recommends \
+        $buildDeps \
+        locales  \
+        python3 \
+        python3-pip \
+        postgresql-client \
+        dnsutils \
+    && echo "LC_ALL=en_US.UTF-8" >> /etc/environment \
+    && echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen \
+    && echo "LANG=en_US.UTF-8" > /etc/locale.conf \
+    && locale-gen en_US.UTF-8 \
+    && dpkg-reconfigure locales \
+    && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+    && useradd -ms /bin/bash worker \
+    && pip3 install -U setuptools \
+    && pip3 install -U wheel \
+    && pip3 install --upgrade pip setuptools wheel \
+    && apt-get remove --purge -yqq $buildDeps \
+    && apt-get clean \
+    && rm -rf \
+        /var/lib/apt/lists/* \
+        /tmp/* \
+        /var/tmp/* \
+        /usr/share/man \
+        /usr/share/doc \
+        /usr/share/doc-base
+
+# Install necessary modules for our pytest functions
+# that will test geopetl
+COPY pytest-requirements.txt /pytest-requirements.txt
+RUN pip3 install -r pytest-requirements.txt
+
+# Setup and install geopetl
+COPY geopetl /geopetl
+COPY setup.py /setup.py
+
+# syntax check on geopetl code base
+RUN python3 -m compileall ./geopetl
+
+# Install geopetl via setup.py
+RUN pip3 install -e .
+
+COPY scripts/postgis_sde_rds_tests_entrypoint.sh /usr/local/bin/postgis_sde_rds_tests_entrypoint.sh
+RUN chmod +x /usr/local/bin/postgis_sde_rds_tests_entrypoint.sh
+
+#ENTRYPOINT ["postgissde_tests_entrypoint.sh", "$POSTGISSDE_PASSWORD", "$POSTGISSDE_USER", "$POSTGISSDE_DB", "$POSTGISSDE_HOST", "$POSTGISSDE_USER", "$POSTGISSDE_DB", "$POSTGISSDE_HOST"]
+
+ENTRYPOINT ["postgis_sde_rds_tests_entrypoint.sh", "$POSTGISSDE_PASSWORD", "$POSTGISSDE_USER", "$POSTGISSDE_DB", "$POSTGISSDE_HOST"]

@@ -1,0 +1,18 @@
+version: '3.7'
+services:
+
+# Docker-compose for testing postgis geopetl tests against postgresql with postgis
+
+
+  geopetl:
+    build:
+      context: .
+      dockerfile: postgis_sde_rds_Dockerfile
+    container_name: geopetl
+    # Pass connection parameters for both databases to geopetl
+    # so our pytest scripts can connect to both.
+    environment:
+      - POSTGISSDE_PASSWORD=secretpassword
+      - POSTGISSDE_HOST=rds-postgis-tester2.cfuoybzycpox.us-east-1.rds.amazonaws.com
+      - POSTGISSDE_USER=test_user
+      - POSTGISSDE_DB=rds_tester
