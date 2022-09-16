@@ -5,35 +5,8 @@ name: test_oracle.py
 # Controls when the action will run. Triggers the workflow on push or pull request events but only for the master branch.
 on:
   push:
-    # Reference: https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#onpushpull_requestpaths
-    paths:
-      - 'geopetl/tests/test_oraclesde.py'
-      - 'geopetl/tests/tests_config.py'
-      - 'geopetl/tests/conftest.py'
-      - 'geopetl/tests/fixtures_data/**'
-      # Trigger on changes to relevant geopetl code-base
-      - 'geopetl/oracle_sde.py'
-      - 'geopetl/carto.py'
-      - 'geopetl/base.py'
-      - 'geopetl/__init__.py'
-      - 'geopetl/util.py'
-      # changes to this workflow file itself.
-      - '.github/workflows/oracle_tests.yml'
-      # changes to the geopetl setup.py
-      - 'setup.py'
-      # changes to oracle-specific docker stuff
-      - 'oracle-docker-compose.yml'
-      - 'oracle_Dockerfile'
-      # changes to the docker entrypoint.sh script that runs our pytest commands
-      - 'scripts/oracle_entrypoint.sh'
-#    branches:
-#      - master
-#      - dev-pass
-  pull_request:
     branches:
-      - master
-      - dev-pass
-
+      - '**'
 
 jobs:
   build:

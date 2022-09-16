@@ -155,6 +155,23 @@ def create_test_table_noid(postgis, schema,srid):
     csv_data = etl.fromcsv(point_csv_dir).cutout(fields.get('object_id_field_name'))
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), from_srid=srid)
 
+# extract data using sql arg in frompostgis()
+def test_stmt_arg(postgis,csv_data,schema,srid):
+    qry = '''select {objectid_field_name} ,{text_field_name},{numeric_field_name},
+            {timestamp_field_name}, {date_field_name},{timezone_field_name},
+             st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
+        schema,
+        point_table_name,
+        srid,
+        objectid_field_name=fields.get('object_id_field_name'),
+        text_field_name=fields.get('text_field_name'),
+        numeric_field_name=fields.get('numeric_field_name'),
+        timestamp_field_name=fields.get('timestamp_field_name'),
+        date_field_name=fields.get('date_field_name'),
+        shape_field_name=fields.get('shape_field_name'),
+        timezone_field_name=fields.get('timezone_field_name')
+    )
+    db_data1 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema, point_table_name, srid),sql=qry)
 
 # assert
 def assert_data_method(csv_data1, db_data1, srid1, field=None):
@@ -269,25 +286,10 @@ def test_reading_multipolygon(postgis, load_multipolygon_table, schema, srid):
     csv_data = etl.fromcsv(multipolygon_csv_dir)
     # read data from test DB using petl
     db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, multipolygon_table_name, srid))
-    assert_data_method(csv_data, db_data1, srid)
-
-# extract data using sql arg in frompostgis()
-def test_stmt_arg(postgis,csv_data,schema,srid):
-    qry = '''select {objectid_field_name} ,{text_field_name},{numeric_field_name},
-            {timestamp_field_name}, {date_field_name},{timezone_field_name},
-             st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
-        schema,
-        point_table_name,
-        srid,
-        objectid_field_name=fields.get('object_id_field_name'),
-        text_field_name=fields.get('text_field_name'),
-        numeric_field_name=fields.get('numeric_field_name'),
-        timestamp_field_name=fields.get('timestamp_field_name'),
-        date_field_name=fields.get('date_field_name'),
-        shape_field_name=fields.get('shape_field_name'),
-        timezone_field_name=fields.get('timezone_field_name')
-    )
-    db_data1 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema, point_table_name, srid),sql=qry)
+    print('etl.look(csv_data)')
+    print(etl.look(csv_data))
+    print('etl.look(db_data1)')
+    print(etl.look(db_data1))
     assert_data_method(csv_data, db_data1, srid)
 
 

@@ -745,7 +745,6 @@ class OracleSdeTable(object):
             elif isinstance(val, str):
                 val = dt_parser().parse(val)
                 val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
-            pass
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -1002,6 +1001,7 @@ class OracleSdeTable(object):
         self.db.cursor.prepare(stmt)
 
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields if x != self.objectid_field}
+        # db_types_filtered.pop('ID')
 
         #Don't fail on setinputsizes error
         try:
@@ -1086,8 +1086,7 @@ class OracleSdeQuery(SpatialQuery):
         try:
             rown_num = etl.nrows(db_view)
         except Exception as e:
-            print(e)
-            raise('ERROR: table is empty')
+            raise Exception(f'ERROR: table is empty. Error: {str(e)}')
 
     def __iter__(self):
         """Proxy iteration to core petl."""

@@ -309,6 +309,7 @@ def test_stmt_arg(postgis,csv_data,schema,srid):
     db_data1 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema, point_table_name, srid),sql=qry)
     assert_data_method(csv_data, db_data1, srid)
 
+
 #------------------WRITING TESTS
 def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
     connection = postgis.dbo

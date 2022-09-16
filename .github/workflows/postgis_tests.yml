@@ -5,36 +5,8 @@ name: test_postgis.py
 # Controls when the action will run. Triggers the workflow on push requests to certain files.
 on:
   push:
-    # Reference: https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#onpushpull_requestpaths
-    paths:
-      - 'geopetl/tests/test_postgis.py'
-      - 'geopetl/tests/tests_config.py'
-      - 'geopetl/tests/conftest.py'
-      - 'geopetl/tests/fixtures_data/**'
-      # Trigger on changes to relevant geopetl code-base
-      - 'geopetl/postgis.py'
-      - 'geopetl/carto.py'
-      - 'geopetl/base.py'
-      - 'geopetl/__init__.py'
-      - 'geopetl/util.py'
-      - 'geopetl/**'
-      # changes to this workflow file itself.
-      - '.github/workflows/postgis_tests.yml'
-      # changes to the geopetl setup.py
-      - 'setup.py'
-      # changes to postgis-specific docker stuff
-      - 'postgis-docker-compose.yml'
-      - 'postgis_Dockerfile'
-      # changes to the docker entrypoint.sh script that runs our pytest commands
-      - 'scripts/postgis_tests_entrypoint.sh'
-#    branches:
-#      - master
-#      - dev-pass
-  pull_request:
     branches:
-      - master
-      - dev-pass
-
+      - '**'
 
 jobs:
   build:
