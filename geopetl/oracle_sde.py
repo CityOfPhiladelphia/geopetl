@@ -1034,8 +1034,7 @@ class OracleSdeTable(object):
                 try:
                     self.db.cursor.executemany(None, val_rows, batcherrors=False)
                 except Exception as e:
-                    print(f'Error trying to write. Printing first item from val_rows: {val_rows[0]}')
-                    print(f'Length of val_rows {len(val_rows)}')
+                    print(f'Error trying to write. Length of val_rows {len(val_rows)}')
                     print(f'Prepare statement used for executemany: {prepare_stmt}')
                     raise e
                 self.db.dbo.commit()
@@ -1047,8 +1046,7 @@ class OracleSdeTable(object):
             try:
                 self.db.cursor.executemany(None, val_rows, batcherrors=False)
             except Exception as e:
-                print(f'Error trying to write. Printing first item from val_rows: {val_rows[0]}')
-                print(f'Length of val_rows {len(val_rows)}')
+                print(f'Error trying to write. Length of val_rows {len(val_rows)}')
                 print(f'Prepare statement used for executemany: {prepare_stmt}')
                 raise e
             er = self.db.cursor.getbatcherrors()
