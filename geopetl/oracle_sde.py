@@ -740,7 +740,11 @@ class OracleSdeTable(object):
             # var.setvalue(0, val)
             # val = var
         elif type_ == 'timestamp without time zone':
-            pass
+            if isinstance(val, datetime):
+                val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
+            elif isinstance(val, str):
+                val = dt_parser().parse(val)
+                val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
@@ -996,7 +1000,7 @@ class OracleSdeTable(object):
             stmt_fields_joined, placeholders_joined)
         self.db.cursor.prepare(stmt)
 
-        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields}
+        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields if x != self.objectid_field}
         # db_types_filtered.pop('ID')
 
         #Don't fail on setinputsizes error
