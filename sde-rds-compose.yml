@@ -7,12 +7,12 @@ services:
   geopetl:
     build:
       context: .
-      dockerfile: postgis_sde_rds_Dockerfile
+      dockerfile: sde_rds_Dockerfile
     container_name: geopetl
     # Pass connection parameters for both databases to geopetl
     # so our pytest scripts can connect to both.
     environment:
-      - POSTGISSDE_PASSWORD=secretpassword
-      - POSTGISSDE_HOST=rds-postgis-tester2.cfuoybzycpox.us-east-1.rds.amazonaws.com
-      - POSTGISSDE_USER=test_user
-      - POSTGISSDE_DB=rds_tester
+      - PASSWORD=secretpassword
+      - HOST=rds-postgis-tester2.cfuoybzycpox.us-east-1.rds.amazonaws.com
+      - USER=test_user
+      - DB=rds_tester

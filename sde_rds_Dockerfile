@@ -67,9 +67,9 @@ RUN python3 -m compileall ./geopetl
 # Install geopetl via setup.py
 RUN pip3 install -e .
 
-COPY scripts/postgis_sde_rds_tests_entrypoint.sh /usr/local/bin/postgis_sde_rds_tests_entrypoint.sh
-RUN chmod +x /usr/local/bin/postgis_sde_rds_tests_entrypoint.sh
+COPY scripts/sde_rds_tests_entrypoint.sh /usr/local/bin/sde_rds_tests_entrypoint.sh
+RUN chmod +x /usr/local/bin/sde_rds_tests_entrypoint.sh
 
 #ENTRYPOINT ["postgissde_tests_entrypoint.sh", "$POSTGISSDE_PASSWORD", "$POSTGISSDE_USER", "$POSTGISSDE_DB", "$POSTGISSDE_HOST", "$POSTGISSDE_USER", "$POSTGISSDE_DB", "$POSTGISSDE_HOST"]
 
-ENTRYPOINT ["postgis_sde_rds_tests_entrypoint.sh", "$POSTGISSDE_PASSWORD", "$POSTGISSDE_USER", "$POSTGISSDE_DB", "$POSTGISSDE_HOST"]
+ENTRYPOINT ["sde_rds_tests_entrypoint.sh", "$PASSWORD", "$USER", "$DB", "$HOST"]
