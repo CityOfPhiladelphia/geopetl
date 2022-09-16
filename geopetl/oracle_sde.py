@@ -996,9 +996,9 @@ class OracleSdeTable(object):
         # Prepare statement
         placeholders_joined = ', '.join(placeholders)
         stmt_fields_joined = ', '.join(stmt_fields)
-        stmt = "INSERT INTO {} ({}) VALUES ({})".format(self._name_with_schema, \
+        prepare_stmt = "INSERT INTO {} ({}) VALUES ({})".format(self._name_with_schema, \
             stmt_fields_joined, placeholders_joined)
-        self.db.cursor.prepare(stmt)
+        self.db.cursor.prepare(prepare_stmt)
 
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields if x != self.objectid_field}
         # db_types_filtered.pop('ID')
@@ -1011,7 +1011,7 @@ class OracleSdeTable(object):
 
         # Make list of value lists
         val_rows = []
-        cur_stmt = stmt
+        cur_stmt = prepare_stmt
         # use Record object for convenience
         rows = rows.records()
 
@@ -1035,14 +1035,24 @@ class OracleSdeTable(object):
 
             if i % buffer_size == 0:
                 # execute
-                self.db.cursor.executemany(None, val_rows, batcherrors=False)
+                try:
+                    self.db.cursor.executemany(None, val_rows, batcherrors=False)
+                except Exception as e:
+                    print(f'Error trying to write. Length of val_rows {len(val_rows)}')
+                    print(f'Prepare statement used for executemany: {prepare_stmt}')
+                    raise e
                 self.db.dbo.commit()
 
                 val_rows = []
-                cur_stmt = stmt
+                cur_stmt = prepare_stmt
         # if there are remaining rows, write them:
         if val_rows:
-            self.db.cursor.executemany(None, val_rows, batcherrors=False)
+            try:
+                self.db.cursor.executemany(None, val_rows, batcherrors=False)
+            except Exception as e:
+                print(f'Error trying to write. Length of val_rows {len(val_rows)}')
+                print(f'Prepare statement used for executemany: {prepare_stmt}')
+                raise e
             er = self.db.cursor.getbatcherrors()
             self.db.dbo.commit()
 
@@ -1092,7 +1102,6 @@ class OracleSdeQuery(SpatialQuery):
         """Proxy iteration to core petl."""
         # form sql statement if sql isn't provided on fct call
         # if there is a sql arg provided
-        print(1092)
         if self.sql:
             stmt = self.sql
         # if no sql arg, create qry
