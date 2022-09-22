@@ -515,6 +515,14 @@ class OracleSdeTable(object):
         '''.format(self._owner.upper(), self.name.upper())
         self.db.cursor.execute(row_count_stmt)
         row_count = self.db.cursor.fetchone()[0]
+
+        check_registration_stmt = f"SELECT REGISTRATION_ID FROM SDE.TABLE_REGISTRY WHERE OWNER = '{self._owner.upper()}' AND TABLE_NAME = '{self.name.upper()}'"
+        self.db.cursor.execute(check_registration_stmt)
+        reg_id = self.db.cursor.fetchone()
+
+        if not reg_id:
+            raise AssertionError('Table is not registered with SDE! To write with shapes it needs to be registered.')
+
         # If the table isn't empty, get geom types from sde.st_geometrytype()
         if row_count > 0:
             stmt = '''select distinct sde.st_geometrytype({geom_field}) from {owner}.{table_name} WHERE SDE.ST_ISEMPTY({geom_field}) = 0 '''.format(geom_field=self.geom_field, owner=self._owner.upper(), table_name=self.name.upper())
