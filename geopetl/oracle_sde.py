@@ -712,7 +712,7 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if val is None:
+        if val is None or val == '':
             return None
         elif val == 0:
             return 0
@@ -1155,6 +1155,9 @@ class OracleSdeQuery(SpatialQuery):
         return self.table.srid
 
     def stmt(self):
+        # handle custom sql stmt
+        if self.sql:
+            return self.sql
         # handle fields
         fields = self.fields
         if fields is None:
