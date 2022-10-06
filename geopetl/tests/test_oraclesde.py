@@ -72,7 +72,7 @@ def create_test_tables(srid, oraclesde_db,schema):
                  fields.get('numeric_field_name'): '2132134342',fields.get('timezone_field_name'): '2014-04-11T10:23:54+05:00',
                  fields.get('shape_field_name'): 'POINT(2704440.74884506 251030.69241638)',fields.get('date_field_name'): ''},
                 {fields.get('text_field_name'): 'po{}tato', fields.get('timestamp_field_name'): '2019-05-14 15:53:53.522000', 
-                 fields.get('numeric_field_name'): '11',fields.get('timezone_field_name'): '2021-08-23T10:23:54-02:00',
+                 fields.get('numeric_field_name'): '0',fields.get('timezone_field_name'): '2021-08-23T10:23:54-02:00',
                  fields.get('shape_field_name'): 'POINT(2674410.98607007 233770.15508713)',fields.get('date_field_name'): '2008-08-11 00:00:00'},
                 {fields.get('text_field_name'): 'v[]im', fields.get('timestamp_field_name'): '2019-05-14 15:53:53.522000', 
                  fields.get('numeric_field_name'): '1353',fields.get('timezone_field_name'): '2015-03-21T10:23:54-01:00', 
@@ -81,7 +81,7 @@ def create_test_tables(srid, oraclesde_db,schema):
                  fields.get('numeric_field_name'): '49053',fields.get('timezone_field_name'): '2020-06-12T10:23:54+03:00',
                  fields.get('shape_field_name'): 'POINT(2675096.08410931 231074.64210546)',fields.get('date_field_name'): '2003-11-23 00:00:00'},
                 {fields.get('text_field_name'): 'y"ea::h', fields.get('timestamp_field_name'): '2018-03-30 15:10:06', 
-                 fields.get('numeric_field_name'): '123',fields.get('timezone_field_name'): '2032-04-30T10:23:54-03:00', 
+                 fields.get('numeric_field_name'): '-123',fields.get('timezone_field_name'): '2032-04-30T10:23:54-03:00', 
                  fields.get('shape_field_name'): 'POINT(2694560.19708389 244942.81679688)',fields.get('date_field_name'): '2020-04-01 00:00:00'},
                 {fields.get('text_field_name'): "qwe'qeqdqw", fields.get('timestamp_field_name'): '2019-01-05 10:53:52', 
                  fields.get('numeric_field_name'): '456',fields.get('timezone_field_name'): '2018-12-25T10:23:54+00:00', 
@@ -214,6 +214,12 @@ def assert_data_method(csv_data1, db_data1, srid1, schema=None, table=None, fiel
             csv_val = csv_dict.get(key)
             if key ==  fields.get('object_id_field_name'):
                 continue
+            if key == fields.get('numericfield'):
+                if csv_val == '':
+                    assert db_val is None
+                else:
+                    assert csv_val == db_val
+            
             elif key == fields.get('shape_field_name'):
                 if csv_val is None or csv_val == 'POINT EMPTY' or csv_val == '':
                     assert (db_val is None  or  (str(db_val) == 'POINT EMPTY' or str(db_val) == 'POLYGON EMPTY') or str(db_val) == 'LINESTRING EMPTY')

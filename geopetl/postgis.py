@@ -6,7 +6,6 @@ from petl.util.base import Table
 from petl.io.db_utils import _quote
 from geopetl.util import parse_db_url
 import json
-from pytz import timezone
 from dateutil import parser as dt_parser
 
 aw = 'test2'
@@ -639,10 +638,10 @@ class PostgisTable(object):
                 val = ''
             val = "'{}'".format(val)
         elif type_ == 'num':
-            if val:
-                val = str(val)
-            else:
+            if val is None or val =='':
                 val = 'NULL'
+            else:
+                val = str(val)
         elif type_ == 'date':
             # TODO dates should be converted to real dates, not strings
             if val:
@@ -772,9 +771,6 @@ class PostgisTable(object):
         if objectid_field and objectid_field not in fields:
             fields = fields + (objectid_field,)
             #local_objectID_flag = True
-        else:
-            print('we have an object field already!!')
-
 
 
 

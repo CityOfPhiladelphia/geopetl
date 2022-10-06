@@ -46,10 +46,10 @@ def load_point_table(postgis,schema, srid):
     (2, 'ab#$%c', '2019-05-15 15:53:53.522000', 12, TIMESTAMPTZ '2011-11-22 10:23:54-04' , ST_GeomFromText('POINT(2712205.71100539 259685.27615705)', {srid}), ' 2005-01-01'),
     (3, 'd!@^&*?-=+ef', TIMESTAMP '2019-05-14 15:53:53.522000' , 1, NULL, ST_GeomFromText('POINT(2672818.51681407 231921.15681663)', {srid}), ' 2015-03-01'),
     (4, 'fij()dcfwef', TIMESTAMP '2019-05-14 15:53:53.522000' , 2132134342, TIMESTAMPTZ '2014-04-11 10:23:54+05' , ST_GeomFromText('POINT(2704440.74884506 251030.69241638)', {srid}), NULL), 
-    (5, 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 11, TIMESTAMPTZ '2021-08-23 10:23:54-02' , ST_GeomFromText('POINT(2674410.98607007 233770.15508713)', {srid}), ' 2008-08-11'),
+    (5, 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 0, TIMESTAMPTZ '2021-08-23 10:23:54-02' , ST_GeomFromText('POINT(2674410.98607007 233770.15508713)', {srid}), ' 2008-08-11'),
     (6, 'v[]im', TIMESTAMP '2019-05-14 15:53:53.522000' , 1353, TIMESTAMPTZ '2015-03-21 10:23:54-01' , ST_GeomFromText('POINT(2694352.72374555 250468.93894671)', {srid}), ' 2005-09-07'), 
     (7, 'he_llo', TIMESTAMP '2019-05-14 15:53:53.522000' , 49053, TIMESTAMPTZ '2020-06-12 10:23:54+03' , ST_GeomFromText('POINT(2675096.08410931 231074.64210546)', {srid}), ' 2003-11-23'), 
-    (8, 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06' , 123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , ST_GeomFromText('POINT(2694560.19708389 244942.81679688)', {srid}), ' 2020-04-01'),
+    (8, 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06' , -123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , ST_GeomFromText('POINT(2694560.19708389 244942.81679688)', {srid}), ' 2020-04-01'),
     (9, 'qwe''qeqdqw', TIMESTAMP '2019-01-05 10:53:52' , 456, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GeomFromText('POINT(2680866.32552156 241245.62340388)', {srid}), ' 2018-07-19'), 
     (10, 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GeomFromText('POINT(2692140.13630722 231409.33008438)', {srid}), ' 2017-06-26'), 
     (11, '', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GeomFromText('POINT EMPTY', {srid}), ' 2017-06-26')'''.format(
@@ -201,6 +201,11 @@ def assert_data_method(csv_data1, db_data1, srid1, field=None):
                     pg_geom = geom_parser(str(csv_val), srid1)
                     csv_geom = geom_parser(str(db_val), srid1)
                     assert csv_geom == pg_geom
+            elif key == fields.get('numericfield'):
+                if csv_val == '':
+                    assert db_val is None
+                else:
+                    assert csv_val == db_val
             elif key == fields.get('object_id_field_name'):
                 continue
             elif key == fields.get('timezone_field_name'):

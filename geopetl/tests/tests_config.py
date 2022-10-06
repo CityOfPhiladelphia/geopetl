@@ -31,15 +31,8 @@ fields= {
 
 def geom_parser(geom_wkt,srid):
     geom_wkt = str(geom_wkt)
-    print('parsing geom wkt ', geom_wkt)
     geom_type = re.findall("[A-Z]{1,12}", geom_wkt)[0]
-    print('geom_type ',geom_type)
-
     coordinates = re.findall(r"[-+]?\d*\.\d+|\d+", geom_wkt)
-    print('coordinates ',coordinates )
-    print('srid ',srid )
-    print(type(srid) )
-    print('precision ', srid_precision.get(srid))
     coordinates_list = [float("%.{}f".format(srid_precision.get(srid)) % float(coords)) for coords in coordinates]
     return geom_type, coordinates_list
 

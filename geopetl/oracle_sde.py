@@ -712,7 +712,7 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if val is None:
+        if val is None or val == '':
             return None
         elif val == 0:
             return 0
