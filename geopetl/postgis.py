@@ -512,14 +512,17 @@ class PostgisTable(object):
                     self._geom_field = None
                     print("Dataset appears to be non-geometric, returning geom_field as None.")
             elif self.db.is_postgis_enabled is True:
-                f = [x for x in self.metadata if x['type'] == 'geometry']
-                if len(f) == 0:
+                stmt = '''select f_geometry_column as column_name from geometry_columns 
+                                   where f_table_name = '{}' and f_table_schema = '{}' '''.format(self.name, self.schema)
+                target_table_shape_fields = self.db.fetch(stmt)[0]
+                print('target_table_shape_fields ', target_table_shape_fields)
+                if len(target_table_shape_fields) == 0:
                     self._geom_field = None
                     print("Dataset appears to be non-geometric, returning geom_field as None.")
-                elif len(f) > 1:
+                elif len(target_table_shape_fields) > 1:
                     raise LookupError('Multiple geometry fields')
                 else:
-                    self._geom_field = f[0]['name']
+                    self._geom_field = target_table_shape_fields[0]['name']
                     print(f"Geometric column name is: '{self._geom_field}'")
             else:
                 raise Exception('DB is not SDE or Postgis enabled??')
