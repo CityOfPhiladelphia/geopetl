@@ -485,13 +485,15 @@ class PostgisTable(object):
                 else:
                     self._geom_field = None
             else:
-                f = [x for x in self.metadata if x['type'] == 'geometry']
-                if len(f) == 0:
+                stmt = '''select f_geometry_column as column_name from geometry_columns 
+                    where f_table_name = '{}' and f_table_schema = '{}' '''.format(self.name, self.schema)
+                target_table_shape_fields = self.db.fetch(stmt)
+                if len(target_table_shape_fields) == 0:
                     self._geom_field = None
-                elif len(f) > 1:
+                elif len(target_table_shape_fields) > 1:
                     raise LookupError('Multiple geometry fields')
                 else:
-                    self._geom_field = f[0]['name']
+                    self._geom_field = target_table_shape_fields[0]['name']
         return self._geom_field
 
     @property
