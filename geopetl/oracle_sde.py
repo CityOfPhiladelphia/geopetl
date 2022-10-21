@@ -712,8 +712,11 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if not val: 
+        if val is None or val == '':
             return None
+        elif val == 0:
+            return 0
+
         # TODO handle types. Seems to be working without this for most cases.
         if type_ == 'text':
             pass
@@ -1048,6 +1051,8 @@ class OracleSdeTable(object):
                 except Exception as e:
                     print(f'Error trying to write. Length of val_rows {len(val_rows)}')
                     print(f'Prepare statement used for executemany: {prepare_stmt}')
+                    err = self.db.cursor.getbatcherrors()
+                    print(err)
                     raise e
                 self.db.dbo.commit()
 
@@ -1060,8 +1065,9 @@ class OracleSdeTable(object):
             except Exception as e:
                 print(f'Error trying to write. Length of val_rows {len(val_rows)}')
                 print(f'Prepare statement used for executemany: {prepare_stmt}')
+                err = self.db.cursor.getbatcherrors()
+                print(err)
                 raise e
-            er = self.db.cursor.getbatcherrors()
             self.db.dbo.commit()
 
     def truncate(self, cascade=False):
