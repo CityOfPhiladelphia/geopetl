@@ -1149,6 +1149,9 @@ class OracleSdeQuery(SpatialQuery):
         return self.table.srid
 
     def stmt(self):
+        # handle custom sql stmt
+        if self.sql:
+            return self.sql
         # handle fields
         fields = self.fields
         if fields is None:
