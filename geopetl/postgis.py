@@ -505,20 +505,22 @@ class PostgisTable(object):
                         self.name, self.schema)
                     r = self.db.fetch(stmt)
                 if r:
-                    self._geom_field = r[0].pop('column_name')
+                    self._geom_field = r.pop('column_name')
                     print(f"Geometric column name is: '{self._geom_field}'")
                 else:
                     self._geom_field = None
                     print("Dataset appears to be non-geometric, returning geom_field as None.")
             elif self.db.is_postgis_enabled is True:
-                f = [x for x in self.metadata if x['type'] == 'geometry']
-                if len(f) == 0:
+                stmt = '''select f_geometry_column as column_name from geometry_columns 
+                                   where f_table_name = '{}' and f_table_schema = '{}' '''.format(self.name, self.schema)
+                target_table_shape_fields = self.db.fetch(stmt)[0]
+                if len(target_table_shape_fields) == 0:
                     self._geom_field = None
                     print("Dataset appears to be non-geometric, returning geom_field as None.")
-                elif len(f) > 1:
+                elif len(target_table_shape_fields) > 1:
                     raise LookupError('Multiple geometry fields')
                 else:
-                    self._geom_field = f[0]['name']
+                    self._geom_field = target_table_shape_fields.pop('column_name')
                     print(f"Geometric column name is: '{self._geom_field}'")
             else:
                 raise Exception('DB is not SDE or Postgis enabled??')
@@ -526,7 +528,6 @@ class PostgisTable(object):
 
     @property
     def objectid_field(self):
-        #
         f = [x['name'].lower() for x in self.metadata if 'objectid' in x['name']]
         if len(f) == 0:
             return None
@@ -727,31 +728,16 @@ class PostgisTable(object):
 
         # Get fields from the row because some fields from self.fields may be
         # optional, such as autoincrementing integers.
-        # raise
-        #fields = rows.header()
-        #fields from local data
         fields = rows[0]
         geom_field = self.geom_field
         objectid_field = self.objectid_field
 
-        # convert '' values to None in geom column
-        rows_temp = etl.convert(rows, geom_field, lambda v: None, where = lambda r: r.shape == '')
-        # select rows where shape col is not none
-        rowsnotnone = rows_temp.selectnotnone(geom_field)
-        # convert rows to records (hybrid objects that can behave like dicts)
-        rows = etl.records(rows)
         # convert rows to records (hybrid objects that can behave like dicts))
-        rows2 = etl.records(rowsnotnone)
         # Get geom metadata
         if geom_field:
-            # if first geom val fill with empty string (creates error if geom val is multigeom)
-            first_geom_val = rows2[0][geom_field] or ''
+            rowsnotnone = rows.selectnotnone(geom_field).records()
+            first_geom_val = rowsnotnone[0][geom_field] or ''
             srid = from_srid or self.srid
-            #row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
-            #    if geom_field and rows[0][geom_field] else None
-            # if rows[0][geom_field]:
-            #     match = re.match('[A-Z]+', rows[0][geom_field])
-            #     row_geom_type = match.group() if match else None
             match = re.match('[A-Z]+', first_geom_val)
             row_geom_type = match.group() if match else None
 
@@ -764,17 +750,13 @@ class PostgisTable(object):
             else:
                 multi_geom = False
 
-
-
-        #local_objectID_flag = False
         #if PG objectid_field not in local data fields tuple, append to local data fields
         if objectid_field and objectid_field not in fields:
             fields = fields + (objectid_field,)
             #local_objectID_flag = True
 
 
-
-        # Make a map of non geom field name => type
+        # Make a map field name => type
         type_map = OrderedDict()
         for field in fields:
             try:
@@ -786,6 +768,8 @@ class PostgisTable(object):
         fields_joined = ', '.join(fields)
         stmt = "INSERT INTO {} ({}) VALUES ".format('.'.join([self.schema, self.name]), fields_joined)
 
+
+        rows = etl.records(rows)
         len_rows = len(rows)
         if buffer_size is None or len_rows < buffer_size:
             iterations = 1
