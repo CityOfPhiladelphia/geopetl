@@ -54,7 +54,7 @@ echo "##########################################"
 echo ""
 
 if [[ "$SDE_EXIT_CODE" -ne "0" ]]; then
-    echo "Errors encountered in tests."
+    echo "Errors encountered in 4326 tests."
     exit 1
 fi
 
@@ -68,5 +68,10 @@ pytest -vvv -ra --disable-warnings --showlocals --tb=native geopetl/tests/test_p
   --host=$SDE_HOST \
   --port=5432 \
   --schema=$SDE_USER \
-  --srid=2272
+  --srid=2272\
+
+if [[ "$SDE_EXIT_CODE" -ne "0" ]]; then
+    echo "Errors encountered in 2272 tests."
+    exit 1
+fi
 

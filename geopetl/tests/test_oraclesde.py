@@ -1,7 +1,6 @@
 import pytest
 import petl as etl
 import cx_Oracle
-#from geopetl.tests.db_config import oracleDBcredentials
 from geopetl.oracle_sde import OracleSdeDatabase, OracleSdeTable
 import csv
 import os
@@ -43,6 +42,7 @@ def create_test_tables(srid, oraclesde_db,schema):
                                 NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'
                                 NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'
      ''')
+
     insert_stmt = '''INSERT INTO {schema}.{point_table_name}_{srid} 
     ({text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}, {objectid_field_name}) 
     VALUES 
@@ -65,15 +65,19 @@ def create_test_tables(srid, oraclesde_db,schema):
                 {fields.get('text_field_name'): 'ab#$%c', fields.get('timestamp_field_name'): '2019-05-15 15:53:53.522000',
                  fields.get('numeric_field_name'): '12', fields.get('timezone_field_name'): '2011-11-22T10:23:54-04:00',
                  fields.get('shape_field_name'): 'POINT(2712205.71100539 259685.27615705)', fields.get('date_field_name'): '2005-01-01 00:00:00'},
+
                 {fields.get('text_field_name'): 'd!@^&*?-=+ef', fields.get('timestamp_field_name'): '2019-05-14 15:53:53.522000', 
                  fields.get('numeric_field_name'): '1', fields.get('timezone_field_name'): '',
                  fields.get('shape_field_name'): 'POINT(2672818.51681407 231921.15681663)',fields.get('date_field_name'): '2015-03-01 00:00:00'},
+
                 {fields.get('text_field_name'): 'fij()dcfwef', fields.get('timestamp_field_name'): '2019-05-14 15:53:53.522000', 
                  fields.get('numeric_field_name'): '2132134342',fields.get('timezone_field_name'): '2014-04-11T10:23:54+05:00',
                  fields.get('shape_field_name'): 'POINT(2704440.74884506 251030.69241638)',fields.get('date_field_name'): ''},
+
                 {fields.get('text_field_name'): 'po{}tato', fields.get('timestamp_field_name'): '2019-05-14 15:53:53.522000', 
                  fields.get('numeric_field_name'): '0',fields.get('timezone_field_name'): '2021-08-23T10:23:54-02:00',
                  fields.get('shape_field_name'): 'POINT(2674410.98607007 233770.15508713)',fields.get('date_field_name'): '2008-08-11 00:00:00'},
+                
                 {fields.get('text_field_name'): 'v[]im', fields.get('timestamp_field_name'): '2019-05-14 15:53:53.522000', 
                  fields.get('numeric_field_name'): '1353',fields.get('timezone_field_name'): '2015-03-21T10:23:54-01:00', 
                  fields.get('shape_field_name'): 'POINT(2694352.72374555 250468.93894671)', fields.get('date_field_name'): '2005-09-07 00:00:00'},
@@ -93,8 +97,8 @@ def create_test_tables(srid, oraclesde_db,schema):
                  fields.get('numeric_field_name'): '5654',fields.get('timezone_field_name'): '2018-12-25T10:23:54+00:00',
                  fields.get('shape_field_name'): 'POINT EMPTY', fields.get('date_field_name'): '2017-06-26 00:00:00'}]
     cursor.executemany(None, val_rows, batcherrors=False)
-
     connection.commit()
+
 
 
 @pytest.fixture
@@ -333,6 +337,10 @@ def test_reading_polygon_table(oraclesde_db, schema,srid, create_polygon_table):
     db_data = etl.fromoraclesde(dbo=oraclesde_db, table_name='{}.{}_{}'.format(schema, polygon_table_name,srid))
     assert_data_method(csv_data, db_data, srid)
 
+def test_reading_materialized_view( oraclesde_db, schema,srid,csv_data): #create_point_view,
+    db_data1 = etl.fromoraclesde(dbo=oraclesde_db, table_name='{schema}.{table}_view'.format(schema=schema, table=point_table_name))
+    assert_data_method(csv_data.cutout(fields.get('shape_field_name')), db_data1, srid)
+
 
 ############################ WRITING TESTS #######################################
 
@@ -403,6 +411,28 @@ def test_wrting_data_no_id(create_test_table_noid,csv_data,schema, db_data,oracl
         )
     )
     assert_data_method(csv_data1, cursor, srid,schema=schema, table=point_table_name)
+
+
+def test_write_nongeom_table(oraclesde_db, csv_data, schema,srid): #create_non_geom_table
+    csv_data = csv_data.cutout('shape')
+    csv_data.tooraclesde(oraclesde_db, '{}.{}_ng'.format(schema,point_table_name)) 
+    cursor = oraclesde_db.cursor()
+    cursor.execute(
+        '''select {objectid_field_name} as "{objectid_field_name}",{text_field_name} as "{text_field_name}",
+        {numeric_field_name} as "{numeric_field_name}",{timestamp_field_name} as "{timestamp_field_name}",
+        {date_field_name} as "{date_field_name}",to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as "{timezone_field_name}" 
+        from {schema}.{point_table_name}_ng'''.format(
+            schema=schema,
+            point_table_name=point_table_name,
+            objectid_field_name=fields.get('object_id_field_name'),
+            text_field_name=fields.get('text_field_name'),
+            numeric_field_name=fields.get('numeric_field_name'),
+            timestamp_field_name=fields.get('timestamp_field_name'),
+            date_field_name=fields.get('date_field_name'),
+            timezone_field_name=fields.get('timezone_field_name')
+            )
+    )
+    assert_data_method(csv_data, cursor, srid)
 
 
 def test_polygon_assertion_write(oraclesde_db, schema,srid, create_polygon_table):

@@ -354,7 +354,10 @@ FIELD_TYPE_MAP = {
     'date':                     'date',
     'user-defined':             'geometry',
     'st_geometry':              'geometry',
+    'geometry':                 'geometry',     # postgis materialized view returns type geometry instead of user-defined or st_geometry
+    'st_point':                 'geometry',     # sde mat view?
     'timestamp with time zone': 'timestamptz',
+    'timestamptz':              'timestamptz',  # postgis materialized view returns type timestamptz instead of timestamp with time zone
     'timestamp without time zone': 'timestamp',
     # materialized views don't specify if they use a timezone, this could be problematic.
     'timestamp':                'timestamp',
@@ -369,11 +372,9 @@ FIELD_TYPE_MAP = {
 class PostgisTable(object):
 
     _srid = None
-    _geom_field = None
-
     def __init__(self, db, name):
         self.db = db
-
+        
         # Check for a schema
         if '.' in name:
             self.schema, self.name = name.split('.')
@@ -384,6 +385,8 @@ class PostgisTable(object):
         else:
             self.schema = self.db.user
             self.name = name
+        _geom_field = self.geom_field
+
 
     def __str__(self):
         return 'PostgisTable: {}'.format(self.name)
@@ -409,8 +412,8 @@ class PostgisTable(object):
             WHERE relname='{}'
             AND n.nspname='{}';
             """.format(self.name,self.schema)
-        #relkind = self.db.fetch(stmt)[0]
-        relkind = self.db.fetch(stmt)[0]['relkind']
+        res = self.db.fetch(stmt)
+        relkind = res[0]['relkind']
         if type_map[relkind] in ['table', 'materialized_view', 'view']:
             return type_map[relkind]
         else:
@@ -458,6 +461,7 @@ class PostgisTable(object):
             field['type'] = FIELD_TYPE_MAP[field['type'].lower()]
         return fields
 
+
     @property
     def name_with_schema(self):
         """Returns the table name prepended with the schema name, prepared for
@@ -475,54 +479,51 @@ class PostgisTable(object):
 
     @property
     def geom_field(self):
-        if self._geom_field is None:
-            # If we're a view, check for a shape field this way first, as normal methods won't work.
+        gf=None
+        if self.db.is_sde_enabled:
             if self.database_object_type == 'view' or self.database_object_type == 'materialized_view':
-                stmt = f'''
-                select column_name from information_schema.columns
-                    where table_name = '{self.name}' and (data_type = 'USER-DEFINED' or data_type = 'ST_GEOMETRY')
-                '''
-                r = self.db.fetch(stmt)
-                if r:
-                    if len(r) == 1 and r[0]:
-                        self._geom_field = r[0]['column_name']
-                        print(f"Geometric column name is: '{self._geom_field}'")
-                        return self._geom_field
-                    elif len(r) > 1:
-                        raise LookupError('Multiple geometry fields')
-                # If it's an empty list, then the mv is non-geometric
-                if not r:
-                    self._geom_field = None
-                    print("Dataset appears to be non-geometric, returning geom_field as None.")
-                    return self._geom_field 
-
-            if self.db.is_sde_enabled is True:
-                stmt = "select column_name from sde.st_geometry_columns where table_name = '{}'".format(self.name)
-                try:
-                    r = self.db.fetch(stmt)
-                except:
-                    stmt = "select f_geometry_column as column_name from geometry_columns where f_table_name = '{}' and f_table_schema = '{}'".format(
-                        self.name, self.schema)
-                    r = self.db.fetch(stmt)
-                if r:
-                    self._geom_field = r[0].pop('column_name')
-                    print(f"Geometric column name is: '{self._geom_field}'")
-                else:
-                    self._geom_field = None
-                    print("Dataset appears to be non-geometric, returning geom_field as None.")
-            elif self.db.is_postgis_enabled is True:
-                f = [x for x in self.metadata if x['type'] == 'geometry']
-                if len(f) == 0:
-                    self._geom_field = None
-                    print("Dataset appears to be non-geometric, returning geom_field as None.")
-                elif len(f) > 1:
-                    raise LookupError('Multiple geometry fields')
-                else:
-                    self._geom_field = f[0]['name']
-                    print(f"Geometric column name is: '{self._geom_field}'")
+                stmt = '''select
+                        attr.attname as column_name,
+                        trim(leading '_' from tp.typname) as datatype
+                        from pg_catalog.pg_attribute as attr
+                        join pg_catalog.pg_class as cls on cls.oid = attr.attrelid
+                        join pg_catalog.pg_namespace as ns on ns.oid = cls.relnamespace
+                        join pg_catalog.pg_type as tp on tp.typelem = attr.atttypid
+                        where 
+                        ns.nspname = '{schema}' and
+                        cls.relname = '{table}' and 
+                        trim(leading '_' from tp.typname) = 'st_point' and
+                        not attr.attisdropped and 
+                        cast(tp.typanalyze as text) = 'array_typanalyze' and 
+                        attr.attnum > 0'''.format(schema=self.schema, table=self.name)
+                target_table_shape_fields = self.db.fetch(stmt)
+                gf = target_table_shape_fields
+            # if object is not view or materialized view
             else:
-                raise Exception('DB is not SDE or Postgis enabled??')
-        return self._geom_field
+                stmt = f''' select column_name from information_schema.columns
+                            where table_name = '{self.name}' and (data_type = 'USER-DEFINED' or data_type = 'ST_GEOMETRY')'''
+                target_table_shape_fields = self.db.fetch(stmt)
+
+        elif self.db.is_postgis_enabled: 
+            # this query should work for both postgis mview and table
+            stmt = f'''select f_geometry_column as column_name from geometry_columns 
+                                   where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
+            target_table_shape_fields = self.db.fetch(stmt)
+
+        # if we find shape fields in target tables/view/materialized vies
+        if len(target_table_shape_fields) == 0:
+            gf = None
+            print("Dataset appears to be non-geometric, returning geom_field as None.")
+        elif len(target_table_shape_fields) == 1:
+            gf = target_table_shape_fields[0].pop('column_name')
+        elif len(target_table_shape_fields) >1:
+            raise LookupError('Multiple geometry fields')
+        else:
+            raise Exception('DB is not SDE or Postgis enabled')
+        
+        return gf
+
+
 
     @property
     def objectid_field(self):
@@ -634,9 +635,9 @@ class PostgisTable(object):
                 val = str(val)
                 # escape single quotes
                 val = val.replace("'", "''")
+                val = "'{}'".format(val)
             else:
-                val = ''
-            val = "'{}'".format(val)
+                val = 'NULL'
         elif type_ == 'num':
             if val is None or val =='':
                 val = 'NULL'
@@ -727,33 +728,37 @@ class PostgisTable(object):
 
         # Get fields from the row because some fields from self.fields may be
         # optional, such as autoincrementing integers.
-        # raise
-        #fields = rows.header()
         #fields from local data
         fields = rows[0]
         geom_field = self.geom_field
         objectid_field = self.objectid_field
 
-        # convert '' values to None in geom column
-        rows_temp = etl.convert(rows, geom_field, lambda v: None, where = lambda r: r.shape == '')
-        # select rows where shape col is not none
-        rowsnotnone = rows_temp.selectnotnone(geom_field)
+        
         # convert rows to records (hybrid objects that can behave like dicts)
-        rows = etl.records(rows)
-        # convert rows to records (hybrid objects that can behave like dicts))
-        rows2 = etl.records(rowsnotnone)
+        #rows = etl.records(rows)
+        # # convert rows to records (hybrid objects that can behave like dicts))
+        # rows2 = etl.records(rowsnotnone)
+
+        #rows = etl.records(rows)
         # Get geom metadata
         if geom_field:
+            # convert '' values to None in geom column
+            rows_temp = etl.convert(rows, geom_field, lambda v: None, where = lambda r: r.shape == '')
+            # select rows where shape col is not none
+            rowsnotnone = rows_temp.selectnotnone(geom_field)
+            # convert rows to records (hybrid objects that can behave like dicts)
+            rows = etl.records(rows)
+           
+            # convert rows to records (hybrid objects that can behave like dicts))
+            rows2 = etl.records(rowsnotnone)
+
             # if first geom val fill with empty string (creates error if geom val is multigeom)
             first_geom_val = rows2[0][geom_field] or ''
             srid = from_srid or self.srid
-            #row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
-            #    if geom_field and rows[0][geom_field] else None
-            # if rows[0][geom_field]:
-            #     match = re.match('[A-Z]+', rows[0][geom_field])
-            #     row_geom_type = match.group() if match else None
             match = re.match('[A-Z]+', first_geom_val)
             row_geom_type = match.group() if match else None
+        else:
+            rows = etl.records(rows)
 
         # Do we need to cast the geometry to a MULTI type? (Assuming all rows
         # have the same geom type.)
@@ -766,7 +771,6 @@ class PostgisTable(object):
 
 
 
-        #local_objectID_flag = False
         #if PG objectid_field not in local data fields tuple, append to local data fields
         if objectid_field and objectid_field not in fields:
             fields = fields + (objectid_field,)
@@ -848,7 +852,6 @@ class PostgisTable(object):
 
     def truncate(self, cascade=False):
         """Drop all rows."""
-
         name = self.name
         schema = self.schema
         # RESTART IDENTITY resets sequence generators.

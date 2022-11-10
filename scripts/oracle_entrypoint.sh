@@ -27,15 +27,14 @@ pytest -vvv -ra --disable-warnings --showlocals --tb=native /geopetl/tests/test_
   --schema=$ORACLE_USER \
   --srid=2272
 ORACLE_EXIT_CODE=$?
-echo "2272 oracle tests done."
-echo "#########################################"
-echo ""
-
 if [[ "$ORACLE_EXIT_CODE" -ne "0"  ]]; then
     echo "Errors encountered in 2272 oracle tests."
     exit 1
 fi
 
+echo "2272 oracle tests done."
+echo "#########################################"
+echo ""
 
 echo "#########################################"
 echo "Running 4326 tests against Oracle database..."
@@ -47,3 +46,13 @@ pytest -vvv -ra --disable-warnings --showlocals --tb=native /geopetl/tests/test_
   --port=1521 \
   --schema=$ORACLE_USER \
   --srid=4326
+ORACLE_EXIT_CODE=$?
+if [[ "$ORACLE_EXIT_CODE" -ne "0"  ]]; then
+    echo "Errors encountered in 4326 oracle tests."
+    exit 1
+fi
+
+echo "4326 oracle tests done."
+echo "#########################################"
+echo ""
+
