@@ -722,7 +722,7 @@ class OracleSdeTable(object):
         elif type_ == 'timestamp with time zone':
             if isinstance(val, datetime):
                 val = val.isoformat()
-            elif isinstance(val, str):
+            elif isinstance(val, str) and val:
                 val=dt_parser().parse(val)
                 val = val.isoformat()
 
@@ -984,8 +984,8 @@ class OracleSdeTable(object):
         stmt = "INSERT INTO {} ({}) VALUES ({})".format(self._name_with_schema, \
             stmt_fields_joined, placeholders_joined)
         self.db.cursor.prepare(stmt)
-
-        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields}
+        #print(stmt)
+        db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields if x != self.objectid_field}
         # db_types_filtered.pop('ID')
 
         #Don't fail on setinputsizes error
@@ -1017,7 +1017,7 @@ class OracleSdeTable(object):
                     # val_row.append(val)
                     val_row[field.upper()] = val
             val_rows.append(val_row)
-
+            #print(val_row)
             if i % buffer_size == 0:
                 # execute
                 self.db.cursor.executemany(None, val_rows, batcherrors=False)
