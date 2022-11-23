@@ -27,6 +27,7 @@ def load_point_table(postgis,schema, srid):
     # write staging data to test table using oracle query
     connection = postgis.dbo
     populate_table_stmt ='''
+    drop materialized view if exists {schema}.{point_table_name}_{srid}_view;
     DROP TABLE IF EXISTS {schema}.{point_table_name}_{srid};
     CREATE TABLE {schema}.{point_table_name}_{srid}
     (
@@ -163,8 +164,8 @@ def csv_data():
 
 @pytest.fixture
 def db_data(postgis,schema,srid):
-    db_col = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema,point_table_name,srid))
-    return db_col
+    #db_col = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema,point_table_name,srid))
+    return etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema,point_table_name,srid))
 
 @pytest.fixture
 def create_test_table_noid(postgis, schema,srid):
