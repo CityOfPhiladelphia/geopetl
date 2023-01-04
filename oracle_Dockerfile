@@ -34,6 +34,7 @@ RUN set -ex \
         awscli \
         python3 \
         python3-pip \
+        python3-venv \
         libaio1 \ 
         dnsutils \
     && useradd -ms /bin/bash worker
@@ -66,12 +67,17 @@ RUN pip3 install -r pytest-requirements.txt
 
 # Setup and install geopetl
 COPY geopetl /geopetl
-COPY setup.py /setup.py
+COPY pyproject.toml /pyproject.toml
 
 # syntax check on geopetl code base
 RUN python3 -m compileall ./geopetl
 
+
+RUN python3 -m pip install --upgrade pip
+RUN python3 -m venv env
+RUN . env/bin/activate
 # Install geopetl via setup.py
+RUN touch setup.cfg
 RUN pip3 install -e .
 
 COPY scripts/oracle_entrypoint.sh /usr/local/bin/entrypoint.sh

@@ -19,6 +19,14 @@ ENV LC_ALL  en_US.UTF-8
 #    && apt-get install -yqq --no-install-recommends \
 #    locales
 
+# FROM ubuntu:16.04
+# RUN apt-get update -y \
+#     && apt install python3 -y \
+#     && apt install python3-pip -y \
+#     && apt install python3-venv -y \
+#     && python3 -m venv venv
+# ENTRYPOINT bin/bash
+
 RUN set -ex \
     && apt-get update -yqq \
     && buildDeps=' \
@@ -30,6 +38,7 @@ RUN set -ex \
         locales  \
         python3 \
         python3-pip \
+        python3-venv \
         postgresql-client \
         dnsutils \
     && echo "LC_ALL=en_US.UTF-8" >> /etc/environment \
@@ -59,12 +68,22 @@ RUN pip3 install -r pytest-requirements.txt
 
 # Setup and install geopetl
 COPY geopetl /geopetl
-COPY setup.py /setup.py
+COPY pyproject.toml /pyproject.toml
 
 # syntax check on geopetl code base
 RUN python3 -m compileall ./geopetl
 
+RUN python3 -m pip --version
+RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip --version
+RUN python3 -m venv env
+# RUN cd env/bin
+# RUN .
+RUN . env/bin/activate
+
+
 # Install geopetl via setup.py
+RUN touch setup.cfg
 RUN pip3 install -e .
 
 COPY scripts/postgis_tests_entrypoint.sh /usr/local/bin/postgis_tests_entrypoint.sh

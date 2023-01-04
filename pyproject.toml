@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "geopetl"
+version = "0.0.2"
+description = "a description about geopetl"
+authors = ["Victor Espinoza   <victor.espinoza@phila.gov>",
+            "Alex Waldman     <alex.waldman@phila.gov>",
+            "Roland MacDavid  <roland.macdavid@phila.gov>"]
+readme = "README.md"
+requires-python = ">=3.7"
+
+
+[tool.setuptools.packages]
+find = {}  # Scan the project directory with the default parameters
+
+

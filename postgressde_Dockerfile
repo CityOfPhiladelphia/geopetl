@@ -30,6 +30,7 @@ RUN set -ex \
         locales  \
         python3 \
         python3-pip \
+        python3-venv \
         postgresql-client \
         dnsutils \
     && echo "LC_ALL=en_US.UTF-8" >> /etc/environment \
@@ -59,11 +60,16 @@ RUN pip3 install -r pytest-requirements.txt
 
 # Setup and install geopetl
 COPY geopetl /geopetl
-COPY setup.py /setup.py
+COPY pyproject.toml /pyproject.toml
 
 # syntax check on geopetl code base
 RUN python3 -m compileall ./geopetl
 
+RUN python3 -m pip install --upgrade pip
+RUN python3 -m venv env
+RUN . env/bin/activate
+
+RUN touch setup.cfg
 # Install geopetl via setup.py
 RUN pip3 install -e .
 
