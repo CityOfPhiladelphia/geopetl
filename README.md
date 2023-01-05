@@ -75,7 +75,7 @@ frompostgis(dbo, query, *args, **kwargs)
 
 
 
-## Usage
+
 **Load (write)**  
 Load data into an existing database table via a DB-API 2.0 connection or cursor. Note that the database table will be truncated
 petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, drop=False, constraints=True, metadata=None, dialect=None, sample=1000)  
