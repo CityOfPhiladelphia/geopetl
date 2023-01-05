@@ -44,9 +44,9 @@ Also, make sure you have libraries for the data sources you'll be using. For exa
 ## Usage
 **Extract (read)**  
 Provides access to data from any DB-API 2.0 connection via a given query. (if query = None, then defaults to  selects * from table)
-petl.io.db.fromdb(dbo, query, *args, **kwargs)
-fromoraclesde(dbo, query, *args, **kwargs)
-frompostgis(dbo, query, *args, **kwargs)
+petl.io.db.fromdb(dbo, query, *args, **kwargs)  
+fromoraclesde(dbo, query, *args, **kwargs)  
+frompostgis(dbo, query, *args, **kwargs)  
 
     import petl as etl
     import geopetl
@@ -78,9 +78,9 @@ frompostgis(dbo, query, *args, **kwargs)
 ## Usage
 **Load (write)**  
 Load data into an existing database table via a DB-API 2.0 connection or cursor. Note that the database table will be truncated
-petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, drop=False, constraints=True, metadata=None, dialect=None, sample=1000)
-tooraclesde()
-topostgis()
+petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, drop=False, constraints=True, metadata=None, dialect=None, sample=1000)  
+tooraclesde()  
+topostgis()  
 
     import petl as etl
     import geopetl
