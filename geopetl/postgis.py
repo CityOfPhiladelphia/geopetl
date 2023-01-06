@@ -503,9 +503,17 @@ class PostgisTable(object):
                     gf = target_table_shape_fields
                 # if object is not view or materialized view
                 else:
-                    stmt = '''select column_name from sde.st_geometry_columns where
-                                            table_name = '{}' '''.format(self.name)
-                    sde_register_check = self.db.fetch(stmt)
+                    try:
+                        stmt = f'''select column_name from sde.st_geometry_columns where
+                                            table_name = '{self.name}' '''
+                        sde_register_check = self.db.fetch(stmt)
+                    # If we're SDE enabled, but we get undefined table for sde.st_geometry_columns
+                    # then we must be in RDS, where you can SDE enable a database, but the backend uses PostGIS
+                    except psycopg2.errors.UndefinedTable as e:
+                        stmt = f'''select f_geometry_column as column_name from geometry_columns 
+                                               where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
+                        sde_register_check = self.db.fetch(stmt)
+
                     if sde_register_check:
                         stmt = f''' select column_name from information_schema.columns
                                                 where table_name = '{self.name}' and (data_type = 'USER-DEFINED' or data_type = 'ST_GEOMETRY')'''
