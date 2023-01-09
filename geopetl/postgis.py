@@ -7,6 +7,8 @@ from petl.io.db_utils import _quote
 from geopetl.util import parse_db_url
 import json
 from dateutil import parser as dt_parser
+# For some errors below
+import psycopg2
 
 aw = 'test2'
 DEFAULT_WRITE_BUFFER_SIZE = 1000
@@ -822,8 +824,6 @@ class PostgisTable(object):
         val_rows = []
         cur_stmt = stmt
 
-        # DEBUG
-        import psycopg2
         # for each row
         for i, row in enumerate(rows):
             val_row = []
