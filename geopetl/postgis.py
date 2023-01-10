@@ -505,21 +505,29 @@ class PostgisTable(object):
                     gf = target_table_shape_fields
                 # if object is not view or materialized view
                 else:
-                    try:
-                        stmt = f'''select column_name from sde.st_geometry_columns where
-                                            table_name = '{self.name}' '''
-                        sde_register_check = self.db.fetch(stmt)
-                    # If we're SDE enabled, but we get undefined table for sde.st_geometry_columns
-                    # then we must be in RDS, where you can SDE enable a database, but the backend uses PostGIS
-                    except psycopg2.errors.UndefinedTable as e:
-                        stmt = f'''select f_geometry_column as column_name from geometry_columns 
-                                               where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
-                        sde_register_check = self.db.fetch(stmt)
+                    # Check if it's registered by checking it's objectid column (should be objectid)
+                    # in the SDE table registry
+                    stmt = f'''select rowid_column from sde.sde_table_registry where
+                                    table_name = '{self.name}' and schema = '{self.schema}' '''
+                    sde_register_check = self.db.fetch(stmt)
 
                     if sde_register_check:
-                        stmt = f''' select column_name from information_schema.columns
-                                                where table_name = '{self.name}' and (data_type = 'USER-DEFINED' or data_type = 'ST_GEOMETRY')'''
-                        target_table_shape_fields = self.db.fetch(stmt)
+                        # Check if our objectid column is actually named "objectid"
+                        if sde_register_check[0]['rowid_column'].lower() != 'objectid':
+                            objectid_field = sde_register_check[0]['rowid_column']
+                            logger.warning(f'Object ID field of this registered table is not called "OBJECTID"! It is: "{objectid_field}". We recommend fixing this!!')
+                        # First attempt to check the geom column in an SDE specific table
+                        try:
+                            stmt = f'''select column_name from sde.st_geometry_columns where
+                                            table_name = '{self.name}' '''
+                            target_table_shape_fields = self.db.fetch(stmt)
+                        # If we're SDE enabled, but we get undefined table for sde.st_geometry_columns
+                        # then we must be in RDS, where you can SDE enable a database, but the backend uses PostGIS
+                        # Check for our geom column in a PostGIS table
+                        except psycopg2.errors.UndefinedTable as e:
+                            stmt = f'''select f_geometry_column as column_name from geometry_columns 
+                                                   where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
+                            target_table_shape_fields = self.db.fetch(stmt)
                     else:
                         raise Exception(f'''Table '{self.name}' is NOT sde registered. Must Register with Geodatabase''')
 
