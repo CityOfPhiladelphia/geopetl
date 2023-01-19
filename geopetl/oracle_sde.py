@@ -178,6 +178,7 @@ class OracleSdeDatabase(object):
             SELECT USERNAME
             FROM ALL_USERS
         """
+        print(f'Line 181: {stmt}')
         self.cursor.execute(stmt)
         return sorted([x[0] for x in self.cursor.fetchall()])
 
@@ -192,6 +193,7 @@ class OracleSdeDatabase(object):
             FROM
                 ALL_TABLES
         """
+        print(f'Line 196: {stmt}')
         self.cursor.execute(stmt)
         rows = [x for x in self.cursor.fetchall()]
         return [dict(zip(['owner', 'table_name'], x)) for x in rows]
@@ -204,6 +206,7 @@ class OracleSdeDatabase(object):
             FROM ALL_TABLES
             WHERE OWNER = :1
         """
+        print(f'Line 209: {stmt}')
         self.cursor.execute(stmt, (user,))
         tables = [x[0] for x in self.cursor.fetchall()]
         return sorted(self._exclude_sde_tables(tables))
@@ -222,6 +225,7 @@ class OracleSdeDatabase(object):
                     WHERE OWNER = '{}'
                 )
         """.format(self._user_p)
+        print(f'Line 228: {stmt}')
         self.cursor.execute(stmt)
         table_names = [x[0] for x in self.cursor.fetchall()]
         # filter out sde business tables
@@ -251,6 +255,7 @@ class OracleSdeDatabase(object):
         """
 
         cursor = self.cursor
+        print(f'Line 258: {stmt}')
         cursor.execute(stmt)
         desc = [d[0] for d in cursor.description]
         return [dict(zip(desc, row)) for row in cursor]
@@ -315,9 +320,11 @@ TODO:
 class OracleSdeTable(object):
     def __init__(self, db, name, srid=None, increment=True):
         self.db = db
+        print(f'Line 323: Altering time session env var')
         self.db.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'"
                                " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
                                " NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'")
+        self._metadata = None
         # Check for a schema
         if '.' in name:
             comps = name.split('.')
@@ -350,6 +357,9 @@ class OracleSdeTable(object):
 
     @property
     def metadata(self):
+        if self._metadata:
+            return self._metadata
+        # If it hasn't been set (is None), then set it.
         stmt = """
             SELECT
                 COLUMN_NAME,
@@ -365,6 +375,7 @@ class OracleSdeTable(object):
             ORDER BY COLUMN_ID
         """
         cursor = self.db.cursor
+        print(f'Line 374: {stmt}')
         cursor.execute(stmt, (self._owner.upper(), self.name.upper(),))
         rows = cursor.fetchall()
         fields = OrderedDict()
@@ -389,7 +400,8 @@ class OracleSdeTable(object):
             # Use scale to identiry intetger numeric types
             if type_without_length == 'NUMBER' and scale == 0:
                 fields[name]['type'] = 'integer'
-        return fields
+        self._metadata = fields
+        return self._metadata
 
     @property
     def sde_type(self):
@@ -403,6 +415,7 @@ class OracleSdeTable(object):
                 I.TYPE = T.UUID
         """
         cursor = self.db.cursor
+        print(f'Line 413: {stmt}')
         cursor.execute(stmt, (self._name_with_schema,))
         row = cursor.fetchone()
         try:
@@ -430,6 +443,7 @@ class OracleSdeTable(object):
                 NULLABLE = 'N' AND
                 COLUMN_NAME LIKE 'OBJECTID%'
         '''.format(schema=self._owner, name=self.name)
+        print(f'Line 441: {stmt}')
         self.db.cursor.execute(stmt)
         fields = self.db.cursor.fetchall()
         # When reading a non-spatial table, there may not be an object ID field
@@ -457,6 +471,7 @@ class OracleSdeTable(object):
                 stmt = '''
                 SELECT count(*) from {table_name_with_schema} where TO_CHAR({key}, 'hh24:mi:ss') != '00:00:00' and rownum < 2               
                 '''.format(table_name_with_schema=self._name_with_schema, key=key)
+                print(f'Line 469: {stmt}')
                 self.db.cursor.execute(stmt)
                 has_time = self.db.cursor.fetchone()[0]
                 if has_time > 0:
@@ -513,10 +528,12 @@ class OracleSdeTable(object):
         row_count_stmt = '''
             select count(*) from {}.{}
         '''.format(self._owner.upper(), self.name.upper())
+        print(f'Line 526: {row_count_stmt}')
         self.db.cursor.execute(row_count_stmt)
         row_count = self.db.cursor.fetchone()[0]
 
         check_registration_stmt = f"SELECT REGISTRATION_ID FROM SDE.TABLE_REGISTRY WHERE OWNER = '{self._owner.upper()}' AND TABLE_NAME = '{self.name.upper()}'"
+        print(f'Line 531: {check_registration_stmt}')
         self.db.cursor.execute(check_registration_stmt)
         reg_id = self.db.cursor.fetchone()
 
@@ -526,6 +543,7 @@ class OracleSdeTable(object):
         # If the table isn't empty, get geom types from sde.st_geometrytype()
         if row_count > 0:
             stmt = '''select distinct sde.st_geometrytype({geom_field}) from {owner}.{table_name} WHERE SDE.ST_ISEMPTY({geom_field}) = 0 '''.format(geom_field=self.geom_field, owner=self._owner.upper(), table_name=self.name.upper())
+            print(f'Line 541: {stmt}')
             geom_type_response = self.db.cursor.execute(stmt)
             geom_types = []
             for geom_type in geom_type_response.fetchall():
@@ -556,6 +574,7 @@ class OracleSdeTable(object):
                 table_name = '{}'
         '''.format(self._owner.upper(), self.name.upper())
 
+        print(f'Line 572: {stmt}')
         self.db.cursor.execute(stmt)
         r = self.db.cursor.fetchone()
 
@@ -588,6 +607,7 @@ class OracleSdeTable(object):
             where l.owner = '{}' and l.table_name = '{}'
         """.format(self._owner.upper(), self.name.upper())
 
+        print(f'Line 605: {stmt}')
         self.db.cursor.execute(stmt)
         row = self.db.cursor.fetchone()
         try:
@@ -602,6 +622,7 @@ class OracleSdeTable(object):
             stmt = '''
                 select distinct sde.st_srid({geom_field}) as srid from {table_account}.{table_name} where sde.st_isempty({geom_field}) != 1
             '''.format(geom_field=self.geom_field, table_account=self._owner.upper(), table_name=self.name.upper())
+            print(f'Line 620: {stmt}')
             self.db.cursor.execute(stmt)
             row = self.db.cursor.fetchone()
             try:
@@ -631,6 +652,7 @@ class OracleSdeTable(object):
         stmt = '''
             select max(sde.st_numpoints({})) from {}.{}
             '''.format(self.geom_field, self._owner.upper(), self.name.upper())
+        print(f'Line 650: {stmt}')
         self.db.cursor.execute(stmt)
         row = self.db.cursor.fetchone()
         try:
@@ -802,6 +824,7 @@ class OracleSdeTable(object):
                 TABLE_NAME = :2
         """
         cursor = self.db.cursor
+        print(f'Line 822: {stmt}')
         cursor.execute(stmt, (self.schema, self.name,))
         rows = cursor.fetchall()
 
@@ -820,6 +843,7 @@ class OracleSdeTable(object):
                 TABLE_NAME = :2
         """
         cursor = self.db.cursor
+        print(f'Line 841: {stmt}')
         cursor.execute(stmt, (self.schema, self.name,))
         rows = cursor.fetchall()
 
@@ -1047,6 +1071,7 @@ class OracleSdeTable(object):
             if i % buffer_size == 0:
                 # execute
                 try:
+                    print(f'Line 1069: Running executemany')
                     self.db.cursor.executemany(None, val_rows, batcherrors=False)
                 except Exception as e:
                     print(f'Error trying to write. Length of val_rows {len(val_rows)}')
@@ -1061,6 +1086,7 @@ class OracleSdeTable(object):
         # if there are remaining rows, write them:
         if val_rows:
             try:
+                print(f'Line 1084: Running executemany')
                 self.db.cursor.executemany(None, val_rows, batcherrors=False)
             except Exception as e:
                 print(f'Error trying to write. Length of val_rows {len(val_rows)}')
@@ -1075,6 +1101,7 @@ class OracleSdeTable(object):
         name = self._name_with_schema_p
         stmt = "TRUNCATE TABLE {}".format(name)
         stmt += ' CASCADE' if cascade else ''
+        print(f'Line 1099: {stmt}')
         self.db.cursor.execute(stmt)
         self.db.dbo.commit()
 
@@ -1084,6 +1111,7 @@ class OracleSdeTable(object):
         # note: this didn't work with a bind variable
         stmt = "SELECT COUNT(*) FROM {}".format(self._name_with_schema)
         cursor = self.db.cursor
+        print(f'Line 1109: {stmt}')
         cursor.execute(stmt)
         return cursor.fetchone()[0]
 
@@ -1125,6 +1153,7 @@ class OracleSdeQuery(SpatialQuery):
         # get petl iterator
         dbo = self.db.dbo
         # execute qry
+        print(f'Line 1151 executing: {stmt}')
         db_view = etl.fromdb(dbo, stmt)
         header = [h.lower() for h in db_view.header()]
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
