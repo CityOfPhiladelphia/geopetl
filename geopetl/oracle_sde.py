@@ -318,6 +318,7 @@ class OracleSdeTable(object):
         self.db.cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'"
                                " NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'"
                                " NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF TZH:TZM'")
+        self._metadata = None
         # Check for a schema
         if '.' in name:
             comps = name.split('.')
@@ -350,6 +351,9 @@ class OracleSdeTable(object):
 
     @property
     def metadata(self):
+        if self._metadata:
+            return self._metadata
+        # If it hasn't been set (is None), then set it.
         stmt = """
             SELECT
                 COLUMN_NAME,
@@ -389,7 +393,8 @@ class OracleSdeTable(object):
             # Use scale to identiry intetger numeric types
             if type_without_length == 'NUMBER' and scale == 0:
                 fields[name]['type'] = 'integer'
-        return fields
+        self._metadata = fields
+        return self._metadata
 
     @property
     def sde_type(self):
@@ -1125,6 +1130,7 @@ class OracleSdeQuery(SpatialQuery):
         # get petl iterator
         dbo = self.db.dbo
         # execute qry
+        print('Geopetl: Reading data from database..')
         db_view = etl.fromdb(dbo, stmt)
         header = [h.lower() for h in db_view.header()]
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
