@@ -484,6 +484,8 @@ class PostgisTable(object):
     @property
     def geom_field(self):
         if self._geom_field is None:
+            # Assume non-geometric, if we find a geometry this var will be set below
+            target_table_shape_fields = None
             if self.db.is_sde_enabled:
                 if self.database_object_type == 'view' or self.database_object_type == 'materialized_view':
                     # Catch all statement for whether it's a view or materizlized view
@@ -538,7 +540,10 @@ class PostgisTable(object):
                 target_table_shape_fields = self.db.fetch(stmt)
 
             # if we find shape fields in target tables/view/materialized vies
-            if len(target_table_shape_fields) == 0:
+            if not target_table_shape_fields:
+                self._geom_field = None
+                print("Dataset appears to be non-geometric, returning geom_field as None.")
+            elif len(target_table_shape_fields) == 0:
                 self._geom_field = None
                 print("Dataset appears to be non-geometric, returning geom_field as None.")
             elif len(target_table_shape_fields) == 1:
