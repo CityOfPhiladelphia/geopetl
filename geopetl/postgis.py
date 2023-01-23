@@ -377,6 +377,7 @@ class PostgisTable(object):
 
     _geom_field = None
     _srid = None
+    _database_object_type = None
     def __init__(self, db, name):
         self.db = db
         
@@ -406,6 +407,8 @@ class PostgisTable(object):
         Right now we want to know whether its a table, view, or materialized view. Other
         things shouldn't be getting passed and we'll raise an exception if they are.
         """
+        if self._database_object_type:
+            return self._database_object_type
         type_map = {
             'r': 'table','i': 'index','S': 'sequence','t': 'TOAST_table','v': 'view', 'm': 'materialized_view',
             'c': 'composite_type','f': 'foreign_table','p': 'partitioned_table','I': 'partitioned_index'
@@ -419,7 +422,9 @@ class PostgisTable(object):
         res = self.db.fetch(stmt)
         relkind = res[0]['relkind']
         if type_map[relkind] in ['table', 'materialized_view', 'view']:
-            return type_map[relkind]
+            self._database_object_type = type_map[relkind]
+            print(f'Database object type: {self._database_object_type}.')
+            return self._database_object_type
         else:
             raise TypeError("""This database object is unsupported at this time.
             database object passed to us looks like a '{}'""".format(type_map[relkind]))
@@ -488,7 +493,9 @@ class PostgisTable(object):
             target_table_shape_fields = None
             if self.db.is_sde_enabled:
                 if self.database_object_type == 'view' or self.database_object_type == 'materialized_view':
-                    # Catch all statement for whether it's a view or materizlized view
+                    # TODO: figured out a way to simplify the below crazy statements
+                    # This below statement works for determing geometric MATERIALIZED view's
+                    # shape field but DOES NOT work for regular geometric views.
                     stmt = '''select
                             attr.attname as column_name,
                             trim(leading '_' from tp.typname) as datatype
@@ -496,15 +503,23 @@ class PostgisTable(object):
                             join pg_catalog.pg_class as cls on cls.oid = attr.attrelid
                             join pg_catalog.pg_namespace as ns on ns.oid = cls.relnamespace
                             join pg_catalog.pg_type as tp on tp.typelem = attr.atttypid
-                            where 
+                            where
                             ns.nspname = '{schema}' and
-                            cls.relname = '{table}' and 
+                            cls.relname = '{table}' and
                             trim(leading '_' from tp.typname) = 'st_point' and
-                            not attr.attisdropped and 
-                            cast(tp.typanalyze as text) = 'array_typanalyze' and 
+                            not attr.attisdropped and
+                            cast(tp.typanalyze as text) = 'array_typanalyze' and
                             attr.attnum > 0'''.format(schema=self.schema, table=self.name)
                     target_table_shape_fields = self.db.fetch(stmt)
-                    gf = target_table_shape_fields
+                    # This method works for determining geometric view's shape fields
+                    # but DOES NOT work for non-geometric views.
+                    # Use as a fallback.
+                    if not target_table_shape_fields:
+                        stmt = f'''SELECT column_name FROM information_schema.columns
+                            WHERE table_name = '{self.name}'
+                            AND table_schema = '{self.schema}'
+                            AND (data_type = 'USER-DEFINED' OR data_type = 'ST_GEOMETRY')'''
+                        target_table_shape_fields = self.db.fetch(stmt)
                 # if object is not view or materialized view
                 else:
                     # Check if it's registered by checking it's objectid column (should be objectid)
@@ -548,6 +563,7 @@ class PostgisTable(object):
                 print("Dataset appears to be non-geometric, returning geom_field as None.")
             elif len(target_table_shape_fields) == 1:
                 self._geom_field = target_table_shape_fields[0].pop('column_name')
+                print(f'Geometric column detected: {self._geom_field}')
             elif len(target_table_shape_fields) > 1:
                 raise LookupError('Multiple geometry fields')
             else:
