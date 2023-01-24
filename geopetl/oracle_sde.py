@@ -453,14 +453,14 @@ class OracleSdeTable(object):
             srid = metadata[key].get('srid', '')
             nullable = metadata[key].get('nullable', '')
             if md_type == 'date':
-                # Check if has time:
+                # Check if has time by trying to convert to a time format
                 stmt = '''
-                SELECT count(*) from {table_name_with_schema} where TO_CHAR({key}, 'hh24:mi:ss') != '00:00:00' and rownum < 2               
+                SELECT count(*) from {table_name_with_schema} WHERE {key} IS NOT NULL AND TO_CHAR({key}, 'hh24:mi:ss') != '00:00:00' AND rownum < 2
                 '''.format(table_name_with_schema=self._name_with_schema, key=key)
                 self.db.cursor.execute(stmt)
                 has_time = self.db.cursor.fetchone()[0]
                 if has_time > 0:
-                    kv_fmt['type'] = 'timestamp without time zone'
+                    kv_fmt['type'] = 'timestamp with time zone'
             elif geom_type:
                 kv_fmt['geometry_type'] = geom_type.lower()
                 if srid:
