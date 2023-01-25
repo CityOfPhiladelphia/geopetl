@@ -488,6 +488,8 @@ class PostgisTable(object):
 
     @property
     def geom_field(self):
+        gf = None
+        target_table_shape_fields = []
         if self._geom_field is None:
             # Assume non-geometric, if we find a geometry this var will be set below
             target_table_shape_fields = None
@@ -528,6 +530,7 @@ class PostgisTable(object):
                                     table_name = '{self.name}' and schema = '{self.schema}' '''
                     sde_register_check = self.db.fetch(stmt)
 
+                    # if registered_check then postgressde?
                     if sde_register_check:
                         # Check if our objectid column is actually named "objectid"
                         if sde_register_check[0]['rowid_column'].lower() != 'objectid':
@@ -543,15 +546,15 @@ class PostgisTable(object):
                         # Check for our geom column in a PostGIS table
                         except psycopg2.errors.UndefinedTable as e:
                             stmt = f'''select f_geometry_column as column_name from geometry_columns 
-                                                   where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
+                                            where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
                             target_table_shape_fields = self.db.fetch(stmt)
                     else:
                         raise Exception(f'''Table '{self.name}' is NOT sde registered. Must Register with Geodatabase''')
 
-            elif self.db.is_postgis_enabled: 
+            elif self.db.is_postgis_enabled:
                 # this query should work for both postgis mview and table
                 stmt = f'''select f_geometry_column as column_name from geometry_columns 
-                                       where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
+                                    where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
                 target_table_shape_fields = self.db.fetch(stmt)
 
             # if we find shape fields in target tables/view/materialized vies
@@ -568,7 +571,7 @@ class PostgisTable(object):
                 raise LookupError('Multiple geometry fields')
             else:
                 raise Exception('DB is not SDE or Postgis enabled')
-            
+
         return self._geom_field
 
 
