@@ -1110,6 +1110,8 @@ class OracleSdeQuery(SpatialQuery):
         self.timestamp = timestamp
         self.geom_with_srid = geom_with_srid
         self.sql = sql
+        # For tests to ensure we're not slamming the database
+        self.times_db_called = 0
 
     def __iter__(self):
         """Proxy iteration to core petl."""
@@ -1126,6 +1128,7 @@ class OracleSdeQuery(SpatialQuery):
         # execute qry
         print('Geopetl: Reading data from database..')
         db_view = etl.fromdb(dbo, stmt)
+        self.times_db_called += 1
         # Check if table is empty
         try:
             rown_num = etl.nrows(db_view)
