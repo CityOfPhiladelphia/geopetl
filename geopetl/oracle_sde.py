@@ -1110,6 +1110,10 @@ class OracleSdeQuery(SpatialQuery):
         self.timestamp = timestamp
         self.geom_with_srid = geom_with_srid
         self.sql = sql
+        # Used exclusively in pytests in databridge_etl_tools
+        # to ensure we're not blowing up the database by uselessly
+        # reading it several times
+        self.times_db_called = 0
         db_view = etl.fromdb(self.db.dbo, self.stmt())
         # Check if table is empty
         try:
@@ -1132,6 +1136,7 @@ class OracleSdeQuery(SpatialQuery):
         # execute qry
         print('Geopetl: Reading data from database..')
         db_view = etl.fromdb(dbo, stmt)
+        self.times_db_called =+ 1
         header = [h.lower() for h in db_view.header()]
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
         if self.geom_field  and self.geom_field in header and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
