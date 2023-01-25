@@ -1110,12 +1110,8 @@ class OracleSdeQuery(SpatialQuery):
         self.timestamp = timestamp
         self.geom_with_srid = geom_with_srid
         self.sql = sql
-        db_view = etl.fromdb(self.db.dbo, self.stmt())
-        # Check if table is empty
-        try:
-            rown_num = etl.nrows(db_view)
-        except Exception as e:
-            raise Exception(f'ERROR: table is empty. Error: {str(e)}')
+        # For tests to ensure we're not slamming the database
+        self.times_db_called = 0
 
     def __iter__(self):
         """Proxy iteration to core petl."""
@@ -1132,6 +1128,13 @@ class OracleSdeQuery(SpatialQuery):
         # execute qry
         print('Geopetl: Reading data from database..')
         db_view = etl.fromdb(dbo, stmt)
+        self.times_db_called += 1
+        # Check if table is empty
+        try:
+            rown_num = etl.nrows(db_view)
+        except Exception as e:
+            raise Exception(f'ERROR: table is empty. Error: {str(e)}')
+
         header = [h.lower() for h in db_view.header()]
         # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
         if self.geom_field  and self.geom_field in header and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
