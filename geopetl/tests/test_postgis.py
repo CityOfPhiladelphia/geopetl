@@ -168,6 +168,7 @@ def load_multipolygon_table(srid, postgis, schema):
     
     INSERT INTO {schema}.{multipolygon_table_name}_{srid} ({objectid_field_name}, {shape_field_name}) 
 VALUES 
+(9, NULL),
 (1, ST_GeomFromText('MULTIPOLYGON ((( 2697059.92403972 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.92403972 243874.43507531)),(( 2697048.19407630 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.19407630 243967.35286848)))', {srid})),
 (2, ST_GeomFromText('MULTIPOLYGON ((( 2697059.82397431 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.82397431 243874.43507531)),(( 2697048.09401089 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.09401089 243967.35286848)))', {srid})),
 (3, ST_GeomFromText('MULTIPOLYGON ((( 2697059.98407897 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.98407897 243874.43507531)),(( 2697048.29414172 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.29414172 243967.35286848)))', {srid})),
@@ -231,8 +232,13 @@ def assert_data_method(csv_data1, db_data1, srid1, field=None):
 
             # assert shape field
             if key == fields.get('shape_field_name'):
-                pg_geom = geom_parser(str(csv_val), srid1)
-                csv_geom = geom_parser(str(db_val), srid1)
+                print('db_val ',db_val)
+                print('csv_val ',csv_val)
+                pg_geom = geom_parser(str(db_val), srid1)
+                csv_geom = geom_parser(str(csv_val), srid1)
+                print('i ', i)
+                print('pg_geom ', pg_geom)
+                print('csv_geom ', csv_geom)
                 assert csv_geom == pg_geom
             elif key == fields.get('object_id_field_name'):
                 continue
