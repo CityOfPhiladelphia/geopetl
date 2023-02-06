@@ -7,7 +7,6 @@ setup(name='geopetl',
       install_requires=['petl','psycopg2','cx_Oracle'],
       extras_require={
           'oracle_sde': ['cx_Oracle'],
-          'postgis': ['psycopg2'],
-          'carto': ['carto'],
+          'postgis': ['psycopg2']
       }
      )
