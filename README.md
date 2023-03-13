@@ -18,7 +18,7 @@ pip install git+https://github.com/CityOfPhiladelphia/geopetl
 
 ## Usage
 **Extract (read)**  
-Provides access to data from any DB-API 2.0 connection via a given query. (if query = None, then defaults to  selects * from table)   
+Provides access to data from any DB-API 2.0 connection via a given query. (if query = None, then defaults to  select * from table)   
 petl.io.db.fromdb(dbo, query, *args, **kwargs)  
 fromoraclesde(dbo, query, *args, **kwargs)  
 frompostgis(dbo, query, *args, **kwargs)  
