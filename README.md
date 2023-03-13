@@ -35,9 +35,6 @@ If installing manually as a pip module, run it like this:
 pip install git+https://github.com/CityOfPhiladelphia/geopetl
 ```
 
-Also, make sure you have libraries for the data sources you'll be using. For example:
-
-`pip install cx_Oracle cartodb`
 
 
 
