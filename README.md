@@ -3,28 +3,6 @@
 A [petl](https://github.com/alimanfoo/petl) extension for spatial data
 
 
-## Running tests in the docker container
-
-To run the tests locally via docker compose, pull this version and place it in your path:
-
-```
-sudo wget https://github.com/docker/compose/releases/download/1.26.0-rc4/docker-compose-Linux-x86_64
-sudo mv docker-compose-Linux-x86_64 /usr/bin/docker-compose && sudo chmod +x /usr/bin/docker-compose
-```
-
-The docker container requires oracle rpms which we have stored in S3. To get them, rename config.sh.example
-to config.sh, and populate the S3 creds into the appropriate environment variables.
-
-Then run the config like so:
-`. .config.sh`
-    
-Pull the oracle rpms:
-`. ./pull-oracle-rpm.sh`
-
-Then run docker-compose to run start the containers and run the pytest tests
-`docker-compose build; docker-compose up`
-
-    
 
 ## Installation
 
@@ -104,5 +82,30 @@ topostgis()
                                     port="5432",
                                     database="postgres_db")
     etl.topostgis(csv_data, postgresde_connection, 'postgres_table_name') 
+    
+    
+    
+## Running tests in the docker container
+
+To run the tests locally via docker compose, pull this version and place it in your path:
+
+```
+sudo wget https://github.com/docker/compose/releases/download/1.26.0-rc4/docker-compose-Linux-x86_64
+sudo mv docker-compose-Linux-x86_64 /usr/bin/docker-compose && sudo chmod +x /usr/bin/docker-compose
+```
+
+The docker container requires oracle rpms which we have stored in S3. To get them, rename config.sh.example
+to config.sh, and populate the S3 creds into the appropriate environment variables.
+
+Then run the config like so:
+`. .config.sh`
+    
+Pull the oracle rpms:
+`. ./pull-oracle-rpm.sh`
+
+Then run docker-compose to run start the containers and run the pytest tests
+`docker-compose build; docker-compose up`
+
+    
 
 
