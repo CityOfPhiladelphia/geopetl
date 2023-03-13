@@ -1,6 +1,6 @@
 # geopetl
 
-A [petl](https://github.com/alimanfoo/petl) extension for spatial data
+A [petl](https://github.com/alimanfoo/petl) extension for spatial data in Oracle and Postgres 
 
 
 
@@ -18,7 +18,7 @@ pip install git+https://github.com/CityOfPhiladelphia/geopetl
 
 ## Usage
 **Extract (read)**  
-Provides access to data from any DB-API 2.0 connection via a given query. (if query = None, then defaults to  selects * from table)
+Provides access to data from any DB-API 2.0 connection via a given query. (if query = None, then defaults to  selects * from table)   
 petl.io.db.fromdb(dbo, query, *args, **kwargs)  
 fromoraclesde(dbo, query, *args, **kwargs)  
 frompostgis(dbo, query, *args, **kwargs)  
