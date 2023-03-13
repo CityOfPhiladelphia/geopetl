@@ -791,23 +791,11 @@ class PostgisTable(object):
         #rows = etl.records(rows)
         # Get geom metadata
         if geom_field:
-            # convert '' values to None in geom column
-            rows_temp = etl.convert(rows, geom_field, lambda v: None, where = lambda r: r.shape == '')
-            # select rows where shape col is not none
-            rowsnotnone = rows_temp.selectnotnone(geom_field)
-            # convert rows to records (hybrid objects that can behave like dicts)
-            rows = etl.records(rows)
-           
-            # convert rows to records (hybrid objects that can behave like dicts))
-            rows2 = etl.records(rowsnotnone)
-
-            # if first geom val fill with empty string (creates error if geom val is multigeom)
-            first_geom_val = rows2[0][geom_field] or ''
+            rowsnotnone = rows.selectnotnone(geom_field)
+            first_geom_val = rowsnotnone[0][geom_field] or ''
             srid = from_srid or self.srid
             match = re.match('[A-Z]+', first_geom_val)
             row_geom_type = match.group() if match else None
-        else:
-            rows = etl.records(rows)
 
         # Do we need to cast the geometry to a MULTI type? (Assuming all rows
         # have the same geom type.)
@@ -818,16 +806,12 @@ class PostgisTable(object):
             else:
                 multi_geom = False
 
-
-
         #if PG objectid_field not in local data fields tuple, append to local data fields
         if objectid_field and objectid_field not in fields:
             fields = fields + (objectid_field,)
             #local_objectID_flag = True
 
-
-
-        # Make a map of non geom field name => type
+        # Make a map of field name => type
         type_map = OrderedDict()
         for field in fields:
             try:
@@ -838,7 +822,7 @@ class PostgisTable(object):
 
         fields_joined = ', '.join(fields)
         stmt = "INSERT INTO {} ({}) VALUES ".format('.'.join([self.schema, self.name]), fields_joined)
-
+        rows = etl.records(rows)
         len_rows = len(rows)
         if buffer_size is None or len_rows < buffer_size:
             iterations = 1
