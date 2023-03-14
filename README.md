@@ -19,8 +19,8 @@ pip install git+https://github.com/CityOfPhiladelphia/geopetl
 ## Usage
 **Extract (read)**  
 Provides access to data from any DB-API 2.0 connection via a given query. If query = None, then defaults to  select * from table. Geopetl  
-extends access to spatial data in oracle and postgres SDE enabled databases as well as postgis databases. etl.frompostgis() method is compatible  
-with both postgres SDE and postgis.
+extends access to spatial data in oracle and postgres SDE enabled databases as well as postgis databases. etl.frompostgis() method is  
+compatible with both postgres SDE and postgis.
 petl.io.db.fromdb(dbo, query, *args, **kwargs)  
 fromoraclesde(dbo, query, *args, **kwargs)  
 frompostgis(dbo, query, *args, **kwargs)  
