@@ -788,7 +788,7 @@ class PostgisTable(object):
         #rows = etl.records(rows)
         # Get geom metadata
         if geom_field:
-            rowsnotnone = rows.selectnotnone(geom_field)
+            rowsnotnone = rows.select(geom_field, lambda v: v != None and v != '')
             first_geom_val = rowsnotnone.values(geom_field)[0] or ''
             srid = from_srid or self.srid
             match = re.match('[A-Z]+', first_geom_val)
