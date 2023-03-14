@@ -31,7 +31,7 @@ frompostgis(dbo, query, *args, **kwargs)
 
     dsn = cx_Oracle.makedsn('host', 'port', service_name='service_name')
     oracle_connection = cx_Oracle.connect('user', 'password', dsn, encoding="UTF-8") 
-    oraclesde_data = fromoraclesde(oracle_connection, 'oracle_table_name')
+    oraclesde_data = etl.fromoraclesde(oracle_connection, 'oracle_table_name')
 
     postgisconnection = psycopg2.connect(user="postgres",
                                     password="password123",
@@ -54,8 +54,8 @@ frompostgis(dbo, query, *args, **kwargs)
 **Load (write)**  
 Load data into an existing database table via a DB-API 2.0 connection or cursor. Note that the database table will be truncated.  
 petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, drop=False, constraints=True, metadata=None, dialect=None, sample=1000)  
-tooraclesde()  
-topostgis()  
+tooraclesde(table, dbo, tablename,srid=None,truncate=True, increment=True)  
+topostgis(table, dbo, table_name, from_srid=None,)  
 
     import petl as etl
     import geopetl
