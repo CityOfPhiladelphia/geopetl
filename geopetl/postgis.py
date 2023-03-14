@@ -82,8 +82,6 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     # do we need to create the table?
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
-    print(db.tables)
-    print('db.tables')
     create = '.'.join([table.schema, table.name]) not in db.tables
     # Create table if it doesn't exist
     if create:
@@ -172,12 +170,11 @@ class PostgisDatabase(object):
         # make a cursor for introspecting the db. not used to read/write data.
         self.cursor = dbo.cursor(cursor_factory=RealDictCursor)
 
-        #a = psycopg2.ConnectionInfo(dbo)
-        a = dbo.get_dsn_parameters()
+        a = psycopg2.extensions.ConnectionInfo(dbo)
 
         # TODO use petl dbo check/validation
         self.dbo = dbo
-        self.user = a.get('user')
+        self.user = a.user
         #self.schemas =
 
         # To be used by setter properties below
@@ -792,7 +789,7 @@ class PostgisTable(object):
         # Get geom metadata
         if geom_field:
             rowsnotnone = rows.selectnotnone(geom_field)
-            first_geom_val = rowsnotnone[0][geom_field] or ''
+            first_geom_val = rowsnotnone.values(geom_field)[0] or ''
             srid = from_srid or self.srid
             match = re.match('[A-Z]+', first_geom_val)
             row_geom_type = match.group() if match else None
