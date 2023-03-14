@@ -15,8 +15,6 @@ from geopetl.util import parse_db_url
 import cx_Oracle
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
-MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
-
 
 def extract_table_schema(dbo, table_name, table_schema_output_path):
     db = OracleSdeDatabase(dbo)
@@ -28,6 +26,8 @@ etl.extract_table_schema = extract_table_schema
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
+    if table.row_count == 0:
+        raise Exception(f"Table {table_name} is empty, exiting...")
     return table.query(**kwargs)
 
 etl.fromoraclesde = fromoraclesde
@@ -328,6 +328,7 @@ class OracleSdeTable(object):
         else:
             self.schema = self.db.user.lower()
             self.name = name.lower()
+        self.row_count = self._get_row_count()
         self.geom_field = self._get_geom_field()
         self.geom_type = self._get_geom_type()
         self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
@@ -486,6 +487,14 @@ class OracleSdeTable(object):
         with open(table_schema_output_path, 'w') as fp:
             json.dump(metadata_fmt, fp)
 
+    def _get_row_count(self):
+        row_count_stmt = '''
+            select count(*) from {}.{}
+        '''.format(self._owner.upper(), self.name.upper())
+        self.db.cursor.execute(row_count_stmt)
+        row_count = self.db.cursor.fetchone()[0]
+        return row_count
+        
     def _get_geom_field(self):
         f = [field for field, desc in self.metadata.items() \
                 if desc['type'] == 'geom']
@@ -516,12 +525,6 @@ class OracleSdeTable(object):
         if self.geom_field is None:
             return None
 
-        row_count_stmt = '''
-            select count(*) from {}.{}
-        '''.format(self._owner.upper(), self.name.upper())
-        self.db.cursor.execute(row_count_stmt)
-        row_count = self.db.cursor.fetchone()[0]
-
         check_registration_stmt = f"SELECT REGISTRATION_ID FROM SDE.TABLE_REGISTRY WHERE OWNER = '{self._owner.upper()}' AND TABLE_NAME = '{self.name.upper()}'"
         self.db.cursor.execute(check_registration_stmt)
         reg_id = self.db.cursor.fetchone()
@@ -530,7 +533,7 @@ class OracleSdeTable(object):
             raise AssertionError('Table is not registered with SDE! To write with shapes it needs to be registered.')
 
         # If the table isn't empty, get geom types from sde.st_geometrytype()
-        if row_count > 0:
+        if self.row_count > 0:
             stmt = '''select distinct sde.st_geometrytype({geom_field}) from {owner}.{table_name} WHERE SDE.ST_ISEMPTY({geom_field}) = 0 '''.format(geom_field=self.geom_field, owner=self._owner.upper(), table_name=self.name.upper())
             geom_type_response = self.db.cursor.execute(stmt)
             geom_types = []
@@ -1111,33 +1114,27 @@ class OracleSdeQuery(SpatialQuery):
         # if no sql arg, create qry
         else:
             stmt = self.stmt()
-
         # get petl iterator
         dbo = self.db.dbo
         # execute qry
-        print('Geopetl: Reading data from database..')
+        print('Geopetl: Reading data from database..', datetime.now())
         db_view = etl.fromdb(self.mkcursor(), stmt)
         self.times_db_called += 1
-        # Check if table is empty
-        try:
-            rown_num = etl.nrows(db_view)
-        except Exception as e:
-            raise Exception(f'ERROR: table is empty. Error: {str(e)}')
 
         header = [h.lower() for h in db_view.header()]
 
         if self.geom_with_srid and self.geom_field and self.geom_field in header and self.srid:
             db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
+        
         # checks tz field in table not view
         selected_ts_fields = [f for f in self.table.timezone_fields if f in header]
         if len(selected_ts_fields) > 0:
             db_view = db_view.convert([s.upper() for s in selected_ts_fields],
-            # db_view = db_view.convert([s.lower() for s in selected_ts_fields],
                                        lambda timezone_field: dt_parser().parse(timezone_field))
 
         # lowercase headers
-        # headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in header])
+
         iter_fn = db_view.__iter__()
         return iter_fn
 
