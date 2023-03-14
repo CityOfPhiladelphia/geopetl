@@ -12,6 +12,7 @@ from petl.io.db_utils import _quote, _is_dbapi_connection
 from petl.util.base import Table
 from geopetl.base import SpatialQuery
 from geopetl.util import parse_db_url
+import cx_Oracle
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
 MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
@@ -649,30 +650,7 @@ class OracleSdeTable(object):
 
     def wkt_getter(self, to_srid):
         assert self.geom_field
-        geom_field_t = geom_field = self.geom_field
-        # SDE.ST_Transform doesn't work when the datums differ. Unfortunately,
-        # 4326 <=> 2272 is one of those. Using Shapely + PyProj for now.
-        # if to_srid and to_srid != self.srid:
-        #     geom_field_t = "SDE.ST_Transform({}, {})"\
-        #         .format(geom_field, to_srid)
-        # return "SDE.ST_AsText({}) AS {}"\
-        #     .format(geom_field_t, geom_field)
-        #
-        # Determine if conversion of geom field from lob -> text can happen in the database or after using cx_oracle read() fct:
-        #     - cx_oracle read() fct is much slower than conversion in the database
-        #     - lob length must be < 4000 char limit for conversion in the datbase
-        #     - therefore choose query based on max length of geom
-        #     - for not use geom_type as proxy for length of geom (handle POINT geom_type conversions in the database
-        #     - TODO: make determination based on max geom field length
-        if self.max_num_points_in_geom is None:
-            self.max_num_points_in_geom = 0
-##        if self.geom_type == 'POINT':
-        if self.max_num_points_in_geom <= MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
-            return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else TO_CHAR(SDE.ST_AsText({})) end AS {}" \
-            .format(geom_field_t, geom_field_t, geom_field)
-        else:
-            return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then EMPTY_CLOB() else SDE.ST_AsText({}) end AS {}" \
-                .format(geom_field_t, geom_field_t, geom_field)
+        return 'sde.st_astext({geom_field}) AS {geom_field}'.format(geom_field=self.geom_field)
 
     #returns a list of the time zone aware field names in a table
     def _timezone_fields(self):
@@ -1113,6 +1091,17 @@ class OracleSdeQuery(SpatialQuery):
         # For tests to ensure we're not slamming the database
         self.times_db_called = 0
 
+    def output_type_handler(self, cursor, name, default_type, size, precision, scale):
+        if default_type == cx_Oracle.DB_TYPE_CLOB:
+            return cursor.var(cx_Oracle.DB_TYPE_LONG, arraysize=cursor.arraysize)
+        if default_type == cx_Oracle.DB_TYPE_BLOB:
+            return cursor.var(cx_Oracle.DB_TYPE_LONG_RAW, arraysize=cursor.arraysize)
+
+    def mkcursor(self):
+        cursor = self.db.dbo.cursor()
+        cursor.outputtypehandler = self.output_type_handler
+        return cursor
+
     def __iter__(self):
         """Proxy iteration to core petl."""
         # form sql statement if sql isn't provided on fct call
@@ -1127,7 +1116,7 @@ class OracleSdeQuery(SpatialQuery):
         dbo = self.db.dbo
         # execute qry
         print('Geopetl: Reading data from database..')
-        db_view = etl.fromdb(dbo, stmt)
+        db_view = etl.fromdb(self.mkcursor(), stmt)
         self.times_db_called += 1
         # Check if table is empty
         try:
@@ -1136,9 +1125,6 @@ class OracleSdeQuery(SpatialQuery):
             raise Exception(f'ERROR: table is empty. Error: {str(e)}')
 
         header = [h.lower() for h in db_view.header()]
-        # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
-        if self.geom_field  and self.geom_field in header and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
-            db_view = db_view.convert(self.geom_field.upper(), 'read')
 
         if self.geom_with_srid and self.geom_field and self.geom_field in header and self.srid:
             db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
