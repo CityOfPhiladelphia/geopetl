@@ -1,8 +1,93 @@
 # geopetl
 
-A [petl](https://github.com/alimanfoo/petl) extension for spatial data
+A [petl](https://github.com/alimanfoo/petl) extension for spatial data in Oracle and Postgres 
 
 
+
+## Installation
+
+
+If installing manually as a pip module, run it like this:
+
+```
+pip install git+https://github.com/CityOfPhiladelphia/geopetl
+```
+
+
+
+
+## Usage
+**Extract (read)**  
+Provides access to data from any DB-API 2.0 connection via a given query. If query = None, then defaults to  select * from table. Geopetl  
+extends access to spatial data in oracle and postgres SDE enabled databases as well as postgis databases. etl.frompostgis() method is  
+compatible with both postgres SDE and postgis.
+petl.io.db.fromdb(dbo, query, *args, **kwargs)  
+fromoraclesde(dbo, query, *args, **kwargs)  
+frompostgis(dbo, query, *args, **kwargs)  
+
+    import petl as etl
+    import geopetl
+    import psycopg2
+    import cx_Oracle
+
+
+    dsn = cx_Oracle.makedsn('host', 'port', service_name='service_name')
+    oracle_connection = cx_Oracle.connect('user', 'password', dsn, encoding="UTF-8") 
+    oraclesde_data = etl.fromoraclesde(oracle_connection, 'oracle_table_name')
+
+    postgisconnection = psycopg2.connect(user="postgres",
+                                    password="password123",
+                                    host="127.0.0.1",
+                                    port="5432",
+                                    database="postgis_db")
+    postgis_data = etl.frompostgis(postgisconnection, 'postgis_table_name')
+
+    postgresde_connection = psycopg2.connect(user="postgres",
+                                    password="password123",
+                                    host="127.0.0.1",
+                                    port="5432",
+                                    database="postgressde_db")
+    postgressde_data = etl.frompostgis(postgresde_connection,'postgressde_table_name')
+
+
+
+
+
+**Load (write)**  
+Load data into an existing database table via a DB-API 2.0 connection or cursor. Note that the database table will be truncated by default.  
+etl.topostgis() method is compatible with both postgres SDE and postgis.  
+petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, drop=False, constraints=True, metadata=None, dialect=None, sample=1000)  
+tooraclesde(table, dbo, tablename,srid=None,truncate=True, increment=True)  
+topostgis(table, dbo, table_name, from_srid=None,)  
+
+    import petl as etl
+    import geopetl
+    import psycopg2
+    import cx_Oracle
+
+    csv_data etl.fromcsv('mydata.csv')
+
+    dsn = cx_Oracle.makedsn('host', 'port', service_name='service_name')
+    oracleconnection = cx_Oracle.connect('user', 'password', dsn, encoding="UTF-8") 
+    etl.tooraclesde(csv_data, oracleconnection, 'oracle_table_name') 
+
+    postgisconnection = psycopg2.connect(user="postgres",
+                                    password="password123",
+                                    host="127.0.0.1",
+                                    port="5432",
+                                    database="postgres_db")
+    etl.topostgis(csv_data, postgisconnection, 'postgis_table_name') 
+
+
+    postgresde_connection = psycopg2.connect(user="postgres",
+                                    password="password123",
+                                    host="127.0.0.1",
+                                    port="5432",
+                                    database="postgres_db")
+    etl.topostgis(csv_data, postgresde_connection, 'postgres_table_name') 
+    
+    
+    
 ## Running tests in the docker container
 
 To run the tests locally via docker compose, pull this version and place it in your path:
@@ -26,26 +111,3 @@ Then run docker-compose to run start the containers and run the pytest tests
 
     
 
-## Installation
-
-
-If installing manually as a pip module, run it like this:
-
-```
-pip install git+https://github.com/CityOfPhiladelphia/geopetl
-```
-
-Also, make sure you have libraries for the data sources you'll be using. For example:
-
-`pip install cx_Oracle cartodb`
-
-## Usage
-
-    import petl as etl
-    import geopetl
-
-    (etl.read('oraclesde://user:pass@db', 'gis_streets.bike_stations')
-        .rename('id', 'station_id')
-        .convert('num_docks', int)
-        .write('carto://domain?apikey=api_key')
-    )
