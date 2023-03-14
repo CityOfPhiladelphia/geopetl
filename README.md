@@ -18,7 +18,8 @@ pip install git+https://github.com/CityOfPhiladelphia/geopetl
 
 ## Usage
 **Extract (read)**  
-Provides access to data from any DB-API 2.0 connection via a given query. (if query = None, then defaults to  select * from table)   
+Provides access to data from any DB-API 2.0 connection via a given query. If query = None, then defaults to  select * from table. Geopetl extends access to    
+spatial data in oracle and postgres SDE enabled databases as well as postgis databases. 
 petl.io.db.fromdb(dbo, query, *args, **kwargs)  
 fromoraclesde(dbo, query, *args, **kwargs)  
 frompostgis(dbo, query, *args, **kwargs)  
@@ -52,7 +53,7 @@ frompostgis(dbo, query, *args, **kwargs)
 
 
 **Load (write)**  
-Load data into an existing database table via a DB-API 2.0 connection or cursor. Note that the database table will be truncated.  
+Load data into an existing database table via a DB-API 2.0 connection or cursor. Note that the database table will be truncated by default.  
 petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, drop=False, constraints=True, metadata=None, dialect=None, sample=1000)  
 tooraclesde(table, dbo, tablename,srid=None,truncate=True, increment=True)  
 topostgis(table, dbo, table_name, from_srid=None,)  
