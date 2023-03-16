@@ -96,7 +96,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     if not create:
         table.truncate()
 
-    table.write(rows, from_srid=from_srid)
+    table.write(rows)
 
 etl.topostgis = topostgis
 
@@ -119,7 +119,7 @@ def appendpostgis(rows, dbo, table_name, from_srid=None, buffer_size=DEFAULT_WRI
 
     # write
     table = db.table(table_name)
-    table.write(rows, from_srid=from_srid)
+    table.write(rows)
 
 etl.appendpostgis = appendpostgis
 
@@ -726,48 +726,10 @@ class PostgisTable(object):
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
 
-    def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
-        """Prepares WKT geometry by projecting and casting as necessary."""
-        # if DB is sde enabled
-        if self.db.is_sde_enabled is True:
-            geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
-        # if DB is postgis enabled
-        elif self.db.is_postgis_enabled is True:
-            geom = "ST_GeomFromText('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
-        else:
-            raise Exception('DB is not SDE or Postgis enabled??')
-
-
-        # Handle 3D geometries
-        # TODO: screen these with regex
-        if 'NaN' in geom:
-            geom = geom.replace('NaN', '0')
-            geom = "ST_Force_2D({})".format(geom)
-
-        # Convert curve geometries (these aren't supported by PostGIS)
-        if 'CURVE' in geom or geom.startswith('CIRC'):
-            geom = "ST_CurveToLine({})".format(geom)
-        # Reproject if necessary
-        if transform_srid and srid != transform_srid:
-             geom = "ST_Transform({}, {})".format(geom, transform_srid)
-        # else:
-        #   geom = "ST_GeomFromText('{}', {})".format(geom, from_srid)
-
-        if multi_geom:
-            if self.db.is_sde_enabled is False:
-                geom = 'ST_Multi({})'.format(geom)
-        return geom
-
-    def write(self, rows, from_srid=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+    def write(self, rows):
         """
-        Inserts dictionary row objects in the the database
-        Args: list of row dicts, table name, ordered field names
-
-        This doesn't currently use petl.todb for a few reasons:
-            - petl uses executemany which isn't intended for speed (basically
-              the equivalent of running many insert statements)
-            - calls to DB functions like ST_GeomFromText end up getting quoted;
-              not sure how to disable this.
+        Inserts dictionary row objects in the the database. Geoms must be pre-formatted 
+        already in the table's SRID.
         """
         if self.database_object_type != 'table':
             raise TypeError('Database object {} is a {}, we cannot write to that!'.format(self.name,self.database_object_type))
@@ -779,34 +741,9 @@ class PostgisTable(object):
         geom_field = self.geom_field
         objectid_field = self.objectid_field
 
-        
-        # convert rows to records (hybrid objects that can behave like dicts)
-        #rows = etl.records(rows)
-        # # convert rows to records (hybrid objects that can behave like dicts))
-        # rows2 = etl.records(rowsnotnone)
-
-        #rows = etl.records(rows)
-        # Get geom metadata
-        if geom_field:
-            rowsnotnone = rows.select(geom_field, lambda v: v != None and v != '')
-            first_geom_val = rowsnotnone.values(geom_field)[0] or ''
-            srid = from_srid or self.srid
-            match = re.match('[A-Z]+', first_geom_val)
-            row_geom_type = match.group() if match else None
-
-        # Do we need to cast the geometry to a MULTI type? (Assuming all rows
-        # have the same geom type.)
-        if geom_field:
-            if self.geom_type.startswith('MULTI') and \
-                not row_geom_type.startswith('MULTI'):
-                multi_geom = True
-            else:
-                multi_geom = False
-
         #if PG objectid_field not in local data fields tuple, append to local data fields
         if objectid_field and objectid_field not in fields:
             fields = fields + (objectid_field,)
-            #local_objectID_flag = True
 
         # Make a map of field name => type
         type_map = OrderedDict()
@@ -820,29 +757,19 @@ class PostgisTable(object):
         fields_joined = ', '.join(fields)
         stmt = "INSERT INTO {} ({}) VALUES ".format('.'.join([self.schema, self.name]), fields_joined)
         rows = etl.records(rows)
-        len_rows = len(rows)
-        if buffer_size is None or len_rows < buffer_size:
-            iterations = 1
-        else:
-            iterations = int(len_rows / buffer_size)
-            iterations += (len_rows % buffer_size > 0)  # round up
 
-        execute = self.db.cursor.execute
-        commit = self.db.dbo.commit
-
-        # Make list of value lists
         val_rows = []
         cur_stmt = stmt
 
-        # for each row
         for i, row in enumerate(rows):
+            if i % 1000 == 0: 
+                print(i)
             val_row = []
             #  for each item in a row
             for field, type_ in type_map_items:
                 if type_ == 'geometry':
                     geom = row[geom_field]
-                    val = self._prepare_geom(geom, srid, multi_geom=multi_geom)
-                    val_row.append(val)
+                    val_row.append(geom)
 
                 # if no object id and sde enabled, use sde index to append
                 elif field == objectid_field and self.db.is_sde_enabled: #and local_objectID_flag:
@@ -851,32 +778,12 @@ class PostgisTable(object):
                 else:
                     val = self.prepare_val(row[field], type_)
                     val_row.append(val)
-
             val_rows.append(val_row)
-            # check if it's time to ship a chunk
-            if i % buffer_size == 0:
-                # Execute
-                vals_joined = ['({})'.format(', '.join(vals)) for vals in val_rows]
-                rows_joined = ', '.join(vals_joined)
-                cur_stmt += rows_joined
-                try:
-                    execute(cur_stmt)
-                except psycopg2.ProgrammingError:
-                    print(self.db.cursor.query)
-                    raise
-                commit()
 
-                val_rows = []
-                cur_stmt = stmt
-
-        # Execute remaining rows (TODO clean this up)
         if val_rows:
-            vals_joined = ['({})'.format(', '.join(vals)) for vals in val_rows]
-            rows_joined = ', '.join(vals_joined)
-            cur_stmt += rows_joined
-            execute(cur_stmt)
-            commit()
-
+            cur_stmt += '%s'
+            psycopg2.extras.execute_values(self.db.cursor, cur_stmt, val_rows)
+            self.db.dbo.commit()
 
     def truncate(self, cascade=False):
         """Drop all rows."""
