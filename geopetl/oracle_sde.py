@@ -12,10 +12,9 @@ from petl.io.db_utils import _quote, _is_dbapi_connection
 from petl.util.base import Table
 from geopetl.base import SpatialQuery
 from geopetl.util import parse_db_url
+import cx_Oracle
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
-MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB = 150
-
 
 def extract_table_schema(dbo, table_name, table_schema_output_path):
     db = OracleSdeDatabase(dbo)
@@ -27,6 +26,8 @@ etl.extract_table_schema = extract_table_schema
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
+    if table.row_count == 0:
+        raise Exception(f"Table {table_name} is empty, exiting...")
     return table.query(**kwargs)
 
 etl.fromoraclesde = fromoraclesde
@@ -327,6 +328,7 @@ class OracleSdeTable(object):
         else:
             self.schema = self.db.user.lower()
             self.name = name.lower()
+        self.row_count = self._get_row_count()
         self.geom_field = self._get_geom_field()
         self.geom_type = self._get_geom_type()
         self.max_num_points_in_geom = 0 if not self.geom_field else self._get_max_num_points_in_geom()
@@ -485,6 +487,14 @@ class OracleSdeTable(object):
         with open(table_schema_output_path, 'w') as fp:
             json.dump(metadata_fmt, fp)
 
+    def _get_row_count(self):
+        row_count_stmt = '''
+            select count(*) from {}.{}
+        '''.format(self._owner.upper(), self.name.upper())
+        self.db.cursor.execute(row_count_stmt)
+        row_count = self.db.cursor.fetchone()[0]
+        return row_count
+        
     def _get_geom_field(self):
         f = [field for field, desc in self.metadata.items() \
                 if desc['type'] == 'geom']
@@ -515,12 +525,6 @@ class OracleSdeTable(object):
         if self.geom_field is None:
             return None
 
-        row_count_stmt = '''
-            select count(*) from {}.{}
-        '''.format(self._owner.upper(), self.name.upper())
-        self.db.cursor.execute(row_count_stmt)
-        row_count = self.db.cursor.fetchone()[0]
-
         check_registration_stmt = f"SELECT REGISTRATION_ID FROM SDE.TABLE_REGISTRY WHERE OWNER = '{self._owner.upper()}' AND TABLE_NAME = '{self.name.upper()}'"
         self.db.cursor.execute(check_registration_stmt)
         reg_id = self.db.cursor.fetchone()
@@ -529,7 +533,7 @@ class OracleSdeTable(object):
             raise AssertionError('Table is not registered with SDE! To write with shapes it needs to be registered.')
 
         # If the table isn't empty, get geom types from sde.st_geometrytype()
-        if row_count > 0:
+        if self.row_count > 0:
             stmt = '''select distinct sde.st_geometrytype({geom_field}) from {owner}.{table_name} WHERE SDE.ST_ISEMPTY({geom_field}) = 0 '''.format(geom_field=self.geom_field, owner=self._owner.upper(), table_name=self.name.upper())
             geom_type_response = self.db.cursor.execute(stmt)
             geom_types = []
@@ -649,30 +653,7 @@ class OracleSdeTable(object):
 
     def wkt_getter(self, to_srid):
         assert self.geom_field
-        geom_field_t = geom_field = self.geom_field
-        # SDE.ST_Transform doesn't work when the datums differ. Unfortunately,
-        # 4326 <=> 2272 is one of those. Using Shapely + PyProj for now.
-        # if to_srid and to_srid != self.srid:
-        #     geom_field_t = "SDE.ST_Transform({}, {})"\
-        #         .format(geom_field, to_srid)
-        # return "SDE.ST_AsText({}) AS {}"\
-        #     .format(geom_field_t, geom_field)
-        #
-        # Determine if conversion of geom field from lob -> text can happen in the database or after using cx_oracle read() fct:
-        #     - cx_oracle read() fct is much slower than conversion in the database
-        #     - lob length must be < 4000 char limit for conversion in the datbase
-        #     - therefore choose query based on max length of geom
-        #     - for not use geom_type as proxy for length of geom (handle POINT geom_type conversions in the database
-        #     - TODO: make determination based on max geom field length
-        if self.max_num_points_in_geom is None:
-            self.max_num_points_in_geom = 0
-##        if self.geom_type == 'POINT':
-        if self.max_num_points_in_geom <= MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
-            return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then '' else TO_CHAR(SDE.ST_AsText({})) end AS {}" \
-            .format(geom_field_t, geom_field_t, geom_field)
-        else:
-            return "CASE WHEN SDE.ST_ISEMPTY({}) = 1 then EMPTY_CLOB() else SDE.ST_AsText({}) end AS {}" \
-                .format(geom_field_t, geom_field_t, geom_field)
+        return 'sde.st_astext({geom_field}) AS {geom_field}'.format(geom_field=self.geom_field)
 
     #returns a list of the time zone aware field names in a table
     def _timezone_fields(self):
@@ -1113,6 +1094,17 @@ class OracleSdeQuery(SpatialQuery):
         # For tests to ensure we're not slamming the database
         self.times_db_called = 0
 
+    def output_type_handler(self, cursor, name, default_type, size, precision, scale):
+        if default_type == cx_Oracle.DB_TYPE_CLOB:
+            return cursor.var(cx_Oracle.DB_TYPE_LONG, arraysize=cursor.arraysize)
+        if default_type == cx_Oracle.DB_TYPE_BLOB:
+            return cursor.var(cx_Oracle.DB_TYPE_LONG_RAW, arraysize=cursor.arraysize)
+
+    def mkcursor(self):
+        cursor = self.db.dbo.cursor()
+        cursor.outputtypehandler = self.output_type_handler
+        return cursor
+
     def __iter__(self):
         """Proxy iteration to core petl."""
         # form sql statement if sql isn't provided on fct call
@@ -1122,36 +1114,27 @@ class OracleSdeQuery(SpatialQuery):
         # if no sql arg, create qry
         else:
             stmt = self.stmt()
-
         # get petl iterator
         dbo = self.db.dbo
         # execute qry
-        print('Geopetl: Reading data from database..')
-        db_view = etl.fromdb(dbo, stmt)
+        print('Geopetl: Reading data from database..', datetime.now())
+        db_view = etl.fromdb(self.mkcursor(), stmt)
         self.times_db_called += 1
-        # Check if table is empty
-        try:
-            rown_num = etl.nrows(db_view)
-        except Exception as e:
-            raise Exception(f'ERROR: table is empty. Error: {str(e)}')
 
         header = [h.lower() for h in db_view.header()]
-        # unpack geoms if we need to. this is slow ¯\_(ツ)_/¯
-        if self.geom_field  and self.geom_field in header and self.return_geom and self.table.max_num_points_in_geom > MAX_NUM_POINTS_IN_GEOM_FOR_CHAR_CONVERSION_IN_DB:
-            db_view = db_view.convert(self.geom_field.upper(), 'read')
 
         if self.geom_with_srid and self.geom_field and self.geom_field in header and self.srid:
             db_view = db_view.convert(self.geom_field.upper(), lambda g: 'SRID={srid};{g}'.format(srid=self.srid, g=g) if g not in ('', None) else '')
+        
         # checks tz field in table not view
         selected_ts_fields = [f for f in self.table.timezone_fields if f in header]
         if len(selected_ts_fields) > 0:
             db_view = db_view.convert([s.upper() for s in selected_ts_fields],
-            # db_view = db_view.convert([s.lower() for s in selected_ts_fields],
                                        lambda timezone_field: dt_parser().parse(timezone_field))
 
         # lowercase headers
-        # headers = db_view.header()
         db_view = etl.setheader(db_view, [x.lower() for x in header])
+
         iter_fn = db_view.__iter__()
         return iter_fn
 
