@@ -1095,10 +1095,24 @@ class OracleSdeQuery(SpatialQuery):
         self.times_db_called = 0
 
     def output_type_handler(self, cursor, name, default_type, size, precision, scale):
+        # note: default arraysize is 100: https://cx-oracle.readthedocs.io/en/latest/api_manual/cursor.html
+        # if over 200,000, set arraysize to 500
+        # if over 600,000, set arraysize to 1000
+        # note: doesn't affect LOBs? https://cx-oracle.readthedocs.io/en/latest/user_guide/tuning.html#tuningfetch
         if default_type == cx_Oracle.DB_TYPE_CLOB:
-            return cursor.var(cx_Oracle.DB_TYPE_LONG, arraysize=cursor.arraysize)
+            if self.table.row_count > 600000:
+                return cursor.var(cx_Oracle.DB_TYPE_LONG, arraysize=1000)
+            elif self.table.row_count > 200000:
+                return cursor.var(cx_Oracle.DB_TYPE_LONG, arraysize=500)
+            else:
+                return cursor.var(cx_Oracle.DB_TYPE_LONG, arraysize=cursor.arraysize)
         if default_type == cx_Oracle.DB_TYPE_BLOB:
-            return cursor.var(cx_Oracle.DB_TYPE_LONG_RAW, arraysize=cursor.arraysize)
+            if self.table.row_count > 600000:
+                return cursor.var(cx_Oracle.DB_TYPE_LONG_RAW, arraysize=1000)
+            elif self.table.row_count > 200000:
+                return cursor.var(cx_Oracle.DB_TYPE_LONG_RAW, arraysize=500)
+            else:
+                return cursor.var(cx_Oracle.DB_TYPE_LONG_RAW, arraysize=cursor.arraysize)
 
     def mkcursor(self):
         cursor = self.db.dbo.cursor()
