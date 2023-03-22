@@ -375,9 +375,10 @@ class PostgisTable(object):
     _geom_field = None
     _srid = None
     _database_object_type = None
+
     def __init__(self, db, name):
         self.db = db
-        
+
         # Check for a schema
         if '.' in name:
             self.schema, self.name = name.split('.')
@@ -388,6 +389,7 @@ class PostgisTable(object):
         else:
             self.schema = self.db.user
             self.name = name
+        self._is_sde_registered = None
 
 
     def __str__(self):
@@ -425,6 +427,27 @@ class PostgisTable(object):
         else:
             raise TypeError("""This database object is unsupported at this time.
             database object passed to us looks like a '{}'""".format(type_map[relkind]))
+
+
+    @property
+    def is_sde_registered(self):
+        if self._is_sde_registered is not None:
+            return self._is_sde_registered
+        # Check if it's registered by checking it's objectid column (should be objectid)
+                    # in the SDE table registry
+        if not self.db.is_postgis_enabled:
+            self._is_sde_registered = False
+        else:
+            stmt = f'''select rowid_column from sde.sde_table_registry where
+                                    table_name = '{self.name}' and schema = '{self.schema}' '''
+            sde_register_check = self.db.fetch(stmt)
+            print("sde register check: ", sde_register_check)
+            if sde_register_check:
+                self._is_sde_registered = True
+            else:
+                self._is_sde_registered = False
+        return self._is_sde_registered
+
 
     @property
     def metadata(self):
@@ -518,32 +541,20 @@ class PostgisTable(object):
                             AND (data_type = 'USER-DEFINED' OR data_type = 'ST_GEOMETRY')'''
                         target_table_shape_fields = self.db.fetch(stmt)
                 # if object is not view or materialized view
-                else:
-                    # Check if it's registered by checking it's objectid column (should be objectid)
-                    # in the SDE table registry
-                    stmt = f'''select rowid_column from sde.sde_table_registry where
-                                    table_name = '{self.name}' and schema = '{self.schema}' '''
-                    sde_register_check = self.db.fetch(stmt)
-
-                    if sde_register_check:
-                        # Check if our objectid column is actually named "objectid"
-                        if sde_register_check[0]['rowid_column'].lower() != 'objectid':
-                            objectid_field = sde_register_check[0]['rowid_column']
-                            logger.warning(f'Object ID field of this registered table is not called "OBJECTID"! It is: "{objectid_field}". We recommend fixing this!!')
-                        # First attempt to check the geom column in an SDE specific table
-                        try:
-                            stmt = f'''select column_name from sde.st_geometry_columns where
-                                            table_name = '{self.name}' '''
-                            target_table_shape_fields = self.db.fetch(stmt)
-                        # If we're SDE enabled, but we get undefined table for sde.st_geometry_columns
-                        # then we must be in RDS, where you can SDE enable a database, but the backend uses PostGIS
-                        # Check for our geom column in a PostGIS table
-                        except psycopg2.errors.UndefinedTable as e:
-                            stmt = f'''select f_geometry_column as column_name from geometry_columns 
-                                                   where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
-                            target_table_shape_fields = self.db.fetch(stmt)
-                    else:
-                        raise Exception(f'''Table '{self.name}' is NOT sde registered. Must Register with Geodatabase''')
+                elif self.is_sde_registered:
+                    print("is sde registered: ", self.is_sde_registered)
+                    # First attempt to check the geom column in an SDE specific table
+                    try:
+                        stmt = f'''select column_name from sde.st_geometry_columns where
+                                        table_name = '{self.name}' '''
+                        target_table_shape_fields = self.db.fetch(stmt)
+                    # If we're SDE enabled, but we get undefined table for sde.st_geometry_columns
+                    # then we must be in RDS, where you can SDE enable a database, but the backend uses PostGIS
+                    # Check for our geom column in a PostGIS table
+                    except psycopg2.errors.UndefinedTable as e:
+                        stmt = f'''select f_geometry_column as column_name from geometry_columns 
+                                                where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
+                        target_table_shape_fields = self.db.fetch(stmt)
 
             elif self.db.is_postgis_enabled: 
                 # this query should work for both postgis mview and table
@@ -565,7 +576,7 @@ class PostgisTable(object):
                 raise LookupError('Multiple geometry fields')
             else:
                 raise Exception('DB is not SDE or Postgis enabled')
-            
+
         return self._geom_field
 
 
@@ -629,18 +640,7 @@ class PostgisTable(object):
 
     @property
     def geom_type(self):
-        # if not sde enabled
-        if self.db.is_postgis_enabled is True:
-            stmt = """
-                SELECT type
-                FROM geometry_columns
-                WHERE f_table_schema = '{}'
-                AND f_table_name = '{}'
-                and f_geometry_column = '{}';
-                """.format(self.schema, self.name, self.geom_field)
-            a = self.db.fetch(stmt)[0].pop('type')
-            return a
-        elif self.db.is_sde_enabled is True:
+        if self.db.is_sde_enabled is True:
             geom_dict = {1:"POINT", 9:"LINE",4:"POLYGON", 11:"MULTIPOLYGON"}
             stmt = """
                 SELECT geometry_type
@@ -662,6 +662,16 @@ class PostgisTable(object):
             else:
                 geomtype = None
             return geomtype
+        elif self.db.is_postgis_enabled is True:
+            stmt = """
+                SELECT type
+                FROM geometry_columns
+                WHERE f_table_schema = '{}'
+                AND f_table_name = '{}'
+                and f_geometry_column = '{}';
+                """.format(self.schema, self.name, self.geom_field)
+            a = self.db.fetch(stmt)[0].pop('type')
+            return a
         else:
             raise Exception('DB is not SDE or Postgis enabled??')
 
