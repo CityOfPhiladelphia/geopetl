@@ -342,6 +342,7 @@ FIELD_TYPE_MAP = {
     'smallint':                 'num',
     'int8':                     'num',
     'int4':                     'num',
+    'int2':                     'num',
     'integer':                  'num',
     'smallint':                 'num',
     'float':                    'num',
@@ -418,8 +419,12 @@ class PostgisTable(object):
             WHERE relname='{}'
             AND n.nspname='{}';
             """.format(self.name,self.schema)
-        res = self.db.fetch(stmt)
-        relkind = res[0]['relkind']
+        if self.name:
+            res = self.db.fetch(stmt)
+            relkind = res[0]['relkind']
+        else:
+            # table arg in frompostgis method can defaut to None when custom sql is provided via sql kwarg
+            return 'sql'
         if type_map[relkind] in ['table', 'materialized_view', 'view']:
             self._database_object_type = type_map[relkind]
             print(f'Database object type: {self._database_object_type}.')
@@ -920,15 +925,15 @@ class PostgisQuery(Table):
     def __iter__(self):
         """Proxy iteration to core petl."""
         # form sql statement
-        stmt = self.stmt()
-        if self.sql:
-            stmt = self.sql
+        stmt = self.stmt() if not self.sql else self.sql
+        # if self.sql:
+        #     stmt = self.sql
 
         # get petl iterator
         dbo = self.db.dbo
         db_view = etl.fromdb(dbo, stmt)
         header = [h.lower() for h in db_view.header()]
-        if self.geom_with_srid and self.table.geom_field and self.table.geom_field in header and self.table.srid:
+        if not self.sql and self.geom_with_srid and self.table.geom_field and self.table.geom_field in header and self.table.srid:
             db_view = db_view.convert(self.table.geom_field, lambda g: 'SRID={srid};{g}'.format(srid=self.table.srid, g=g) if g not in ('', None) else '')
         iter_fn = db_view.__iter__()
 
