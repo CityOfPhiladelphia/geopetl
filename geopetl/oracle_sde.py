@@ -524,13 +524,14 @@ class OracleSdeTable(object):
 
         if self.geom_field is None:
             return None
+        
+        # This excludes functionality for views, commenting out for now:
+        # check_registration_stmt = f"SELECT REGISTRATION_ID FROM SDE.TABLE_REGISTRY WHERE OWNER = '{self._owner.upper()}' AND TABLE_NAME = '{self.name.upper()}'"
+        # self.db.cursor.execute(check_registration_stmt)
+        # reg_id = self.db.cursor.fetchone()
 
-        check_registration_stmt = f"SELECT REGISTRATION_ID FROM SDE.TABLE_REGISTRY WHERE OWNER = '{self._owner.upper()}' AND TABLE_NAME = '{self.name.upper()}'"
-        self.db.cursor.execute(check_registration_stmt)
-        reg_id = self.db.cursor.fetchone()
-
-        if not reg_id:
-            raise AssertionError('Table is not registered with SDE! To write with shapes it needs to be registered.')
+        # if not reg_id:
+        #     raise AssertionError('Table is not registered with SDE! To write with shapes it needs to be registered.')
 
         # If the table isn't empty, get geom types from sde.st_geometrytype()
         if self.row_count > 0:
@@ -698,7 +699,7 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if val is None or val == '':
+        if val is None:
             return None
         elif val == 0:
             return 0
