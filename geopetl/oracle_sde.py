@@ -699,7 +699,7 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if val is None or val == '':
+        if val is None: # or val == '':
             return None
         elif val == 0:
             return 0
@@ -714,6 +714,8 @@ class OracleSdeTable(object):
         elif type_ == 'geom':
             pass
         elif type_ == 'date':
+            if val=='':
+                return ''
             # Convert datetimes to ISO-8601
             if isinstance(val, str):
                 splitval = val.split(' ')
@@ -741,8 +743,11 @@ class OracleSdeTable(object):
             if isinstance(val, datetime):
                 val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
             elif isinstance(val, str):
-                val = dt_parser().parse(val)
-                val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
+                if val=='':
+                    return ''
+                else:
+                    val = dt_parser().parse(val)
+                    val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
         else:
             raise TypeError("Unhandled type: '{}'".format(type_))
         return val
