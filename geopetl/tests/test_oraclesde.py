@@ -343,7 +343,8 @@ def test_reading_polygon_table(oraclesde_db, schema,srid, create_polygon_table):
 
 # load staging data with geopetl, extract with cxOracle, assert with csv data
 def test_assert_written_data(oraclesde_db, csv_data, schema,srid):
-    csv_data.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema, point_table_name, srid), srid=srid)
+    csv_data_ = etl.fromcsv(point_csv_dir)
+    csv_data_.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema, point_table_name, srid), srid=srid)
     # read data using oracle_cx
     cursor = oraclesde_db.cursor()
     cursor.execute(
