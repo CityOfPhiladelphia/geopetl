@@ -106,7 +106,7 @@ Then run the config like so:
 Pull the oracle rpms:
 `. ./pull-oracle-rpm.sh`
 
-Then run docker-compose to run start the containers and run the pytest tests
+Then run docker-compose to run start the containers and run the pytest tests  
 `docker-compose -f oracle-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`  
 `docker-compose -f postgis-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`  
 `docker-compose -f postgressde-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`  
