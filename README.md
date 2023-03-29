@@ -26,10 +26,10 @@ fromoraclesde(dbo, query, *args, **kwargs)
 frompostgis(dbo, query, *args, **kwargs) 
 
 ````python
-    import petl as etl
-    import geopetl
-    import psycopg2
-    import cx_Oracle
+import petl as etl
+import geopetl
+import psycopg2
+import cx_Oracle
 
     dsn = cx_Oracle.makedsn('host', 'port', service_name='service_name')
     oracle_connection = cx_Oracle.connect('user', 'password', dsn, encoding="UTF-8") 
