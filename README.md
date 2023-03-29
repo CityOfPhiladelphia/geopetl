@@ -18,9 +18,9 @@ pip install git+https://github.com/CityOfPhiladelphia/geopetl
 
 ## Usage
 **Extract (read)**  
-Provides access to data from any DB-API 2.0 connection via a given query. If query = None, then defaults to  select * from table. Geopetl  
-extends access to spatial data in oracle and postgres SDE enabled databases as well as postgis databases. etl.frompostgis() method is  
-compatible with both postgres SDE and postgis.  
+Provides access to data from any DB-API 2.0 connection via a given query. If query = None, then defaults to  
+select * from table. Geopetl extends access to spatial data in oracle and postgres SDE enabled databases as  
+well as postgis databases. `etl.frompostgis()` method is compatible with both postgres SDE and postgis.  
 petl.io.db.fromdb(dbo, query, *args, **kwargs)  
 fromoraclesde(dbo, query, *args, **kwargs)  
 frompostgis(dbo, query, *args, **kwargs) 
@@ -52,14 +52,15 @@ postgressde_data = etl.frompostgis(postgresde_connection,'postgressde_table_name
 
 
 **Load (write)**  
-Load data into an existing database table via a DB-API 2.0 connection or cursor. Note that the database table will be truncated by default.  
-etl.topostgis() method is compatible with both postgres SDE and postgis.  
+Load data into an existing database table via a DB-API 2.0 connection or cursor. Note that the database  
+table will be truncated by default. The etl.topostgis() method is compatible with both postgres SDE  
+and postgis.  
 petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, drop=False, constraints=True, metadata=None, dialect=None, sample=1000)  
 tooraclesde(table, dbo, tablename,srid=None,truncate=True, increment=True)  
 topostgis(table, dbo, table_name, from_srid=None,)  
 
 
-<code>
+````
 import petl as etl
 import geopetl
 import psycopg2
@@ -85,7 +86,7 @@ postgresde_connection = psycopg2.connect(user="postgres",
                                     port="5432",
                                     database="postgres_db")
 etl.topostgis(csv_data, postgresde_connection, 'postgres_table_name') 
-</code>
+````
     
     
 ## Running tests in the docker container
