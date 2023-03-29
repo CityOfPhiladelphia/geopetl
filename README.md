@@ -25,7 +25,7 @@ petl.io.db.fromdb(dbo, query, *args, **kwargs)
 fromoraclesde(dbo, query, *args, **kwargs)  
 frompostgis(dbo, query, *args, **kwargs) 
 
-```
+```python
     import petl as etl
     import geopetl
     import psycopg2
