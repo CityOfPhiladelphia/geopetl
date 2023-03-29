@@ -58,7 +58,8 @@ petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, d
 tooraclesde(table, dbo, tablename,srid=None,truncate=True, increment=True)  
 topostgis(table, dbo, table_name, from_srid=None,)  
 
-````python
+
+<code>
 import petl as etl
 import geopetl
 import psycopg2
@@ -84,7 +85,7 @@ postgresde_connection = psycopg2.connect(user="postgres",
                                     port="5432",
                                     database="postgres_db")
 etl.topostgis(csv_data, postgresde_connection, 'postgres_table_name') 
-````
+</code>
     
     
 ## Running tests in the docker container
