@@ -60,6 +60,7 @@ petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, d
 tooraclesde(table, dbo, tablename,srid=None,truncate=True, increment=True)  
 topostgis(table, dbo, table_name, from_srid=None,)  
 
+```python
     import petl as etl
     import geopetl
     import psycopg2
@@ -85,7 +86,7 @@ topostgis(table, dbo, table_name, from_srid=None,)
                                     port="5432",
                                     database="postgres_db")
     etl.topostgis(csv_data, postgresde_connection, 'postgres_table_name') 
-    
+```
     
     
 ## Running tests in the docker container
@@ -106,11 +107,13 @@ Then run the config like so:
 Pull the oracle rpms:
 `. ./pull-oracle-rpm.sh`
 
-Then run docker-compose to run start the containers and run the pytest tests  
+Then run docker-compose to run start the containers and run the pytest tests 
+```bash
 `docker-compose -f oracle-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`  
 `docker-compose -f postgis-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`  
 `docker-compose -f postgressde-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`  
 `docker-compose -f sde-rds-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`
+```
 
     
 
