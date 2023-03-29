@@ -25,6 +25,7 @@ petl.io.db.fromdb(dbo, query, *args, **kwargs)
 fromoraclesde(dbo, query, *args, **kwargs)  
 frompostgis(dbo, query, *args, **kwargs) 
 
+**
 ```python
     import petl as etl
     import geopetl
@@ -49,6 +50,7 @@ frompostgis(dbo, query, *args, **kwargs)
                                     database="postgressde_db")
     postgressde_data = etl.frompostgis(postgresde_connection,'postgressde_table_name')
 ```
+**
 
 
 
