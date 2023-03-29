@@ -30,7 +30,7 @@ frompostgis(dbo, query, *args, **kwargs)
     import psycopg2
     import cx_Oracle
 
-
+```
     dsn = cx_Oracle.makedsn('host', 'port', service_name='service_name')
     oracle_connection = cx_Oracle.connect('user', 'password', dsn, encoding="UTF-8") 
     oraclesde_data = etl.fromoraclesde(oracle_connection, 'oracle_table_name')
@@ -48,7 +48,7 @@ frompostgis(dbo, query, *args, **kwargs)
                                     port="5432",
                                     database="postgressde_db")
     postgressde_data = etl.frompostgis(postgresde_connection,'postgressde_table_name')
-
+```
 
 
 
