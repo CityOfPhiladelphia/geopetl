@@ -18,10 +18,13 @@ pip install git+https://github.com/CityOfPhiladelphia/geopetl
 
 ## Usage
 **Extract (read)**  
-Provides access to data from any DB-API 2.0 connection via a given query. If query = None, then defaults to  
-select * from table. Geopetl extends access to spatial data in oracle and postgres SDE enabled databases as  
-well as postgis databases. `etl.frompostgis()` method is compatible with both postgres SDE and postgis.  
-petl.io.db.fromdb(dbo, query, *args, **kwargs)  
+Provides access to data from any DB-API 2.0 connection via a given query. If query = None, then geopetl defaults to  
+`select * from table`. Geopetl extends access to spatial data in oracle (`fromoraclesde(dbo, query, *args, **kwargs)`)  
+and postgres (`etl.frompostgis(dbo, query, *args, **kwargs)`) SDE enabled databases in a similar way as the  
+petl package method `fromdb(dbo, query, *args, **kwargs)` where `dbo` is a connection or cursor object, `query` is a  
+string containing a SQL query  
+NOTE that `frompostgis()` method is compatible with both postgres SDE and postgis.  
+ 
 fromoraclesde(dbo, query, *args, **kwargs)  
 frompostgis(dbo, query, *args, **kwargs) 
 
@@ -53,14 +56,14 @@ postgressde_data = etl.frompostgis(postgresde_connection,'postgressde_table_name
 
 **Load (write)**  
 Load data into an existing database table via a DB-API 2.0 connection or cursor. Note that the database  
-table will be truncated by default. The etl.topostgis() method is compatible with both postgres SDE  
-and postgis.  
+table will be truncated by default. `The etl.topostgis()` method is compatible with both postgres SDE  
+and postgis.
 petl.io.db.todb(table, dbo, tablename, schema=None, commit=True, create=False, drop=False, constraints=True, metadata=None, dialect=None, sample=1000)  
-tooraclesde(table, dbo, tablename,srid=None,truncate=True, increment=True)  
-topostgis(table, dbo, table_name, from_srid=None,)  
+`tooraclesde(table, dbo, tablename,srid=None,truncate=True, increment=True)`  
+`topostgis(table, dbo, table_name, from_srid=None,)`    
 
 
-````
+````python
 import petl as etl
 import geopetl
 import psycopg2
@@ -109,10 +112,10 @@ Pull the oracle rpms:
 
 Then run docker-compose to run start the containers and run the pytest tests 
 ```bash
-`docker-compose -f oracle-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`  
-`docker-compose -f postgis-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`  
-`docker-compose -f postgressde-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`  
-`docker-compose -f sde-rds-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl`
+docker-compose -f oracle-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl  
+docker-compose -f postgis-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl  
+docker-compose -f postgressde-docker-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl  
+docker-compose -f sde-rds-compose.yml up --build --abort-on-container-exit --exit-code-from geopetl  
 ```
 
     
