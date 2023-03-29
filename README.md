@@ -25,7 +25,7 @@ petl.io.db.fromdb(dbo, query, *args, **kwargs)
 fromoraclesde(dbo, query, *args, **kwargs)  
 frompostgis(dbo, query, *args, **kwargs) 
 
-**```python
+````python
     import petl as etl
     import geopetl
     import psycopg2
@@ -48,7 +48,7 @@ frompostgis(dbo, query, *args, **kwargs)
                                     port="5432",
                                     database="postgressde_db")
     postgressde_data = etl.frompostgis(postgresde_connection,'postgressde_table_name')
-```**
+````
 
 
 **Load (write)**  
