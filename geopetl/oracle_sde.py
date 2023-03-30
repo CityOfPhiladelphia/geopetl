@@ -524,13 +524,14 @@ class OracleSdeTable(object):
 
         if self.geom_field is None:
             return None
+        
+        # This excludes functionality for views, commenting out for now:
+        # check_registration_stmt = f"SELECT REGISTRATION_ID FROM SDE.TABLE_REGISTRY WHERE OWNER = '{self._owner.upper()}' AND TABLE_NAME = '{self.name.upper()}'"
+        # self.db.cursor.execute(check_registration_stmt)
+        # reg_id = self.db.cursor.fetchone()
 
-        check_registration_stmt = f"SELECT REGISTRATION_ID FROM SDE.TABLE_REGISTRY WHERE OWNER = '{self._owner.upper()}' AND TABLE_NAME = '{self.name.upper()}'"
-        self.db.cursor.execute(check_registration_stmt)
-        reg_id = self.db.cursor.fetchone()
-
-        if not reg_id:
-            raise AssertionError('Table is not registered with SDE! To write with shapes it needs to be registered.')
+        # if not reg_id:
+        #     raise AssertionError('Table is not registered with SDE! To write with shapes it needs to be registered.')
 
         # If the table isn't empty, get geom types from sde.st_geometrytype()
         if self.row_count > 0:
@@ -698,11 +699,8 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
-        if val is None or val == '':
-            return None
-        elif val == 0:
-            return 0
-
+        if val is None or val == '' or val == 0:
+            return val
         # TODO handle types. Seems to be working without this for most cases.
         if type_ == 'text':
             pass
@@ -718,24 +716,22 @@ class OracleSdeTable(object):
                 splitval = val.split(' ')
                 if ' ' in val and ':' in splitval[1] and 'T' not in val:
                     val =splitval[0] + 'T' + splitval[1]
-                if val:
-                    val = dt_parser().parse(val)
-                    val = val.strftime("%Y-%m-%d %H:%M:%S")
+                val = dt_parser().parse(val)
+                val = val.strftime("%Y-%m-%d %H:%M:%S")
             if isinstance(val, datetime):
                 val = val.strftime("%Y-%m-%d %H:%M:%S")
-        elif type_ == 'nclob':
-            pass
-        elif type_ == 'timestamp with time zone':
-            if isinstance(val, datetime):
-                val = val.isoformat()
-            elif isinstance(val, str) and val:
-                val=dt_parser().parse(val)
-                val = val.isoformat()
-
+        elif type_ == 'nclob': 
             # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
             # var = self._c.var(cx_Oracle.NCLOB)
             # var.setvalue(0, val)
             # val = var
+            pass
+        elif type_ == 'timestamp with time zone':
+            if isinstance(val, datetime):
+                val = val.isoformat()
+            elif isinstance(val, str):
+                val=dt_parser().parse(val)
+                val = val.isoformat()
         elif type_ == 'timestamp without time zone':
             if isinstance(val, datetime):
                 val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
