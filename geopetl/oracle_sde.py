@@ -699,6 +699,8 @@ class OracleSdeTable(object):
 
     def _prepare_val(self, val, type_):
         """Prepare a value for entry into the DB."""
+        if val is None or val == '' or val == 0:
+            return val
         # TODO handle types. Seems to be working without this for most cases.
         if type_ == 'text':
             pass
@@ -708,32 +710,32 @@ class OracleSdeTable(object):
             pass
         elif type_ == 'geom':
             pass
-        elif type_ == 'nclob':
-            pass
-            # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
-            # var = self._c.var(cx_Oracle.NCLOB)
-            # var.setvalue(0, val)
-            # val = var
         elif type_ == 'date':
             # Convert datetimes to ISO-8601
-            if isinstance(val, str) and val:
+            if isinstance(val, str):
                 splitval = val.split(' ')
                 if ' ' in val and ':' in splitval[1] and 'T' not in val:
                     val =splitval[0] + 'T' + splitval[1]
                 val = dt_parser().parse(val)
                 val = val.strftime("%Y-%m-%d %H:%M:%S")
-            if isinstance(val, datetime) and val:
+            if isinstance(val, datetime):
                 val = val.strftime("%Y-%m-%d %H:%M:%S")
+        elif type_ == 'nclob': 
+            # Cast as a CLOB object so cx_Oracle doesn't try to make it a LONG
+            # var = self._c.var(cx_Oracle.NCLOB)
+            # var.setvalue(0, val)
+            # val = var
+            pass
         elif type_ == 'timestamp with time zone':
             if isinstance(val, datetime):
                 val = val.isoformat()
-            elif isinstance(val, str) and val:
+            elif isinstance(val, str):
                 val=dt_parser().parse(val)
                 val = val.isoformat()
         elif type_ == 'timestamp without time zone':
             if isinstance(val, datetime):
                 val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
-            elif isinstance(val, str) and val:
+            elif isinstance(val, str):
                 val = dt_parser().parse(val)
                 val = val.strftime("%Y-%m-%d %H:%M:%S.%f")
         else:
