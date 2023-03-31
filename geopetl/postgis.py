@@ -427,7 +427,7 @@ class PostgisTable(object):
             return 'sql'
         if type_map[relkind] in ['table', 'materialized_view', 'view']:
             self._database_object_type = type_map[relkind]
-            print(f'Database object type: {self._database_object_type}.')
+            print('Database object type: {}.'.format(self._database_object_type))
             return self._database_object_type
         else:
             raise TypeError("""This database object is unsupported at this time.
@@ -443,8 +443,8 @@ class PostgisTable(object):
         if not self.db.is_sde_enabled:
             self._is_sde_registered = False
         else:
-            stmt = f'''select rowid_column from sde.sde_table_registry where
-                                    table_name = '{self.name}' and schema = '{self.schema}' '''
+            stmt = '''select rowid_column from sde.sde_table_registry where
+                                    table_name = '{table_name}' and schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
             sde_register_check = self.db.fetch(stmt)
             print("sde register check: ", sde_register_check)
             if sde_register_check:
@@ -540,31 +540,31 @@ class PostgisTable(object):
                     # but DOES NOT work for non-geometric views.
                     # Use as a fallback.
                     if not target_table_shape_fields:
-                        stmt = f'''SELECT column_name FROM information_schema.columns
-                            WHERE table_name = '{self.name}'
-                            AND table_schema = '{self.schema}'
-                            AND (data_type = 'USER-DEFINED' OR data_type = 'ST_GEOMETRY')'''
+                        stmt = '''SELECT column_name FROM information_schema.columns
+                            WHERE table_name = '{table_name}'
+                            AND table_schema = '{table_schema}'
+                            AND (data_type = 'USER-DEFINED' OR data_type = 'ST_GEOMETRY')'''.format(table_name=self.name, table_schema=self.schema)
                         target_table_shape_fields = self.db.fetch(stmt)
                 # if object is not view or materialized view
                 elif self.is_sde_registered:
                     print("is sde registered: ", self.is_sde_registered)
                     # First attempt to check the geom column in an SDE specific table
                     try:
-                        stmt = f'''select column_name from sde.st_geometry_columns where
-                                        table_name = '{self.name}' '''
+                        stmt = '''select column_name from sde.st_geometry_columns where
+                                        table_name = '{table_name}' '''.format(table_name=self.name)
                         target_table_shape_fields = self.db.fetch(stmt)
                     # If we're SDE enabled, but we get undefined table for sde.st_geometry_columns
                     # then we must be in RDS, where you can SDE enable a database, but the backend uses PostGIS
                     # Check for our geom column in a PostGIS table
                     except psycopg2.errors.UndefinedTable as e:
-                        stmt = f'''select f_geometry_column as column_name from geometry_columns 
-                                                where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
+                        stmt = '''select f_geometry_column as column_name from geometry_columns 
+                                                where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
                         target_table_shape_fields = self.db.fetch(stmt)
 
             elif self.db.is_postgis_enabled: 
                 # this query should work for both postgis mview and table
-                stmt = f'''select f_geometry_column as column_name from geometry_columns 
-                                       where f_table_name = '{self.name}' and f_table_schema = '{self.schema}' '''
+                stmt = '''select f_geometry_column as column_name from geometry_columns 
+                                       where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
                 target_table_shape_fields = self.db.fetch(stmt)
 
             # if we find shape fields in target tables/view/materialized vies
@@ -576,7 +576,7 @@ class PostgisTable(object):
                 print("Dataset appears to be non-geometric, returning geom_field as None.")
             elif len(target_table_shape_fields) == 1:
                 self._geom_field = target_table_shape_fields[0].pop('column_name')
-                print(f'Geometric column detected: {self._geom_field}')
+                print('Geometric column detected: {}'.format(self._geom_field))
             elif len(target_table_shape_fields) > 1:
                 raise LookupError('Multiple geometry fields')
             else:

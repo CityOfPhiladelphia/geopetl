@@ -27,7 +27,7 @@ def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
     if table.row_count == 0:
-        raise Exception(f"Table {table_name} is empty, exiting...")
+        raise Exception("Table {table_name} is empty, exiting...".format(table_name=table_name))
     return table.query(**kwargs)
 
 etl.fromoraclesde = fromoraclesde
@@ -1031,8 +1031,8 @@ class OracleSdeTable(object):
                 try:
                     self.db.cursor.executemany(None, val_rows, batcherrors=False)
                 except Exception as e:
-                    print(f'Error trying to write. Length of val_rows {len(val_rows)}')
-                    print(f'Prepare statement used for executemany: {prepare_stmt}')
+                    print('Error trying to write. Length of val_rows {len(val_rows)}'.format(val_rows=val_rows))
+                    print('Prepare statement used for executemany: {prepare_stmt}'.format(prepare_stmt=prepare_stmt))
                     err = self.db.cursor.getbatcherrors()
                     print(err)
                     raise e
@@ -1045,8 +1045,8 @@ class OracleSdeTable(object):
             try:
                 self.db.cursor.executemany(None, val_rows, batcherrors=False)
             except Exception as e:
-                print(f'Error trying to write. Length of val_rows {len(val_rows)}')
-                print(f'Prepare statement used for executemany: {prepare_stmt}')
+                print('Error trying to write. Length of val_rows {len(val_rows)}'.format(val_rows=val_rows))
+                print('Prepare statement used for executemany: {prepare_stmt}'.format(prepare_stmt=prepare_stmt))
                 err = self.db.cursor.getbatcherrors()
                 print(err)
                 raise e
