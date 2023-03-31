@@ -440,7 +440,7 @@ class PostgisTable(object):
             return self._is_sde_registered
         # Check if it's registered by checking it's objectid column (should be objectid)
                     # in the SDE table registry
-        if not self.db.is_postgis_enabled:
+        if not self.db.is_sde_enabled:
             self._is_sde_registered = False
         else:
             stmt = f'''select rowid_column from sde.sde_table_registry where
