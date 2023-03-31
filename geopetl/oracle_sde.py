@@ -33,7 +33,7 @@ def fromoraclesde(dbo, table_name, **kwargs):
 etl.fromoraclesde = fromoraclesde
 
 def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
-                buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=True, increment=True):
+                buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=True, increment=True, fail_on_empty=True):
     """
     Writes rows to database. Truncates by default.
 
@@ -56,28 +56,28 @@ def tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
         # TODO create table if it doesn't exist
         raise NotImplementedError('Autocreate tables for Oracle SDE not currently implemented.')
 
-    table.write(rows, srid=srid, table_srid=table_srid, increment=increment, truncate=truncate)
+    table.write(rows, srid=srid, table_srid=table_srid, increment=increment, truncate=truncate, fail_on_empty=fail_on_empty)
 
 etl.tooraclesde = tooraclesde
 
 def _tooraclesde(self, dbo, table_name, srid=None, table_srid=None,
-                 buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=True, increment=True):
+                 buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=True, increment=True, fail_on_empty=True):
     """
     This wraps tooraclesde and adds a `self` arg so it can be attached to
     the Table class. This enables functional-style chaining.
     """
     return tooraclesde(self, dbo, table_name, table_srid=table_srid,
-                       buffer_size=buffer_size, truncate=truncate, increment=increment)
+                       buffer_size=buffer_size, truncate=truncate, increment=increment, fail_on_empty=fail_on_empty)
 
 Table.tooraclesde = _tooraclesde
 
 def appendoraclesde(rows, dbo, table_name, srid=None, table_srid=None,
-                buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+                buffer_size=DEFAULT_WRITE_BUFFER_SIZE, fail_on_empty=True):
     """
     Appends rows to database. Calls tooraclesde with truncate parameter set to False.
     """
     return tooraclesde(rows, dbo, table_name, srid=None, table_srid=None,
-                buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=False)
+                buffer_size=DEFAULT_WRITE_BUFFER_SIZE, truncate=False, fail_on_empty=fail_on_empty)
 
 etl.appendoraclesde = appendoraclesde
 
@@ -816,7 +816,7 @@ class OracleSdeTable(object):
 
 
     def write(self, rows, srid=None, table_srid=None,
-              buffer_size=DEFAULT_WRITE_BUFFER_SIZE,increment=True,truncate=True):
+              buffer_size=DEFAULT_WRITE_BUFFER_SIZE,increment=True,truncate=True, fail_on_empty=True):
         """
         Inserts dictionary row objects in the the database.
         Args: list of row dicts, table name, ordered field names
@@ -830,7 +830,11 @@ class OracleSdeTable(object):
         """
         # If the dataframe is empty or only has a header, exit
         if len(rows) < 2:
-            raise Exception("Dataframe is empty, exiting...")
+            print("Dataframe is empty, exiting...")
+            if fail_on_empty:    
+                raise Exception("Dataframe is empty, exiting...")
+            else:
+                return
 
         # if table doesn't have a srid (probably because it isn't registered
         # with sde) and none was passed in, error
