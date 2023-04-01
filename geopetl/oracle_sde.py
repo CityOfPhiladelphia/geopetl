@@ -82,13 +82,13 @@ def appendoraclesde(rows, dbo, table_name, srid=None, table_srid=None,
 etl.appendoraclesde = appendoraclesde
 
 def _appendoraclesde(self, dbo, table_name, table_srid=None,
-                 buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
+                 buffer_size=DEFAULT_WRITE_BUFFER_SIZE, fail_on_empty=True):
     """
     This wraps appendoraclesde and adds a `self` arg so it can be attached to
     the Table class. This enables functional-style chaining.
     """
     return appendoraclesde(self, dbo, table_name, table_srid=table_srid,
-                       buffer_size=buffer_size)
+                       buffer_size=buffer_size, fail_on_empty=fail_on_empty)
 
 Table.appendoraclesde = _appendoraclesde
 ################################################################################
