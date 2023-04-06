@@ -10,7 +10,7 @@ from dateutil import parser as dt_parser
 # For some errors below
 import psycopg2
 
-aw = 'test2'
+
 DEFAULT_WRITE_BUFFER_SIZE = 1000
 
 DATA_TYPE_MAP = {
@@ -174,7 +174,7 @@ class PostgisDatabase(object):
 
         # TODO use petl dbo check/validation
         self.dbo = dbo
-        self.user = a.user
+        self.user = a.get('user')
 
         # To be used by setter properties below
         self._is_sde_enabled = None
