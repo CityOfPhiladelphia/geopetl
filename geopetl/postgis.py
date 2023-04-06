@@ -170,20 +170,15 @@ class PostgisDatabase(object):
         # make a cursor for introspecting the db. not used to read/write data.
         self.cursor = dbo.cursor(cursor_factory=RealDictCursor)
 
-        a = psycopg2.extensions.ConnectionInfo(dbo)
+        a = dbo.get_dsn_parameters()
 
         # TODO use petl dbo check/validation
         self.dbo = dbo
         self.user = a.user
-        #self.schemas =
 
         # To be used by setter properties below
         self._is_sde_enabled = None
         self._is_postgis_enabled = None
-
-        # # TODO use petl dbo check/validation
-        # self.dbo = dbo
-        # self.user = dbo.user
 
 
     def __str__(self):
