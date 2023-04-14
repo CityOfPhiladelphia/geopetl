@@ -726,7 +726,14 @@ class PostgisTable(object):
             elif 'timestamptz' not in str(val).lower():
                 val = '''TIMESTAMPTZ '{}' '''.format(val)
         elif type_ == 'boolean':
-            val = val if val else 'NULL'
+            # if we don't convert to string, then our val join in write() will fail to join the value
+            # since it will be a True/False value
+            if (val == True) or (val == False):
+                val = str(val)
+            elif not val:
+                val = 'NULL'
+            else:
+                val = val
         elif type_ == 'money':
             if not val:
                 val = 'NULL'
