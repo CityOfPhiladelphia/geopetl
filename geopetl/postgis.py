@@ -341,6 +341,8 @@ FIELD_TYPE_MAP = {
     'integer':                  'num',
     'smallint':                 'num',
     'float':                    'num',
+    'float4':                   'num',
+    'float8':                   'num',
     'double':                   'num',
     'numeric':                  'num',
     'bigint':                   'num',
