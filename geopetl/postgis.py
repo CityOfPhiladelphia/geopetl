@@ -446,7 +446,6 @@ class PostgisTable(object):
             stmt = '''select rowid_column from sde.sde_table_registry where
                                     table_name = '{table_name}' and schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
             sde_register_check = self.db.fetch(stmt)
-            print("sde register check: ", sde_register_check)
             if sde_register_check:
                 self._is_sde_registered = True
             else:
@@ -547,7 +546,6 @@ class PostgisTable(object):
                         target_table_shape_fields = self.db.fetch(stmt)
                 # if object is not view or materialized view
                 elif self.is_sde_registered:
-                    print("is sde registered: ", self.is_sde_registered)
                     # First attempt to check the geom column in an SDE specific table
                     try:
                         stmt = '''select column_name from sde.st_geometry_columns where
@@ -731,7 +729,7 @@ class PostgisTable(object):
             elif 'timestamptz' not in str(val).lower():
                 val = '''TIMESTAMPTZ '{}' '''.format(val)
         elif type_ == 'boolean':
-            val = val if val else 'NULL'
+            val = str(val) if val else 'NULL'
         elif type_ == 'money':
             if not val:
                 val = 'NULL'

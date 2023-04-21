@@ -35,6 +35,10 @@
     {
       "name": "datefield",
       "type": "date"
+    },
+    {
+      "name": "booleanfield",
+      "type": "boolean"
     }
   ]
 }
