@@ -556,7 +556,7 @@ class PostgisTable(object):
                     # Check for our geom column in a PostGIS table
                     except psycopg2.errors.UndefinedTable as e:
                         stmt = '''select f_geometry_column as column_name from geometry_columns 
-                                                where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
+                                        where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
                         target_table_shape_fields = self.db.fetch(stmt)
 
             elif self.db.is_postgis_enabled: 
@@ -729,7 +729,11 @@ class PostgisTable(object):
             elif 'timestamptz' not in str(val).lower():
                 val = '''TIMESTAMPTZ '{}' '''.format(val)
         elif type_ == 'boolean':
-            val = str(val) if val else 'NULL'
+            val = str(val)
+            if (val and val.lower() == 'true') or (val and val.lower()== 'false'):
+                val = val
+            else:
+                val = 'NULL'
         elif type_ == 'money':
             if not val:
                 val = 'NULL'
