@@ -392,7 +392,7 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
     cursor = connection.cursor()
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-            {timezone_field_name},
+            {timezone_field_name},booleanfield,
             st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
         srid=srid,
         schema=schema,
@@ -410,15 +410,13 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
 
 def test_write_nongeom_table(postgis, csv_data, schema,srid):
     csv_data = csv_data.cutout('shape')
-    print('csv data 412')
-    print(etl.look(csv_data))
     csv_data.topostgis(postgis.dbo, '{}.{}_ng'.format(schema,point_table_name)) 
     connection = postgis.dbo
     cursor = connection.cursor()
 
     stmt = '''
                 select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-                {timezone_field_name} from {schema}.{point_table_name}_ng'''.format(
+                {timezone_field_name}, booleanfield from {schema}.{point_table_name}_ng'''.format(
         schema=schema,
         point_table_name=point_table_name,
         objectid_field_name=fields.get('object_id_field_name'),
@@ -444,7 +442,7 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
     cursor = connection.cursor()
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-            {timezone_field_name}, st_astext({shape_field_name}) as {shape_field_name} from {schema}.{point_table_name}_{srid}'''.format(
+            {timezone_field_name}, booleanfield, st_astext({shape_field_name}) as {shape_field_name} from {schema}.{point_table_name}_{srid}'''.format(
         schema=schema,
         srid=srid,
         point_table_name=point_table_name,
@@ -563,7 +561,8 @@ def test_with_types(db_data, postgis, schema, srid,csv_data):
     data1 = etl.frompostgis(dbo=postgis.dbo,
                             table_name='{}.{}_{}'.format(schema,point_table_name,srid))
     #load to second test table
-    data1.topostgis(postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name,srid), from_srid=srid, column_definition_json=point_column_definition)
+    data1.topostgis(postgis.dbo, '{}.{}_{}_2'.format(schema, point_table_name,srid),
+                                 from_srid=srid, column_definition_json=point_column_definition)
 
     # extract from second test table
     data2 = etl.frompostgis(dbo=postgis.dbo,
