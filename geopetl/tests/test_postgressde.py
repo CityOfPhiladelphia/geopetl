@@ -283,7 +283,7 @@ def assert_data_method(csv_data1, db_data1, srid1, field=None):
             elif key == 'booleanfield':
                 if isinstance(csv_val,str):
                     print('str boolean')
-                    assert csv_val ==str(db_val)
+                    assert csv_val ==str(db_val).lower()
                 else:
                     assert csv_val== db_val
                 
