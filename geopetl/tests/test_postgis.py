@@ -44,7 +44,7 @@ def load_non_geom_table(postgis, schema):
     (4, 'fij()dcfwef', TIMESTAMP '2019-05-14 15:53:53.522000' , 2132134342, TIMESTAMPTZ '2014-04-11 10:23:54+05' , NULL,'true'), 
     (5, 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 0, TIMESTAMPTZ '2021-08-23 10:23:54-02' , '2008-08-11','true'),
     (6, 'v[]im', TIMESTAMP '2019-05-14 15:53:53.522000' , 1353, TIMESTAMPTZ '2015-03-21 10:23:54-01' , '2005-09-07','true'), 
-    (7, 'he_llo', TIMESTAMP '2019-05-14 15:53:53.522000' , 49053, TIMESTAMPTZ '2020-06-12 10:23:54+03' , ' 2003-11-23','true'), 
+    (7, 'he_llo', TIMESTAMP '2019-05-14 15:53:53.522000' , 49053, TIMESTAMPTZ '2020-06-12 10:23:54+03' , ' 2003-11-23','false'), 
     (8, 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06' , -123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , '2020-04-01','false'),
     (9, 'qwe''qeqdqw', TIMESTAMP '2019-01-05 10:53:52' , 456, TIMESTAMPTZ '2018-12-25 10:23:54+00' , '2018-07-19','false'), 
     (10, 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' ,'2017-06-26','false'), 
@@ -272,6 +272,12 @@ def assert_data_method(csv_data1, db_data1, srid=None, field=None):
                 except:
                     csv_val = csv_val
                 assert db_val == csv_val
+            elif key == 'booleanfield':
+                if isinstance(csv_val,str):
+                    print('str boolean 277')
+                    assert csv_val.lower() ==str(db_val).lower()
+                else:
+                    assert csv_val== db_val
             # compare values from each key
             else:
                 assert db_val == db_val
@@ -360,7 +366,7 @@ def test_reading_multipolygons(postgis, load_multipolygon_table,schema, srid):
 # extract data using sql arg in frompostgis()
 def test_stmt_arg(postgis,csv_data,schema,srid):
     qry = '''select {objectid_field_name} ,{text_field_name},{numeric_field_name},
-            {timestamp_field_name}, {date_field_name},{timezone_field_name},
+            {timestamp_field_name}, {date_field_name},{timezone_field_name}, booleanfield,
              st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
         schema,
         point_table_name,
