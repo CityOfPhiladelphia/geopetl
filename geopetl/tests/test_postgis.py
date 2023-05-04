@@ -36,7 +36,7 @@ def load_non_geom_table(postgis, schema):
     );
 
     INSERT INTO {schema}.{point_table_name}_ng
-    ({objectid_field_name}, textfield, timestamp, numericfield, timezone, datefield, booleanfield)
+    ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {date_field_name}, {boolean_field_name})
      VALUES
     (1,NULL,NULL,NULL,NULL, NULL,NULL),
     (2, 'ab#$%c', '2019-05-15 15:53:53.522000', 12, TIMESTAMPTZ '2011-11-22 10:23:54-04', ' 2005-01-01','true'),
@@ -49,9 +49,15 @@ def load_non_geom_table(postgis, schema):
     (9, 'qwe''qeqdqw', TIMESTAMP '2019-01-05 10:53:52' , 456, TIMESTAMPTZ '2018-12-25 10:23:54+00' , '2018-07-19','false'), 
     (10, 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' ,'2017-06-26','false'), 
     (11, NULL, TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , '2017-06-26','false')'''.format('''{}''',
-        objectid_field_name=fields.get('object_id_field_name'),
         schema=schema,
-        point_table_name=point_table_name)
+        point_table_name=point_table_name,
+        objectid_field_name=fields.get('object_id_field_name'),
+        text_field_name=fields.get('text_field_name'),
+        timestamp_field_name=fields.get('timestamp_field_name'),
+        numeric_field_name=fields.get('numeric_field_name'),
+        timezone_field_name=fields.get('timezone_field_name'), 
+        date_field_name=fields.get('date_field_name'),
+        boolean_field_name=fields.get('boolean_field_name'))
     connection = postgis.dbo
     cursor = connection.cursor()
     cursor.execute(create)
@@ -79,7 +85,7 @@ def load_point_table(postgis,schema, srid):
     );
     
     INSERT INTO {schema}.{point_table_name}_{srid} 
-    ({objectid_field_name}, textfield, timestamp, numericfield, timezone, {shape_field_name}, datefield, booleanfield)
+    ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}, {boolean_field_name})
      VALUES
     (1,NULL,NULL,NULL,NULL, NULL,NULL,NULL),
     (2, 'ab#$%c', '2019-05-15 15:53:53.522000', 12, TIMESTAMPTZ '2011-11-22 10:23:54-04' , ST_GeomFromText('POINT(2712205.71100539 259685.27615705)', {srid}), ' 2005-01-01', 'true'),
@@ -96,6 +102,12 @@ def load_point_table(postgis,schema, srid):
         schema=schema,
         point_table_name=point_table_name,
         objectid_field_name=fields.get('object_id_field_name'),
+        text_field_name=fields.get('text_field_name'),
+        timestamp_field_name=fields.get('timestamp_field_name'),
+        numeric_field_name=fields.get('numeric_field_name'),
+        timezone_field_name=fields.get('timezone_field_name'), 
+        date_field_name=fields.get('date_field_name'),
+        boolean_field_name=fields.get('boolean_field_name'),
         shape_field_name=fields.get('shape_field_name'),
         srid=srid)
     cursor = connection.cursor()
@@ -398,7 +410,7 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
     cursor = connection.cursor()
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-            {timezone_field_name},booleanfield,
+            {timezone_field_name}, booleanfield,
             st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
         srid=srid,
         schema=schema,
