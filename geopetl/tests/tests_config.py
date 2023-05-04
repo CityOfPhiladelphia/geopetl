@@ -26,8 +26,9 @@ fields= {
     'timestamp_field_name': 'timestamp',
     'timezone_field_name': 'timezone',
     'object_id_field_name': 'objectid',
-    'shape_field_name': 'shape'
-          }
+    'shape_field_name': 'shape',
+    'boolean_field_name':'booleanfield'
+    }
 
 def geom_parser(geom_wkt,srid):
     geom_wkt = str(geom_wkt)
