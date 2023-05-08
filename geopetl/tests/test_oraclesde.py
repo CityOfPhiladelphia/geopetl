@@ -26,7 +26,7 @@ def oraclesde_db(host, port, service_name,user, pw):
 # returns csv data in geopetl data frame
 @pytest.fixture
 def csv_data():
-    csv_data = etl.fromcsv(point_csv_dir).convert([fields.get('object_id_field_name'),fields.get('numeric_field_name')], int)
+    csv_data = etl.fromcsv(point_csv_dir).convert([fields.get('object_id_field_name'),fields.get('numeric_field_name')], int).cutout(fields.get('boolean_field_name'))
     csv_data = etl.convert(csv_data,[fields.get('timestamp_field_name'),fields.get('date_field_name'),fields.get('timezone_field_name')], lambda row: dt_parser.parse(row))
     return csv_data
 
@@ -101,8 +101,7 @@ def create_test_tables(srid, oraclesde_db,schema):
                 {fields.get('text_field_name'): None, fields.get('timestamp_field_name'): '2019-05-14 15:53:53.522000', 
                  fields.get('numeric_field_name'): '5654',fields.get('timezone_field_name'): '2018-12-25T10:23:54+00:00',
                  fields.get('shape_field_name'): 'POINT EMPTY', fields.get('date_field_name'): '2017-06-26 00:00:00'}]
-    print('val_rows')
-    print(val_rows)
+
     cursor.executemany(None, val_rows, batcherrors=False)
 
     connection.commit()
@@ -163,7 +162,7 @@ def create_multipolygon_table(srid, oraclesde_db,schema):
             schema=schema, multipolygon_table_name=multipolygon_table_name,srid=srid,
             shape_field_name=fields.get('shape_field_name'),objectid_field_name=fields.get('object_id_field_name'))
     cursor = oraclesde_db.cursor()
-    val_rows = [
+    val_rows = [{fields.get('shape_field_name'):'MULTIPOLYGON(polygon empty)'},
         {fields.get('shape_field_name'): '''MULTIPOLYGON(((
         2697059.92403972 243874.43507531, 2697057.92404372 243872.43507931, 2697058.92404172 243871.43508130, 2697059.92403972 243872.43507931, 2697059.92403972 243874.43507531)),
         (( 2697048.19407630 243967.35286848, 2697050.19407231 243968.35286647, 2697049.19407430 243968.35286647, 2697048.19407630 243967.35286848)
@@ -197,7 +196,7 @@ def db_data(oraclesde_db, schema, srid):
 #loads staging data using geopetl
 @pytest.fixture
 def create_test_table_noid(oraclesde_db, schema,srid):
-    csv_data = etl.fromcsv(point_csv_dir).cutout(fields.get('object_id_field_name'))
+    csv_data = etl.fromcsv(point_csv_dir).cutout(fields.get('object_id_field_name')).cutout(fields.get('boolean_field_name'))
     csv_data.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema,point_table_name,srid))
 
 
@@ -235,7 +234,7 @@ def assert_data_method(csv_data1, db_data1, srid1, schema=None, table=None, fiel
                     assert csv_val == db_val
             elif key == fields.get('shape_field_name'):
                 if csv_val is None or csv_val == 'POINT EMPTY' or csv_val == '':
-                    assert (db_val is None  or (str(db_val) == 'POINT EMPTY' or str(db_val) == 'POLYGON EMPTY') or str(db_val) == 'LINESTRING EMPTY')
+                    assert (db_val is None  or (str(db_val) == 'POINT EMPTY' or str(db_val) == 'POLYGON EMPTY') or str(db_val) == 'LINESTRING EMPTY'  or str(db_val)=='MULTIPOLYGON EMPTY')
                 else:
                     csv_geom, csv_coords = geom_parser(csv_val, srid1)
                     db_geom, db_coords = geom_parser(db_val, srid1)
@@ -343,7 +342,7 @@ def test_reading_polygon_table(oraclesde_db, schema,srid, create_polygon_table):
 
 # load staging data with geopetl, extract with cxOracle, assert with csv data
 def test_assert_written_data(oraclesde_db, csv_data, schema,srid):
-    csv_data_ = etl.fromcsv(point_csv_dir)
+    csv_data_ = etl.fromcsv(point_csv_dir).cutout(fields.get('boolean_field_name'))
     csv_data_.tooraclesde(oraclesde_db, '{}.{}_{}'.format(schema, point_table_name, srid), srid=srid)
     # read data using oracle_cx
     cursor = oraclesde_db.cursor()
