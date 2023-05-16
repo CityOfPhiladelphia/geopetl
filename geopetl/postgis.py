@@ -44,6 +44,12 @@ GEOM_TYPE_MAP = {
     'geometry':        'Geometry',
 }
 
+def extract_table_schema(dbo, table_name, table_schema_output_path):
+    db = PostgisDatabase(dbo)
+    table = db.table(table_name)
+    table.extract_table_schema(table_schema_output_path)
+
+etl.extract_table_schema = extract_table_schema
 
 def frompostgis(dbo, table_name, fields=None, return_geom=True, geom_with_srid=False,
                 where=None, limit=None, sql=None):
@@ -71,7 +77,6 @@ def frompostgis(dbo, table_name, fields=None, return_geom=True, geom_with_srid=F
                        where=where, limit=limit, sql=sql)
 
 etl.frompostgis = frompostgis
-
 
 def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None, buffer_size=DEFAULT_WRITE_BUFFER_SIZE):
     """
@@ -491,6 +496,46 @@ class PostgisTable(object):
         for field in fields:
             field['type'] = FIELD_TYPE_MAP[field['type'].lower()]
         return fields
+    
+    def extract_table_schema(self, table_schema_output_path):
+        # extract list of realdictrows from self.metadata and convert to regular dictionary
+        # where each field name contains a dictionary with a key of type leading to it's type.
+        metadata = {}
+        for i in self.metadata:
+            field_name = i['name']
+            field_type = i['type']
+            metadata[field_name] = {}
+            metadata[field_name]['type'] = field_type
+
+        if self.geom_field:
+            metadata[self.geom_field]['geom_type'] = self.geom_type
+            metadata[self.geom_field]['srid'] = self.srid
+        metadata_fmt = {'fields':[]}
+        for key in metadata:
+            kv_fmt = {}
+            kv_fmt['name'] = key
+            md_type = metadata[key]['type']
+            geom_type = metadata[key].get('geom_type', '')
+            srid = metadata[key].get('srid', '')
+            nullable = metadata[key].get('nullable', '')
+            if geom_type:
+                kv_fmt['geometry_type'] = geom_type.lower()
+                if srid:
+                    # if str(srid)[:4] == '3000':
+                    #     srid = 2272
+                    kv_fmt['srid'] = srid
+            if not nullable:
+                if not 'constraints' in kv_fmt:
+                    kv_fmt['constraints'] = {}
+                kv_fmt['constraints']['required'] = 'true'
+            metadata_fmt['fields'].append(kv_fmt)
+        if self.objectid_field:
+            if not 'primaryKey' in metadata_fmt:
+                metadata_fmt['primaryKey'] = []
+            metadata_fmt['primaryKey'].append(self.objectid_field)
+
+        with open(table_schema_output_path, 'w') as fp:
+            json.dump(metadata_fmt, fp)
 
 
     @property
@@ -582,7 +627,6 @@ class PostgisTable(object):
         return self._geom_field
 
 
-
     @property
     def objectid_field(self):
         #
@@ -604,6 +648,7 @@ class PostgisTable(object):
             geom_getter = 'ST_Transform({}, {})'.format(geom_getter, to_srid)
         return 'ST_AsText({}) AS {}'.format(geom_getter, geom_field)
 
+
     @property
     def srid(self):
         if self._srid is None:
@@ -624,7 +669,7 @@ class PostgisTable(object):
                     else:
                         raise e
             # if we still haven't gotten an SRID and the db is sde_enabled, try is this way:
-            if self.db.is_sde_enabled is True and self._srid is None:
+            if self.db.is_sde_enabled is True and not self._srid:
                 try:
                     stmt = "select srid from sde.st_geometry_columns where schema_name = '{}' and table_name = '{}'" \
                         .format(self.schema, self.name)
@@ -635,6 +680,17 @@ class PostgisTable(object):
                     r = self.db.fetch(stmt)
                 if r:
                     self._srid = r[0]['srid']
+                else:
+                    self._srid = None
+
+            # Last resort, if we still have a null or 0 SRID, try selecting the ST_SRID of a geom value directly
+            # This will work for views in a PostGIS database, for some reason normal methods return a 0.
+            if self.db.is_postgis_enabled and not self._srid:
+                print('Havent found SRID through regular methods(is this a view?), using fallback method of ST_SRID()..')
+                stmt = f'SELECT ST_SRID({self.geom_field}) FROM {self.schema}.{self.name} WHERE NOT st_isempty({self.geom_field}) LIMIT 1;'
+                r = self.db.fetch(stmt)
+                if r:
+                    self._srid = r[0]['st_srid']
                 else:
                     self._srid = None
         return self._srid
