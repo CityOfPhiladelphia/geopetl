@@ -3,7 +3,9 @@ import petl as etl
 from geopetl.postgis import PostgisDatabase
 import psycopg2
 from dateutil import parser as dt_parser
-from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name, point_table_name, point_csv_dir,fields, multipolygon_table_name, multipolygon_csv_dir
+from test_postgis import assert_data_method
+from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name, point_table_name,\
+             point_csv_dir,fields, multipolygon_table_name, multipolygon_csv_dir#, assert_data_method
 
 
 ############################################# FIXTURES ################################################################
@@ -129,8 +131,8 @@ def load_line_table(srid, postgis, schema):
     '''.format(schema=schema,
                sr=srid,
                line_table_name=line_table_name,
-                objectid_field_name=fields.get('object_id_field_name'),
-                shape_field_name=fields.get('shape_field_name'))
+               objectid_field_name=fields.get('object_id_field_name'),
+               shape_field_name=fields.get('shape_field_name'))
     connection = postgis.dbo
     cursor = connection.cursor()
     cursor.execute('''truncate table {schema}.{line_table_name}_{sr}'''.format(schema=schema,line_table_name=line_table_name, sr=srid))
@@ -224,60 +226,6 @@ def test_stmt_arg(postgis,csv_data,schema,srid):
     )
     db_data1 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema, point_table_name, srid),sql=qry)
 
-# assert
-def assert_data_method(csv_data1, db_data1, srid1=None, field=None):
-    keys = csv_data1[0]
-    try:
-        db_header = [column[0] for column in db_data1.description]
-        db_data1 = db_data1.fetchall()
-        i=0
-    except:
-        db_header = db_data1[0]
-        i=1
-    for row in csv_data1[1:]:
-        etl_dict = dict(zip(db_header, db_data1[i]))  # dictionary from etl data
-        csv_dict = dict(zip(csv_data1[0], row))  # dictionary from csv data
-
-        if field:
-            keys = list(field)
-        for key in keys:
-            csv_val = csv_dict.get(key)
-            db_val = etl_dict.get(key)
-            if csv_val== '':## or csv_val == None:
-                assert db_val is None
-                continue
-
-            # assert shape field
-            if key == fields.get('shape_field_name'):
-                pg_geom = geom_parser(str(db_val), srid1)
-                csv_geom = geom_parser(str(csv_val), srid1)
-
-                assert csv_geom == pg_geom
-            #skip assert objectid  
-            elif key == fields.get('object_id_field_name'):
-                continue
-            elif key == 'booleanfield':
-                if isinstance(csv_val,str):
-                    assert csv_val.lower() ==str(db_val).lower()
-                else:
-                    assert csv_val== db_val
-                
-            #assert timezone field 
-            elif key == fields.get('timezone_field_name'):
-                if csv_val == None or csv_val == '':
-                    assert db_val is None
-                try:
-                    db_val = dt_parser.parse(db_val)
-                except:
-                        db_val = db_val
-                try:
-                        csv_val = dt_parser.parse(csv_val)
-                except:
-                    csv_val = csv_val
-                assert db_val == csv_val
-            else:
-                assert csv_val == db_val
-        i=i+1
 
 ######################################   TESTS   ####################################################################
 
@@ -394,10 +342,10 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
                   '{}.{}_{}'.format(schema, point_table_name, srid),
                   from_srid=srid)
     connection = postgis.dbo
-    cursor = connection.cursor()
+    cursor = connection.cursor() ## to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SSTZH:TZM') 
     stmt = '''
                     select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-                    to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name}, booleanfield,
+                    to_char({timezone_field_name},'YYYY-MM-DD HH24:MI:SSTZH:TZM') as {timezone_field_name}, booleanfield,
                     sde.st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
         schema=schema,
         table_name=point_table_name,

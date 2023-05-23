@@ -6,8 +6,8 @@ from pytz import timezone
 import csv
 from dateutil import parser as dt_parser
 from tests_config import geom_parser, line_csv_dir, line_table_name,line_column_definition,\
-    polygon_csv_dir, polygon_table_name, polygon_column_definition, \
-    point_table_name, point_csv_dir, point_column_definition,fields, multipolygon_table_name, multipolygon_csv_dir,multipolygon_column_definition
+    polygon_csv_dir, polygon_table_name, polygon_column_definition, point_table_name,\
+    point_csv_dir, point_column_definition,fields, multipolygon_table_name, multipolygon_csv_dir,multipolygon_column_definition, assert_data_method
 
 
 ############################################# FIXTURES ################################################################
@@ -180,7 +180,7 @@ def load_line_table(srid, postgis, schema):
                srid=srid,
                line_table_name=line_table_name,
                 objectid_field_name=fields.get('object_id_field_name'),
-                shape_field_name=fields.get('shape_field_name'))
+            shape_field_name=fields.get('shape_field_name'))
     connection = postgis.dbo
     cursor = connection.cursor()
     # cursor.execute('''truncate table {schema}.{line_table_name}_{srid}'''.format(schema=schema, srid=srid,line_table_name=line_table_name))
@@ -236,65 +236,60 @@ def create_test_table_noid(postgis, schema,srid):
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), column_definition_json=point_column_definition, from_srid=srid)
 
 
-# assert
-def assert_data_method(csv_data1, db_data1, srid=None, field=None):
-    keys = csv_data1[0]
-    i =0
-
-    try:
-        db_header = [column[0] for column in db_data1.description]
-        db_data1 = db_data1.fetchall()
-        i=0
-    except:
-        db_header = db_data1[0]
-        i=1
+# # # assert
+# def assert_data_method(csv_data1, db_data1, srid=None, field=None):
+#     keys = csv_data1[0]
+#     i =0
+#     try:
+#         db_header = [column[0] for column in db_data1.description]
+#         db_data1 = db_data1.fetchall()
+#         i=0
+#     except:
+#         db_header = db_data1[0]
+#         i=1
     
-    #for i,row in enumerate(csv_data1[1:]):
+#     #for i,row in enumerate(csv_data1[1:]):
 
-    for row in csv_data1[1:]:
-        etl_dict = dict(zip(db_header, db_data1[i]))  # dictionary from etl data
-        csv_dict = dict(zip(csv_data1[0], row))  # dictionary from csv data
-        if field:
-            keys = list(field)
+#     for row in csv_data1[1:]:
+#         etl_dict = dict(zip(db_header, db_data1[i]))  # dictionary from etl data
+#         csv_dict = dict(zip(csv_data1[0], row))  # dictionary from csv data
+#         if field:
+#             keys = list(field)
 
-        for key in keys:
-            print('asserting key ', key)
-            csv_val = csv_dict.get(key)
-            db_val = etl_dict.get(key)
-            print('db_val ', db_val)
-            print('csv_val ', csv_val)
-            if csv_val == '':
-                assert db_val is None
-                continue
+#         for key in keys:
+#             csv_val = csv_dict.get(key)
+#             db_val = etl_dict.get(key)
+#             if csv_val == '':
+#                 assert db_val is None
+#                 continue
 
-            # assert shape field
-            if key == fields.get('shape_field_name'):
-                pg_geom = geom_parser(str(db_val), srid)
-                csv_geom = geom_parser(str(csv_val), srid)
-                assert csv_geom == pg_geom
-            elif key == fields.get('object_id_field_name'):
-                continue
-            elif key == fields.get('timezone_field_name') or key == fields.get('timestamp_field_name'):
-                try:
-                    db_val = dt_parser.parse(db_val)
-                except:
-                    db_val = db_val
-                try:
-                    csv_val = dt_parser.parse(csv_val)
-                except:
-                    csv_val = csv_val
-                assert db_val == csv_val
-            elif key == 'booleanfield':
-                if isinstance(csv_val,str):
-                    print('str boolean 277')
-                    assert csv_val.lower() ==str(db_val).lower()
-                else:
-                    assert csv_val== db_val
-            # compare values from each key
-            else:
-                assert db_val == db_val
+#             # assert shape field
+#             if key == fields.get('shape_field_name'):
+#                 pg_geom = geom_parser(str(db_val), srid)
+#                 csv_geom = geom_parser(str(csv_val), srid)
+#                 assert csv_geom == pg_geom
+#             elif key == fields.get('object_id_field_name'):
+#                 continue
+#             elif key == fields.get('timezone_field_name') or key == fields.get('timestamp_field_name'):
+#                 try:
+#                     db_val = dt_parser.parse(db_val)
+#                 except:
+#                     db_val = db_val
+#                 try:
+#                     csv_val = dt_parser.parse(csv_val)
+#                 except:
+#                     csv_val = csv_val
+#                 assert db_val == csv_val
+#             elif key == fields.get('boolean_field_name'):
+#                 if isinstance(csv_val,str):
+#                     assert csv_val.lower() ==str(db_val).lower()
+#                 else:
+#                     assert csv_val== db_val
+#             # compare values from each key
+#             else:
+#                 assert db_val == db_val
                 
-        i=i+1
+#         i=i+1
 
 ######################################   TESTS   ####################################################################
 
