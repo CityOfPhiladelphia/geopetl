@@ -95,7 +95,7 @@ def load_point_table(postgis,schema, srid):
 @pytest.fixture
 def load_polygon_table(srid, postgis, schema):
     stmt = '''
-    INSERT INTO {schema}.{polygon_table_name}_{sr} ({shape_field_name}, {objectid_field_name}) 
+    INSERT INTO {schema}.{polygon_table_name}_{srid} ({shape_field_name}, {objectid_field_name}) 
     VALUES
     (
      NULL, SDE.NEXT_ROWID('{schema}', '{polygon_table_name}_{srid}')),
@@ -192,7 +192,7 @@ def create_point_view(schema,srid, postgis):
 @pytest.fixture
 def csv_data():
     #{point_table_name}_{srid} ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}, {boolean_field_name}
-    csv_data = etl.fromcsv(point_csv_dir).convert([fields.get('objectid_field_name'),fields.get('numeric_field_name')], int)
+    csv_data = etl.fromcsv(point_csv_dir).convert([fields.get('object_id_field_name'),fields.get('numeric_field_name')], int)
     csv_data = etl.convert(csv_data,[fields.get('timestamp_field_name'),fields.get('date_field_name'),fields.get('timezone_field_name')], lambda row: dt_parser.parse(row))
     csv_data = etl.convert(csv_data, fields.get('date_field_name'), lambda row: row.date())
     #csv_data = etl.convert(csv_data, 'booleanfield', lambda row: bool(row))
