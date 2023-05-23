@@ -5,9 +5,9 @@ import psycopg2
 from pytz import timezone
 import csv
 from dateutil import parser as dt_parser
-from tests_config import geom_parser, line_csv_dir, line_table_name,line_column_definition,\
-    polygon_csv_dir, polygon_table_name, polygon_column_definition, point_table_name,\
-    point_csv_dir, point_column_definition,fields, multipolygon_table_name, multipolygon_csv_dir,multipolygon_column_definition, assert_data_method
+from tests_config import geom_parser, line_csv_dir, line_table_name,line_column_definition, polygon_csv_dir,\
+        polygon_table_name, polygon_column_definition, point_table_name,point_csv_dir, point_column_definition,\
+        fields, multipolygon_table_name, multipolygon_csv_dir,multipolygon_column_definition, assert_data_method
 
 
 ############################################# FIXTURES ################################################################
@@ -26,13 +26,13 @@ def load_non_geom_table(postgis, schema):
     create = '''DROP TABLE IF EXISTS {schema}.{point_table_name}_ng;
     CREATE TABLE {schema}.{point_table_name}_ng
     (
-    objectid numeric,
-    textfield text,
-    "timestamp" timestamp without time zone,
-    numericfield numeric,
-    timezone timestamp with time zone,
-    datefield date,
-    booleanfield boolean
+    {objectid_field_name} numeric,
+    {text_field_name} text,
+    {timestamp_field_name} timestamp without time zone,
+    {numeric_field_name} numeric,
+    {timezone_field_name} timestamp with time zone,
+    {date_field_name} date,
+    {boolean_field_name} boolean
     );
 
     INSERT INTO {schema}.{point_table_name}_ng
@@ -45,7 +45,7 @@ def load_non_geom_table(postgis, schema):
     (5, 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 0, TIMESTAMPTZ '2021-08-23 10:23:54-02' , '2008-08-11','true'),
     (6, 'v[]im', TIMESTAMP '2019-05-14 15:53:53.522000' , 1353, TIMESTAMPTZ '2015-03-21 10:23:54-01' , '2005-09-07','true'), 
     (7, 'he_llo', TIMESTAMP '2019-05-14 15:53:53.522000' , 49053, TIMESTAMPTZ '2020-06-12 10:23:54+03' , ' 2003-11-23','false'), 
-    (8, 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06' , -123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , '2020-04-01','false'),
+    (8, 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06', -123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , '2020-04-01','false'),
     (9, 'qwe''qeqdqw', TIMESTAMP '2019-01-05 10:53:52' , 456, TIMESTAMPTZ '2018-12-25 10:23:54+00' , '2018-07-19','false'), 
     (10, 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' ,'2017-06-26','false'), 
     (11, NULL, TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , '2017-06-26','false')'''.format('''{}''',
@@ -66,22 +66,22 @@ def load_non_geom_table(postgis, schema):
 # create new table and write csv staging data to it
 @pytest.fixture
 def load_point_table(postgis,schema, srid):
-    # write staging data to test table using oracle query
+    # write staging data to test table using postgis query
     connection = postgis.dbo
-    mview_stmt= '''DROP MATERIALIZED VIEW IF EXISTS {schema}.point_table_{srid}_view;'''
+    mview_stmt= '''DROP MATERIALIZED VIEW IF EXISTS {schema}.{point_table_name}_{srid}_view;'''
     populate_table_stmt ='''
-    DROP MATERIALIZED VIEW IF EXISTS {schema}.point_table_{srid}_view;
+    DROP MATERIALIZED VIEW IF EXISTS {schema}.{point_table_name}_{srid}_view;
     DROP TABLE IF EXISTS {schema}.{point_table_name}_{srid};
     CREATE TABLE {schema}.{point_table_name}_{srid}
     (
-    objectid numeric,
-    textfield text,
-    "timestamp" timestamp without time zone,
-    numericfield numeric,
-    timezone timestamp with time zone,
-    shape geometry(Point,{srid}),
-    datefield date,
-    booleanfield boolean
+    {objectid_field_name} numeric,
+    {text_field_name} text,
+    {timestamp_field_name} timestamp without time zone,
+    {numeric_field_name} numeric,
+    {timezone_field_name} timestamp with time zone,
+    {shape_field_name} geometry(Point,{srid}),
+    {date_field_name} date,
+    {boolean_field_name} boolean
     );
     
     INSERT INTO {schema}.{point_table_name}_{srid} 
@@ -120,10 +120,10 @@ def load_point_table(postgis,schema, srid):
 @pytest.fixture
 def create_point_view(schema,srid, postgis):
     stmt = ''' 
-        CREATE MATERIALIZED VIEW IF NOT EXISTS {schema}.point_table_{srid}_view
+        CREATE MATERIALIZED VIEW IF NOT EXISTS {schema}.{point_table_name}_{srid}_view
         AS
-        select * from {schema}.point_table_{srid}
-        WITH  DATA '''.format(schema=schema, srid=srid)
+        select * from {schema}.{point_table_name}_{srid}
+        WITH  DATA '''.format(schema=schema, point_table_name=point_table_name, srid=srid)
     connection = postgis.dbo
     cursor = connection.cursor()
     cursor.execute(stmt)
@@ -235,61 +235,6 @@ def create_test_table_noid(postgis, schema,srid):
     csv_data = etl.fromcsv(point_csv_dir).cutout('objectid')
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid), column_definition_json=point_column_definition, from_srid=srid)
 
-
-# # # assert
-# def assert_data_method(csv_data1, db_data1, srid=None, field=None):
-#     keys = csv_data1[0]
-#     i =0
-#     try:
-#         db_header = [column[0] for column in db_data1.description]
-#         db_data1 = db_data1.fetchall()
-#         i=0
-#     except:
-#         db_header = db_data1[0]
-#         i=1
-    
-#     #for i,row in enumerate(csv_data1[1:]):
-
-#     for row in csv_data1[1:]:
-#         etl_dict = dict(zip(db_header, db_data1[i]))  # dictionary from etl data
-#         csv_dict = dict(zip(csv_data1[0], row))  # dictionary from csv data
-#         if field:
-#             keys = list(field)
-
-#         for key in keys:
-#             csv_val = csv_dict.get(key)
-#             db_val = etl_dict.get(key)
-#             if csv_val == '':
-#                 assert db_val is None
-#                 continue
-
-#             # assert shape field
-#             if key == fields.get('shape_field_name'):
-#                 pg_geom = geom_parser(str(db_val), srid)
-#                 csv_geom = geom_parser(str(csv_val), srid)
-#                 assert csv_geom == pg_geom
-#             elif key == fields.get('object_id_field_name'):
-#                 continue
-#             elif key == fields.get('timezone_field_name') or key == fields.get('timestamp_field_name'):
-#                 try:
-#                     db_val = dt_parser.parse(db_val)
-#                 except:
-#                     db_val = db_val
-#                 try:
-#                     csv_val = dt_parser.parse(csv_val)
-#                 except:
-#                     csv_val = csv_val
-#                 assert db_val == csv_val
-#             elif key == fields.get('boolean_field_name'):
-#                 if isinstance(csv_val,str):
-#                     assert csv_val.lower() ==str(db_val).lower()
-#                 else:
-#                     assert csv_val== db_val
-#             # compare values from each key
-#             else:
-#                 assert db_val == db_val
-                
-#         i=i+1
 
 ######################################   TESTS   ####################################################################
 

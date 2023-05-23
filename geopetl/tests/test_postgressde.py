@@ -4,8 +4,8 @@ from geopetl.postgis import PostgisDatabase
 import psycopg2
 from dateutil import parser as dt_parser
 from test_postgis import assert_data_method
-from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,polygon_table_name, point_table_name,\
-             point_csv_dir,fields, multipolygon_table_name, multipolygon_csv_dir#, assert_data_method
+from tests_config import geom_parser, line_csv_dir, line_table_name, polygon_csv_dir, line_table_name,\
+        polygon_table_name, point_table_name,point_csv_dir,fields, multipolygon_table_name, multipolygon_csv_dir
 
 
 ############################################# FIXTURES ################################################################
@@ -98,15 +98,15 @@ def load_polygon_table(srid, postgis, schema):
     INSERT INTO {schema}.{polygon_table_name}_{sr} ({shape_field_name}, {objectid_field_name}) 
     VALUES
     (
-     NULL, SDE.NEXT_ROWID('{schema}', 'polygon_table_{sr}')),
-    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}),
-     SDE.NEXT_ROWID('{schema}', 'polygon_table_{sr}')),
-    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), SDE.NEXT_ROWID('{schema}', 'polygon_table_{sr}')),
-    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), SDE.NEXT_ROWID('{schema}', 'polygon_table_{sr}')),
-    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), SDE.NEXT_ROWID('{schema}', 'polygon_table_{sr}')),
-    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {sr}), SDE.NEXT_ROWID('{schema}', 'polygon_table_{sr}'))
+     NULL, SDE.NEXT_ROWID('{schema}', '{polygon_table_name}_{srid}')),
+    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}),
+     SDE.NEXT_ROWID('{schema}', 'polygon_table_{srid}')),
+    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}), SDE.NEXT_ROWID('{schema}', '{polygon_table_name}_{srid}')),
+    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}), SDE.NEXT_ROWID('{schema}', '{polygon_table_name}_{srid}')),
+    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}), SDE.NEXT_ROWID('{schema}', '{polygon_table_name}_{srid}')),
+    (SDE.ST_GEOMETRY('POLYGON((2697048.19400001 243967.35275000,2697046.11900000 244007.28925000,2697046.19599999 244038.87700000,2696984.16900000 244045.93900000,2697059.92400000 243874.43500000,2697048.19400001 243967.35275000))', {srid}), SDE.NEXT_ROWID('{schema}', '{polygon_table_name}_{srid}'))
     '''.format(schema=schema,
-                sr=srid,
+                srid=srid,
                polygon_table_name=polygon_table_name,
                 objectid_field_name = fields.get('object_id_field_name'),
                 shape_field_name = fields.get('shape_field_name')
@@ -120,22 +120,22 @@ def load_polygon_table(srid, postgis, schema):
 @pytest.fixture
 def load_line_table(srid, postgis, schema):
     stmt = '''	
-    INSERT INTO {schema}.{line_table_name}_{sr} ({shape_field_name}, {objectid_field_name}) 
+    INSERT INTO {schema}.{line_table_name}_{srid} ({shape_field_name}, {objectid_field_name}) 
     VALUES 
-    (NULL, SDE.NEXT_ROWID('{schema}', 'line_table_{sr}')),
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.NEXT_ROWID('{schema}', 'line_table_{sr}')),
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.NEXT_ROWID('{schema}', 'line_table_{sr}')),
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.NEXT_ROWID('{schema}', 'line_table_{sr}')),
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.NEXT_ROWID('{schema}', 'line_table_{sr}')),
-    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {sr}), SDE.NEXT_ROWID('{schema}', 'line_table_{sr}'))
+    (NULL, SDE.NEXT_ROWID('{schema}', 'line_table_{srid}')),
+    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), SDE.NEXT_ROWID('{schema}', '{line_table_name}_{srid}')),
+    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), SDE.NEXT_ROWID('{schema}', '{line_table_name}_{srid}')),
+    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), SDE.NEXT_ROWID('{schema}', '{line_table_name}_{srid}')),
+    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), SDE.NEXT_ROWID('{schema}', '{line_table_name}_{srid}')),
+    (SDE.ST_GEOMETRY('LINESTRING(2679640.41975001 259205.68799999, 2679610.90800001 259142.53425001)', {srid}), SDE.NEXT_ROWID('{schema}', '{line_table_name}_{srid}'))
     '''.format(schema=schema,
-               sr=srid,
+               srid=srid,
                line_table_name=line_table_name,
                objectid_field_name=fields.get('object_id_field_name'),
                shape_field_name=fields.get('shape_field_name'))
     connection = postgis.dbo
     cursor = connection.cursor()
-    cursor.execute('''truncate table {schema}.{line_table_name}_{sr}'''.format(schema=schema,line_table_name=line_table_name, sr=srid))
+    cursor.execute('''truncate table {schema}.{line_table_name}_{srid}'''.format(schema=schema,line_table_name=line_table_name, srid=srid))
     cursor.execute(stmt)
     connection.commit()
 
@@ -180,10 +180,10 @@ def load_multipolygon_table(srid, postgis, schema):
 @pytest.fixture
 def create_point_view(schema,srid, postgis):
     stmt = ''' 
-        CREATE MATERIALIZED VIEW IF NOT EXISTS {schema}.point_table_{srid}_view
+        CREATE MATERIALIZED VIEW IF NOT EXISTS {schema}.{point_table_name}_{srid}_view
         AS
-        select * from {schema}.point_table_{srid}
-        WITH  DATA '''.format(schema=schema, srid=srid)
+        select * from {schema}.{point_table_name}_{srid}
+        WITH  DATA '''.format(point_table_name=point_table_name, schema=schema, srid=srid)
     connection = postgis.dbo
     cursor = connection.cursor()
     cursor.execute(stmt)
@@ -191,9 +191,10 @@ def create_point_view(schema,srid, postgis):
 
 @pytest.fixture
 def csv_data():
-    csv_data = etl.fromcsv(point_csv_dir).convert(['objectid','numericfield'], int)
-    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
-    csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
+    #{point_table_name}_{srid} ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}, {boolean_field_name}
+    csv_data = etl.fromcsv(point_csv_dir).convert([fields.get('objectid_field_name'),fields.get('numeric_field_name')], int)
+    csv_data = etl.convert(csv_data,[fields.get('timestamp_field_name'),fields.get('date_field_name'),fields.get('timezone_field_name')], lambda row: dt_parser.parse(row))
+    csv_data = etl.convert(csv_data, fields.get('date_field_name'), lambda row: row.date())
     #csv_data = etl.convert(csv_data, 'booleanfield', lambda row: bool(row))
     return csv_data
 
@@ -342,10 +343,10 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
                   '{}.{}_{}'.format(schema, point_table_name, srid),
                   from_srid=srid)
     connection = postgis.dbo
-    cursor = connection.cursor() ## to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SSTZH:TZM') 
+    cursor = connection.cursor() 
     stmt = '''
                     select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-                    to_char({timezone_field_name},'YYYY-MM-DD HH24:MI:SSTZH:TZM') as {timezone_field_name}, booleanfield,
+                    to_char({timezone_field_name},'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name}, booleanfield,
                     sde.st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
         schema=schema,
         table_name=point_table_name,
