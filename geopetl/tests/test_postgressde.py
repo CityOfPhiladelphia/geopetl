@@ -27,17 +27,17 @@ def load_non_geom_table(postgis, schema):
     
     INSERT INTO {schema}.{point_table_name}_ng ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {date_field_name},{boolean_field_name}) 
     VALUES 
-     (sde.next_rowid('{schema}', 'point_table_ng'), NULL, NULL , NULL, NULL, NULL, NULL),
-     (sde.next_rowid('{schema}', 'point_table_ng'), 'ab#$%c','2019-05-15 15:53:53.522000', 12, TIMESTAMPTZ '2011-11-22 10:23:54-04', ' 2005-01-01', true),
-     (sde.next_rowid('{schema}', 'point_table_ng'), 'd!@^&*?-=+ef', TIMESTAMP '2019-05-14 15:53:53.522000' , 1, null, ' 2015-03-01', true),
-     (sde.next_rowid('{schema}', 'point_table_ng'), 'fij()dcfwef', TIMESTAMP '2019-05-14 15:53:53.522000' , 2132134342, TIMESTAMPTZ '2014-04-11 10:23:54+05', null, true),
-     (sde.next_rowid('{schema}', 'point_table_ng'), 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 0, TIMESTAMPTZ '2021-08-23 10:23:54-02', ' 2008-08-11', true),
-     (sde.next_rowid('{schema}', 'point_table_ng'), 'v[]im', TIMESTAMP '2019-05-14 15:53:53.522000' , 1353, TIMESTAMPTZ '2015-03-21 10:23:54-01', ' 2005-09-07', true),
-     (sde.next_rowid('{schema}', 'point_table_ng'), 'he_llo', TIMESTAMP '2019-05-14 15:53:53.522000' , 49053, TIMESTAMPTZ '2020-06-12 10:23:54+03', ' 2003-11-23',false),
-     (sde.next_rowid('{schema}', 'point_table_ng'), 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06' , -123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , ' 2020-04-01',false),
-     (sde.next_rowid('{schema}', 'point_table_ng'), 'qwe''qeqdqw', TIMESTAMP '2019-01-05 10:53:52' , 456, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ' 2018-07-19',false),
-     (sde.next_rowid('{schema}', 'point_table_ng'), 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ' 2017-06-26',false),
-     (sde.next_rowid('{schema}', 'point_table_ng'), NULL, TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' ,  ' 2017-06-26',false)'''.format(
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), NULL, NULL , NULL, NULL, NULL, NULL),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), 'ab#$%c','2019-05-15 15:53:53.522000', 12, TIMESTAMPTZ '2011-11-22 10:23:54-04', ' 2005-01-01', true),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), 'd!@^&*?-=+ef', TIMESTAMP '2019-05-14 15:53:53.522000' , 1, null, ' 2015-03-01', true),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), 'fij()dcfwef', TIMESTAMP '2019-05-14 15:53:53.522000' , 2132134342, TIMESTAMPTZ '2014-04-11 10:23:54+05', null, true),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 0, TIMESTAMPTZ '2021-08-23 10:23:54-02', ' 2008-08-11', true),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), 'v[]im', TIMESTAMP '2019-05-14 15:53:53.522000' , 1353, TIMESTAMPTZ '2015-03-21 10:23:54-01', ' 2005-09-07', true),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), 'he_llo', TIMESTAMP '2019-05-14 15:53:53.522000' , 49053, TIMESTAMPTZ '2020-06-12 10:23:54+03', ' 2003-11-23',false),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06' , -123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , ' 2020-04-01',false),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), 'qwe''qeqdqw', TIMESTAMP '2019-01-05 10:53:52' , 456, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ' 2018-07-19',false),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ' 2017-06-26',false),
+     (sde.next_rowid('{schema}', '{point_table_name}_ng'), NULL, TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' ,  ' 2017-06-26',false)'''.format(
         '''{}''',
         objectid_field_name=fields.get('object_id_field_name'),
         text_field_name=fields.get('text_field_name'),
@@ -62,20 +62,20 @@ def load_point_table(postgis,schema, srid):
     # write staging data to test table using sql query
     connection = postgis.dbo
     populate_table_stmt = ''' 
-    DROP MATERIALIZED VIEW IF EXISTS {schema}.point_table_{srid}_view;
+    DROP MATERIALIZED VIEW IF EXISTS {schema}.{point_table_name}_{srid}_view;
     INSERT INTO {schema}.{point_table_name}_{srid} ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}, {boolean_field_name}) 
     VALUES 
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), NULL, NULL , NULL, NULL, NULL, NULL, NULL),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), 'ab#$%c','2019-05-15 15:53:53.522000', 12, TIMESTAMPTZ '2011-11-22 10:23:54-04' , ST_GEOMETRY('POINT(2712205.71100539 259685.27615705)', {srid}), ' 2005-01-01',true),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), 'd!@^&*?-=+ef', TIMESTAMP '2019-05-14 15:53:53.522000' , 1, null, ST_GEOMETRY('POINT(2672818.51681407 231921.15681663)', {srid}), ' 2015-03-01',true),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), 'fij()dcfwef', TIMESTAMP '2019-05-14 15:53:53.522000' , 2132134342, TIMESTAMPTZ '2014-04-11 10:23:54+05' , ST_GEOMETRY('POINT(2704440.74884506 251030.69241638)', {srid}), null,true),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 0, TIMESTAMPTZ '2021-08-23 10:23:54-02' , ST_GEOMETRY('POINT(2674410.98607007 233770.15508713)', {srid}), ' 2008-08-11',true),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), 'v[]im', TIMESTAMP '2019-05-14 15:53:53.522000' , 1353, TIMESTAMPTZ '2015-03-21 10:23:54-01' , ST_GEOMETRY('POINT(2694352.72374555 250468.93894671)', {srid}), ' 2005-09-07',true),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), 'he_llo', TIMESTAMP '2019-05-14 15:53:53.522000' , 49053, TIMESTAMPTZ '2020-06-12 10:23:54+03' , ST_GEOMETRY('POINT(2675096.08410931 231074.64210546)', {srid}), ' 2003-11-23',false),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06' , -123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , ST_GEOMETRY('POINT(2694560.19708389 244942.81679688)', {srid}), ' 2020-04-01',false),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), 'qwe''qeqdqw', TIMESTAMP '2019-01-05 10:53:52' , 456, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GEOMETRY('POINT(2680866.32552156 241245.62340388)', {srid}), ' 2018-07-19',false),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GEOMETRY('POINT(2692140.13630722 231409.33008438)', {srid}), ' 2017-06-26',false),
-     (sde.next_rowid('{schema}', 'point_table_{srid}'), NULL, TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GEOMETRY('POINT EMPTY', {srid}), ' 2017-06-26',false)'''.format(
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), NULL, NULL , NULL, NULL, NULL, NULL, NULL),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), 'ab#$%c','2019-05-15 15:53:53.522000', 12, TIMESTAMPTZ '2011-11-22 10:23:54-04' , ST_GEOMETRY('POINT(2712205.71100539 259685.27615705)', {srid}), ' 2005-01-01',true),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), 'd!@^&*?-=+ef', TIMESTAMP '2019-05-14 15:53:53.522000' , 1, null, ST_GEOMETRY('POINT(2672818.51681407 231921.15681663)', {srid}), ' 2015-03-01',true),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), 'fij()dcfwef', TIMESTAMP '2019-05-14 15:53:53.522000' , 2132134342, TIMESTAMPTZ '2014-04-11 10:23:54+05' , ST_GEOMETRY('POINT(2704440.74884506 251030.69241638)', {srid}), null,true),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), 'po{}tato', TIMESTAMP '2019-05-14 15:53:53.522000' , 0, TIMESTAMPTZ '2021-08-23 10:23:54-02' , ST_GEOMETRY('POINT(2674410.98607007 233770.15508713)', {srid}), ' 2008-08-11',true),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), 'v[]im', TIMESTAMP '2019-05-14 15:53:53.522000' , 1353, TIMESTAMPTZ '2015-03-21 10:23:54-01' , ST_GEOMETRY('POINT(2694352.72374555 250468.93894671)', {srid}), ' 2005-09-07',true),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), 'he_llo', TIMESTAMP '2019-05-14 15:53:53.522000' , 49053, TIMESTAMPTZ '2020-06-12 10:23:54+03' , ST_GEOMETRY('POINT(2675096.08410931 231074.64210546)', {srid}), ' 2003-11-23',false),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), 'y"ea::h', TIMESTAMP '2018-03-30 15:10:06' , -123, TIMESTAMPTZ '2032-04-30 10:23:54-03' , ST_GEOMETRY('POINT(2694560.19708389 244942.81679688)', {srid}), ' 2020-04-01',false),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), 'qwe''qeqdqw', TIMESTAMP '2019-01-05 10:53:52' , 456, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GEOMETRY('POINT(2680866.32552156 241245.62340388)', {srid}), ' 2018-07-19',false),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), 'lmwefwe', TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GEOMETRY('POINT(2692140.13630722 231409.33008438)', {srid}), ' 2017-06-26',false),
+     (sde.next_rowid('{schema}', '{point_table_name}_{srid}'), NULL, TIMESTAMP '2019-05-14 15:53:53.522000' , 5654, TIMESTAMPTZ '2018-12-25 10:23:54+00' , ST_GEOMETRY('POINT EMPTY', {srid}), ' 2017-06-26',false)'''.format(
         '''{}''',
         objectid_field_name=fields.get('object_id_field_name'),
         text_field_name=fields.get('text_field_name'),
@@ -191,7 +191,6 @@ def create_point_view(schema,srid, postgis):
 
 @pytest.fixture
 def csv_data():
-    #{point_table_name}_{srid} ({objectid_field_name}, {text_field_name}, {timestamp_field_name}, {numeric_field_name}, {timezone_field_name}, {shape_field_name}, {date_field_name}, {boolean_field_name}
     csv_data = etl.fromcsv(point_csv_dir).convert([fields.get('object_id_field_name'),fields.get('numeric_field_name')], int)
     csv_data = etl.convert(csv_data,[fields.get('timestamp_field_name'),fields.get('date_field_name'),fields.get('timezone_field_name')], lambda row: dt_parser.parse(row))
     csv_data = etl.convert(csv_data, fields.get('date_field_name'), lambda row: row.date())
@@ -283,6 +282,12 @@ def test_reading_timezone(csv_data, db_data,srid):
     csv_data1 = csv_data
     assert_data_method(csv_data1, db_data1, srid, field=key)
 
+def test_reading_boolean(csv_data, db_data,srid):
+    key = fields.get('boolean_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+
 # #compare csv data with postgres data using geopetl
 def test_reading_polygon_table(postgis, load_polygon_table,schema, srid):
     csv_data = etl.fromcsv(polygon_csv_dir)
@@ -346,7 +351,7 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
     cursor = connection.cursor() 
     stmt = '''
                     select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-                    to_char({timezone_field_name},'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name}, booleanfield,
+                    to_char({timezone_field_name},'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name}, {boolean_field_name},
                     sde.st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
         schema=schema,
         table_name=point_table_name,
@@ -357,7 +362,8 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
         timestamp_field_name=fields.get('timestamp_field_name'),
         date_field_name=fields.get('date_field_name'),
         shape_field_name=fields.get('shape_field_name'),
-        timezone_field_name=fields.get('timezone_field_name')
+        timezone_field_name=fields.get('timezone_field_name'),
+        boolean_field_name= fields.get('boolean_field_name')
     )
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
@@ -373,7 +379,7 @@ def test_write_data_no_id(csv_data, db_data,srid, postgis,schema):
     cursor = connection.cursor()
     stmt = '''
         select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-        to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name}, booleanfield,
+        to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name},{boolean_field_name} ,
         sde.st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
         schema=schema,
         table_name=point_table_name,
@@ -384,7 +390,8 @@ def test_write_data_no_id(csv_data, db_data,srid, postgis,schema):
         timestamp_field_name=fields.get('timestamp_field_name'),
         date_field_name=fields.get('date_field_name'),
         shape_field_name=fields.get('shape_field_name'),
-        timezone_field_name=fields.get('timezone_field_name')
+        timezone_field_name=fields.get('timezone_field_name'),
+        boolean_field_name=fields.get('boolean_field_name')
         )
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
@@ -394,22 +401,22 @@ def test_writing_unregistered(postgis,schema,csv_data, db_data,srid):
     connection = postgis.dbo
     with pytest.raises(Exception) as e_info:
         csv_data.topostgis(
-            connection,'{}.{}_unregistered'.format(schema,point_table_name),#schema+'.point_table_unregistered',
+            connection,'{}.{}_unregistered'.format(schema,point_table_name),
             from_srid=srid )
 
 
 # WRITING TEST?
 def test_null_times(postgis, csv_data, schema, srid):
-    csv_data['timestamp'] = ''
-    csv_data['timezone'] = ''
-    csv_data['datefield'] = ''
+    csv_data[fields.get('timestamp_field_name')] = ''
+    csv_data[fields.get('timezone_field_name')] = ''
+    csv_data[fields.get('date_field_name')] = ''
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid),
                        from_srid=srid)
     connection = postgis.dbo
     cursor = connection.cursor()
     stmt = '''
                 select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-                to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name}, booleanfield,
+                to_char({timezone_field_name}, 'YYYY-MM-DD HH24:MI:SS.FFTZH:TZM') as {timezone_field_name}, {boolean_field_name},
                 sde.st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
         schema =schema,
         table_name=point_table_name,
@@ -420,7 +427,8 @@ def test_null_times(postgis, csv_data, schema, srid):
         timestamp_field_name=fields.get('timestamp_field_name'),
         date_field_name=fields.get('date_field_name'),
         shape_field_name=fields.get('shape_field_name'),
-        timezone_field_name=fields.get('timezone_field_name')
+        timezone_field_name=fields.get('timezone_field_name'),
+        boolean_field_name= fields.get('boolean_field_name')
     )
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
