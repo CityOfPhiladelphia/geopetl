@@ -132,8 +132,8 @@ def create_point_view(schema,srid, postgis):
 @pytest.fixture
 def load_polygon_table(srid, postgis, schema):
     stmt = '''
-        DROP TABLE IF EXISTS {schema}.POLYGON_TABLE_{srid};
-    CREATE TABLE {schema}.POLYGON_TABLE_{srid}
+        DROP TABLE IF EXISTS {schema}.{polygon_table_name}_{srid};
+    CREATE TABLE {schema}.{polygon_table_name}_{srid}
     (
     {objectid_field_name} numeric,
     {shape_field_name} geometry(Polygon,{srid})
@@ -219,9 +219,9 @@ VALUES
 
 @pytest.fixture
 def csv_data():
-    csv_data = etl.fromcsv(point_csv_dir).convert(['objectid','numericfield'], int)
-    csv_data = etl.convert(csv_data,['timestamp','datefield','timezone'], lambda row: dt_parser.parse(row))
-    csv_data = etl.convert(csv_data, 'datefield', lambda row: row.date())
+    csv_data = etl.fromcsv(point_csv_dir).convert([fields.get('object_id_field_name'),fields.get('numeric_field_name')], int)
+    csv_data = etl.convert(csv_data,[fields.get('timestamp_field_name'),fields.get('date_field_name'),fields.get('timezone_field_name')], lambda row: dt_parser.parse(row))
+    csv_data = etl.convert(csv_data, fields.get('date_field_name'), lambda row: row.date())
     return csv_data
 
 
@@ -248,6 +248,7 @@ def test_read_ng_table(load_non_geom_table, postgis,csv_data,schema):
     db_col = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_ng'.format(schema,point_table_name))
     csv_data = csv_data.cutout(fields.get('shape_field_name'))
     assert_data_method(csv_data, db_col)
+
 
 def test_read_without_schema(postgis, csv_data, schema, srid):
     data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,point_table_name,srid))
@@ -278,7 +279,7 @@ def test_read_shape(csv_data, db_data,srid):
     csv_data1 = csv_data
     assert_data_method(csv_data1, db_data1, srid, field=key)
 
-# #8
+# 8
 def test_assert_textfield(csv_data, db_data,srid):
     key = fields.get('text_field_name')
     db_data1 = db_data
@@ -287,6 +288,12 @@ def test_assert_textfield(csv_data, db_data,srid):
 # #9
 def test_assert_timezone(csv_data, db_data,srid):
     key = fields.get('timezone_field_name')
+    db_data1 = db_data
+    csv_data1 = csv_data
+    assert_data_method(csv_data1, db_data1, srid, field=key)
+
+def test_assert_boolean(csv_data, db_data,srid):
+    key = fields.get('boolean_field_name')
     db_data1 = db_data
     csv_data1 = csv_data
     assert_data_method(csv_data1, db_data1, srid, field=key)
@@ -307,18 +314,13 @@ def test_reading_linestrings(postgis, load_line_table,schema, srid):
 # #compare csv data with postgres data using geopetl
 def test_reading_multipolygons(postgis, load_multipolygon_table,schema, srid):
     csv_data = etl.fromcsv(multipolygon_csv_dir)
-    # print('csv_data')
-    # print(etl.look(csv_data))
-    # read data from test DB using petl
     db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,multipolygon_table_name,srid))
-    # print('db_data1')
-    # print(etl.look(db_data1))
     assert_data_method(csv_data, db_data1, srid)
 
 # extract data using sql arg in frompostgis()
 def test_stmt_arg(postgis,csv_data,schema,srid):
     qry = '''select {objectid_field_name} ,{text_field_name},{numeric_field_name},
-            {timestamp_field_name}, {date_field_name},{timezone_field_name}, booleanfield,
+            {timestamp_field_name}, {date_field_name},{timezone_field_name}, {boolean_field_name},
              st_astext({shape_field_name}) as {shape_field_name} from {}.{}_{}'''.format(
         schema,
         point_table_name,
@@ -329,7 +331,8 @@ def test_stmt_arg(postgis,csv_data,schema,srid):
         timestamp_field_name=fields.get('timestamp_field_name'),
         date_field_name=fields.get('date_field_name'),
         shape_field_name=fields.get('shape_field_name'),
-        timezone_field_name=fields.get('timezone_field_name')
+        timezone_field_name=fields.get('timezone_field_name'),
+        boolean_field_name = fields.get('boolean_field_name')
     )
     db_data1 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema, point_table_name, srid),sql=qry)
     assert_data_method(csv_data, db_data1, srid)
@@ -350,7 +353,7 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
     cursor = connection.cursor()
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-            {timezone_field_name}, booleanfield,
+            {timezone_field_name}, {boolean_field_name},
             st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
         srid=srid,
         schema=schema,
@@ -361,20 +364,21 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
         timestamp_field_name=fields.get('timestamp_field_name'),
         date_field_name=fields.get('date_field_name'),
         shape_field_name=fields.get('shape_field_name'),
-        timezone_field_name=fields.get('timezone_field_name')
+        timezone_field_name=fields.get('timezone_field_name'),
+        boolean_field_name = fields.get('boolean_field_name')
     )
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor,srid)
 
 def test_write_nongeom_table(postgis, csv_data, schema,srid):
-    csv_data = csv_data.cutout('shape')
+    csv_data = csv_data.cutout(fields.get('shape_field_name'))
     csv_data.topostgis(postgis.dbo, '{}.{}_ng'.format(schema,point_table_name)) 
     connection = postgis.dbo
     cursor = connection.cursor()
 
     stmt = '''
                 select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-                {timezone_field_name}, booleanfield from {schema}.{point_table_name}_ng'''.format(
+                {timezone_field_name}, {boolean_field_name} from {schema}.{point_table_name}_ng'''.format(
         schema=schema,
         point_table_name=point_table_name,
         objectid_field_name=fields.get('object_id_field_name'),
@@ -383,7 +387,8 @@ def test_write_nongeom_table(postgis, csv_data, schema,srid):
         timestamp_field_name=fields.get('timestamp_field_name'),
         date_field_name=fields.get('date_field_name'),
         shape_field_name=fields.get('shape_field_name'),
-        timezone_field_name=fields.get('timezone_field_name')
+        timezone_field_name=fields.get('timezone_field_name'),
+        boolean_field_name = fields.get('boolean_field_name')
     )
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
@@ -400,7 +405,7 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
     cursor = connection.cursor()
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-            {timezone_field_name}, booleanfield, st_astext({shape_field_name}) as {shape_field_name} from {schema}.{point_table_name}_{srid}'''.format(
+            {timezone_field_name}, {boolean_field_name}, st_astext({shape_field_name}) as {shape_field_name} from {schema}.{point_table_name}_{srid}'''.format(
         schema=schema,
         srid=srid,
         point_table_name=point_table_name,
@@ -410,7 +415,8 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
         timestamp_field_name=fields.get('timestamp_field_name'),
         date_field_name=fields.get('date_field_name'),
         shape_field_name=fields.get('shape_field_name'),
-        timezone_field_name=fields.get('timezone_field_name')
+        timezone_field_name=fields.get('timezone_field_name'),
+        boolean_field_name = fields.get('boolean_field_name')
     )
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
@@ -418,17 +424,17 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
 
 # WRITE NULL TIME VALUES
 def test_null_times(postgis, csv_data, schema, srid):
-    csv_data['timestamp'] = ''
-    csv_data['timezone'] = ''
-    csv_data['datefield'] = ''
+    csv_data[fields.get('timestamp_field_name')] = ''
+    csv_data[fields.get('timezone_field_name')] = ''
+    csv_data[fields.get('date_field_name')] = ''
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema,point_table_name,srid),
                        column_definition_json=point_column_definition,
                        )
     connection = postgis.dbo
     cursor = connection.cursor()
     stmt = '''
-                select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-                {timezone_field_name}, booleanfield,
+                select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},
+                {date_field_name}, {timezone_field_name}, {boolean_field_name},
                 st_astext({shape_field_name}) as {shape_field_name} from {schema}.{point_table_name}_{srid}'''.format(
         schema=schema,
         point_table_name=point_table_name,
@@ -439,7 +445,8 @@ def test_null_times(postgis, csv_data, schema, srid):
         timestamp_field_name=fields.get('timestamp_field_name'),
         date_field_name=fields.get('date_field_name'),
         shape_field_name=fields.get('shape_field_name'),
-        timezone_field_name=fields.get('timezone_field_name')
+        timezone_field_name=fields.get('timezone_field_name'),
+        boolean_field_name = fields.get('boolean_field_name')
     )
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
@@ -496,20 +503,26 @@ def test_with_types(db_data, postgis, schema, srid,csv_data):
         DROP TABLE IF EXISTS {schema}.{point_table_name}_{srid}_2;
         CREATE TABLE {schema}.{point_table_name}_{srid}_2
         (
-        objectid numeric,
-        textfield text,
-        "timestamp" timestamp without time zone,
-        numericfield numeric,
-        timezone timestamp with time zone,
-        shape geometry(Point,{srid}),
-        datefield date,
-        booleanfield boolean
+        {objectid_field_name} numeric,
+        {text_field_name} text,
+        "{timestamp_field_name}" timestamp without time zone,
+        {numeric_field_name} numeric,
+        {timezone_field_name} timestamp with time zone,
+        {shape_field_name} geometry(Point,{srid}),
+        {date_field_name} date,
+        {boolean_field_name} boolean
         )'''.format(
-        schema=schema,
-        point_table_name=point_table_name,
-        srid=srid)
-    print('createstmt')
-    print(create_table_stmt)
+                    schema=schema,
+                    point_table_name=point_table_name,
+                    objectid_field_name =fields.get('object_id_field_name'),
+                    text_field_name=fields.get('text_field_name'),
+                    numeric_field_name=fields.get('numeric_field_name'),
+                    timestamp_field_name=fields.get('timestamp_field_name'),
+                    date_field_name=fields.get('date_field_name'),
+                    shape_field_name=fields.get('shape_field_name'),
+                    timezone_field_name=fields.get('timezone_field_name'),
+                    boolean_field_name = fields.get('boolean_field_name'),
+                    srid=srid)
     connection = postgis.dbo
     cursor = connection.cursor()
     cursor.execute(create_table_stmt)
