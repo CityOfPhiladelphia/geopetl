@@ -21,6 +21,7 @@ def postgis(db, user, pw, host):
     postgis_db = PostgisDatabase(dsn)
     return postgis_db
 
+# load data to non geometric table
 @pytest.fixture
 def load_non_geom_table(postgis, schema):
     create = '''DROP TABLE IF EXISTS {schema}.{point_table_name}_ng;
@@ -63,7 +64,7 @@ def load_non_geom_table(postgis, schema):
     cursor.execute(create)
     connection.commit()
 
-# create new table and write csv staging data to it
+# create new point table and write csv staging data to it
 @pytest.fixture
 def load_point_table(postgis,schema, srid):
     # write staging data to test table using postgis query
@@ -117,6 +118,7 @@ def load_point_table(postgis,schema, srid):
     cursor.execute(populate_table_stmt)
     connection.commit()
 
+# create test materialized view 
 @pytest.fixture
 def create_point_view(schema,srid, postgis):
     stmt = ''' 
@@ -129,6 +131,7 @@ def create_point_view(schema,srid, postgis):
     cursor.execute(stmt)
     connection.commit()
 
+# create polygon test table
 @pytest.fixture
 def load_polygon_table(srid, postgis, schema):
     stmt = '''
@@ -238,80 +241,83 @@ def create_test_table_noid(postgis, schema,srid):
 
 ######################################   TESTS   ####################################################################
 
-#------------------READING TESTS
-#load staging data extract using geopetle compare csv data with postgres table data
+##########  READING TESTS :  Write data using psycopg2, read data using geopetl, and asssert data ##########
+
+# test reading from a table using geopetl
 def test_read_point_table(load_point_table, postgis,csv_data,db_data,srid):
     assert_data_method(csv_data, db_data, srid=srid)
 
-#load staging non geometric data extract using geopetl compare csv data with postgres table data
+# test reading from a non geometric table using geopetl
 def test_read_ng_table(load_non_geom_table, postgis,csv_data,schema):
     db_col = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_ng'.format(schema,point_table_name))
     csv_data = csv_data.cutout(fields.get('shape_field_name'))
     assert_data_method(csv_data, db_col)
 
-
-def test_read_without_schema(postgis, csv_data, schema, srid):
+# test reading from a table using geopetl without passing schema
+def test_read_without_schema(postgis, csv_data,schema, srid):
     data = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,point_table_name,srid))
     assert_data_method(csv_data, data, srid)
 
-#4
-def test_read_timestamp(csv_data, db_data,srid):
+# test reading timestamp field from a postgis table using geopetl
+def test_read_timestamp(csv_data, db_data,schema,srid,postgis):
     key = fields.get('timestamp_field_name')
-    assert_data_method(csv_data,db_data, srid, field=key)
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, point_table_name, srid), fields=key)
+    assert_data_method(csv_data,db_data1, srid, field=key)
 
-#5
-def test_read_numericfield(csv_data, db_data,srid):
+# test reading numeric field from a postgis table using geopetl
+def test_read_numericfield(csv_data, db_data,schema,srid,postgis):
     key = fields.get('numeric_field_name')
-    db_data1 = db_data
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, point_table_name, srid), fields=key)
     csv_data1 = csv_data
     assert_data_method(csv_data1, db_data1, srid, field=key)
-#6
-def test_read_datefield(csv_data, db_data, srid):
+
+# test reading date field from a postgis table using geopetl
+def test_read_datefield(csv_data, db_data,schema,srid,postgis):
     key = fields.get('date_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, point_table_name, srid), fields=key)
+    assert_data_method(csv_data, db_data1, srid, field=key)
 
-#7
-def test_read_shape(csv_data, db_data,srid):
+# test reading point geometry field from a postgis table using geopetl
+def test_read_shape(csv_data, db_data,schema,srid,postgis):
     key = fields.get('shape_field_name')
-    db_data1 = db_data
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, point_table_name, srid), fields=key)
     csv_data1 = csv_data
     assert_data_method(csv_data1, db_data1, srid, field=key)
 
-# 8
-def test_assert_textfield(csv_data, db_data,srid):
+# test reading text field from a postgis table using geopetl
+def test_assert_textfield(csv_data, db_data,schema,srid,postgis):
     key = fields.get('text_field_name')
-    db_data1 = db_data
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, point_table_name, srid), fields=key)
     csv_data1 = csv_data
     assert_data_method(csv_data1, db_data1, srid, field=key)
-# #9
-def test_assert_timezone(csv_data, db_data,srid):
+
+# test reading timestamptz field from a postgis table using geopetl
+def test_assert_timezone(csv_data, db_data,schema,srid,postgis):
     key = fields.get('timezone_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, point_table_name, srid), fields=key)
+    assert_data_method(csv_data, db_data1, srid, field=key)
 
-def test_assert_boolean(csv_data, db_data,srid):
+# test reading boolean field from a postgis table using geopetl
+def test_assert_boolean(csv_data, db_data,schema,srid,postgis):
     key = fields.get('boolean_field_name')
-    db_data1 = db_data
-    csv_data1 = csv_data
-    assert_data_method(csv_data1, db_data1, srid, field=key)
+    db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema, point_table_name, srid), fields=key)
+    assert_data_method(csv_data, db_data1, srid, field=key)
 
-# #compare csv data with postgres data using geopetl
+# test reading from a polygon table using geopetl
 def test_reading_polygons(postgis, load_polygon_table,schema, srid):
     csv_data = etl.fromcsv(polygon_csv_dir)
-    # read data from test DB using petl
+    # read data from test DB using geopetl
     db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,polygon_table_name,srid))
     assert_data_method(csv_data, db_data1, srid)
 
+# test reading from a linestring table using geopetl
 def test_reading_linestrings(postgis, load_line_table,schema, srid):
     csv_data = etl.fromcsv(line_csv_dir)
-    # read data from test DB using petl
+    # read data from test DB using geopetl
     db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,line_table_name,srid))
     assert_data_method(csv_data, db_data1, srid)
 
-# #compare csv data with postgres data using geopetl
+# test reading from a multipolygon table using geopetl
 def test_reading_multipolygons(postgis, load_multipolygon_table,schema, srid):
     csv_data = etl.fromcsv(multipolygon_csv_dir)
     db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}'.format(schema,multipolygon_table_name,srid))
@@ -336,13 +342,16 @@ def test_stmt_arg(postgis,csv_data,schema,srid):
     )
     db_data1 = etl.frompostgis(dbo=postgis.dbo,table_name='{}.{}_{}'.format(schema, point_table_name, srid),sql=qry)
     assert_data_method(csv_data, db_data1, srid)
-    
+
+# test reading from a materialized view using geopetl
 def test_reading_materialized_view(create_point_view, postgis, schema,srid,csv_data):
     db_data1 = etl.frompostgis(dbo=postgis.dbo, table_name='{}.{}_{}_view'.format(schema, point_table_name, srid))
     assert_data_method(csv_data, db_data1, srid)
 
 
-#------------------WRITING TESTS
+##########  WRITING TESTS :  write data using geopetl, read data using psycopg2, and asssert data ##########
+
+# test writing to a table with without passing schema
 def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
     connection = postgis.dbo
     csv_data.topostgis(
@@ -353,8 +362,8 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
     cursor = connection.cursor()
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-            {timezone_field_name}, {boolean_field_name},
-            st_astext({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
+            {timezone_field_name}, {boolean_field_name},st_astext({shape_field_name}) as {shape_field_name} 
+            from {schema}.{table_name}_{srid}'''.format(
         srid=srid,
         schema=schema,
         table_name=point_table_name,
@@ -370,6 +379,7 @@ def test_write_without_schema(db_data, postgis, csv_data, schema, srid):
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor,srid)
 
+# test writing to a table with no geometry field
 def test_write_nongeom_table(postgis, csv_data, schema,srid):
     csv_data = csv_data.cutout(fields.get('shape_field_name'))
     csv_data.topostgis(postgis.dbo, '{}.{}_ng'.format(schema,point_table_name)) 
@@ -377,8 +387,9 @@ def test_write_nongeom_table(postgis, csv_data, schema,srid):
     cursor = connection.cursor()
 
     stmt = '''
-                select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-                {timezone_field_name}, {boolean_field_name} from {schema}.{point_table_name}_ng'''.format(
+                select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name}
+                ,{date_field_name},{timezone_field_name}, {boolean_field_name} 
+                from {schema}.{point_table_name}_ng'''.format(
         schema=schema,
         point_table_name=point_table_name,
         objectid_field_name=fields.get('object_id_field_name'),
@@ -393,7 +404,7 @@ def test_write_nongeom_table(postgis, csv_data, schema,srid):
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
 
-# # # WRITING tests write using a string connection to db
+#  tests writing to a table using a string connection to db
 def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
     my_dsn = '''dbname={db} user={user} password={pw} host={host}'''.format(db=db,user=user,pw=pw,host=host)
     etl.topostgis(csv_data,
@@ -405,7 +416,8 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
     cursor = connection.cursor()
     stmt = '''
             select {objectid_field_name},{text_field_name},{numeric_field_name},{timestamp_field_name},{date_field_name},
-            {timezone_field_name}, {boolean_field_name}, st_astext({shape_field_name}) as {shape_field_name} from {schema}.{point_table_name}_{srid}'''.format(
+            {timezone_field_name}, {boolean_field_name}, st_astext({shape_field_name}) as {shape_field_name} 
+            from {schema}.{point_table_name}_{srid}'''.format(
         schema=schema,
         srid=srid,
         point_table_name=point_table_name,
@@ -422,7 +434,7 @@ def test_write_dsn_connection(csv_data,db, user, pw, host,postgis,schema,srid):
     assert_data_method(csv_data, cursor, srid)
 
 
-# WRITE NULL TIME VALUES
+# test writing null values in timestamp and timestamptz fields  
 def test_null_times(postgis, csv_data, schema, srid):
     csv_data[fields.get('timestamp_field_name')] = ''
     csv_data[fields.get('timezone_field_name')] = ''
@@ -451,11 +463,11 @@ def test_null_times(postgis, csv_data, schema, srid):
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
 
-
+# test writing to table containing a polygon geometry type field
 def test_polygon_assertion_write(postgis, schema, srid):
     csv_data = etl.fromcsv(polygon_csv_dir)
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, polygon_table_name,srid),from_srid=srid,column_definition_json=polygon_column_definition)
-    # read data from test DB using petl
+    # read data from test DB using psycodb2 
     stmt = '''select {objectid_field_name}, ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{polygon_table_name}_{srid}'''.format(
         schema=schema,
         polygon_table_name=polygon_table_name,
@@ -466,10 +478,11 @@ def test_polygon_assertion_write(postgis, schema, srid):
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
 
+# test writing to table containing a line geometry type field
 def test_line_assertion_write(postgis, schema,srid):
     csv_data = etl.fromcsv(line_csv_dir)
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, line_table_name,srid), from_srid=srid,column_definition_json=line_column_definition)
-    # read data from test DB
+    # read data from test table using psycodb2
     stmt = '''select {objectid_field_name}, ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{line_table_name}_{srid}'''.format(
         srid=srid,
         schema=schema,
@@ -481,11 +494,11 @@ def test_line_assertion_write(postgis, schema,srid):
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
 
-
+# test writing to table containing a multipolygon geometry type field
 def test_multipolygon_assertion_write(postgis, schema,srid):
     csv_data = etl.fromcsv(multipolygon_csv_dir)
     csv_data.topostgis(postgis.dbo, '{}.{}_{}'.format(schema, multipolygon_table_name,srid), from_srid=srid)
-    # read data from test DB
+    # read data from test using psycodb2
     stmt = '''select {objectid_field_name}, ST_AsText({shape_field_name}) as {shape_field_name} from {schema}.{table_name}_{srid}'''.format(
         srid=srid,
         schema=schema,
@@ -497,7 +510,7 @@ def test_multipolygon_assertion_write(postgis, schema,srid):
     cursor.execute(stmt)
     assert_data_method(csv_data, cursor, srid)
 
-#
+# read from 2 duplicate point tables using geopetl. assert data across both dataframes
 def test_with_types(db_data, postgis, schema, srid,csv_data):
     create_table_stmt = '''
         DROP TABLE IF EXISTS {schema}.{point_table_name}_{srid}_2;
