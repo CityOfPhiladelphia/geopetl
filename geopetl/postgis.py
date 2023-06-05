@@ -65,7 +65,6 @@ def frompostgis(dbo, table_name, fields=None, return_geom=True, geom_with_srid=F
     # create db wrappers
     db = PostgisDatabase(dbo)
     table = db.table(table_name)
-    print('68 returngeom ', return_geom)
 
     # return a query container
     return table.query(fields=fields, return_geom=return_geom, geom_with_srid=geom_with_srid,
@@ -684,7 +683,6 @@ class PostgisTable(object):
         return [x for x in self.fields if x != self.geom_field]
 
     def query(self, fields=None, return_geom=None, geom_with_srid=None, where=None, limit=None, sql=None):
-        print('686 return_geom ', return_geom)
         return PostgisQuery(self.db, self, fields=fields, return_geom=return_geom,
                             geom_with_srid=geom_with_srid, where=where, limit=limit, sql=sql)
 
@@ -920,13 +918,12 @@ class PostgisQuery(Table):
         self.fields = fields
         # boolean to determnine if we need to use well known text in sql query
         self.return_geom = return_geom
-        # if we have fieds arguement and the target table geom_fiels is in fields arg
+        # if we have fieds arguement and the target table geom_field is in fields arg
         if (fields and (table.geom_field in fields)): 
             self.return_geom = True
         # if fields
         elif fields and (table.geom_field not in fields):
             self.return_geom = False
-            print(932)
         self.geom_with_srid = geom_with_srid
         self.to_srid = to_srid
         self.where = where
@@ -963,15 +960,16 @@ class PostgisQuery(Table):
         if fields is None:
             fields = self.table.fields
     
+        # if there are multiple fields and fields variable is a list double quote each element in list
         if isinstance(fields,list) and len(fields)>1:
             fields = [_quote(field) for field in fields]
-        else:
-            print('else 983 fields ', fields)
+  
 
         # handle geom
         geom_field = self.table.geom_field
         if geom_field and self.return_geom:
             wkt_getter = self.table.wkt_getter(geom_field, self.to_srid)
+            # if fields is a list, find geom field and format with well known text 
             if isinstance(fields,list):
                 geom_field_index = fields.index('"'+geom_field+'"')
                 fields[geom_field_index] = wkt_getter
