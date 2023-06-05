@@ -65,6 +65,7 @@ def frompostgis(dbo, table_name, fields=None, return_geom=True, geom_with_srid=F
     # create db wrappers
     db = PostgisDatabase(dbo)
     table = db.table(table_name)
+    print('68 returngeom ', return_geom)
 
     # return a query container
     return table.query(fields=fields, return_geom=return_geom, geom_with_srid=geom_with_srid,
@@ -683,6 +684,7 @@ class PostgisTable(object):
         return [x for x in self.fields if x != self.geom_field]
 
     def query(self, fields=None, return_geom=None, geom_with_srid=None, where=None, limit=None, sql=None):
+        print('686 return_geom ', return_geom)
         return PostgisQuery(self.db, self, fields=fields, return_geom=return_geom,
                             geom_with_srid=geom_with_srid, where=where, limit=limit, sql=sql)
 
@@ -912,12 +914,19 @@ class PostgisTable(object):
 ################################################################################
 
 class PostgisQuery(Table):
-    def __init__(self, db, table, fields=None, return_geom=True, geom_with_srid=False,
-                 to_srid=None, where=None, limit=None, sql=None):
+    def __init__(self, db, table, fields=None, return_geom=True, geom_with_srid=False,to_srid=None, where=None, limit=None, sql=None):
         self.db = db
         self.table = table
         self.fields = fields
+        # boolean to determnine if we need to use well known text in sql query
         self.return_geom = return_geom
+        # if we have fieds arguement and the target table geom_fiels is in fields arg
+        if (fields and (table.geom_field in fields)): 
+            self.return_geom = True
+        # if fields
+        elif fields and (table.geom_field not in fields):
+            self.return_geom = False
+            print(932)
         self.geom_with_srid = geom_with_srid
         self.to_srid = to_srid
         self.where = where
@@ -928,8 +937,14 @@ class PostgisQuery(Table):
         """Proxy iteration to core petl."""
         # form sql statement
         stmt = self.stmt() if not self.sql else self.sql
-        # if self.sql:
-        #     stmt = self.sql
+        if self.sql:
+            stmt = self.sql
+        elif self.fields:
+            print('939 fields ')
+        # else:
+        #     print(941)
+
+        
 
         # get petl iterator
         dbo = self.db.dbo
@@ -947,21 +962,28 @@ class PostgisQuery(Table):
         fields = self.fields
         if fields is None:
             fields = self.table.fields
-
-        fields = [_quote(field) for field in fields]
+    
+        if isinstance(fields,list) and len(fields)>1:
+            fields = [_quote(field) for field in fields]
+        else:
+            print('else 983 fields ', fields)
 
         # handle geom
         geom_field = self.table.geom_field
-        # replace geom field with wkt in fields list
         if geom_field and self.return_geom:
             wkt_getter = self.table.wkt_getter(geom_field, self.to_srid)
-            geom_field_index = fields.index('"'+geom_field+'"')
-            fields[geom_field_index] = wkt_getter
+            if isinstance(fields,list):
+                geom_field_index = fields.index('"'+geom_field+'"')
+                fields[geom_field_index] = wkt_getter
+            
 
         # form statement
-        fields_joined = ', '.join(fields)
-        stmt = 'SELECT {} FROM {}'.format(fields_joined,
-                                          self.table.name_with_schema)
+        if isinstance(fields,list) and len(fields)>1:
+            fields_joined = ', '.join(fields)
+        else: 
+            fields_joined = fields
+
+        stmt = 'SELECT {} FROM {}'.format(fields_joined,self.table.name_with_schema)
 
         where = self.where
         if where:
