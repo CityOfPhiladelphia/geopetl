@@ -16,12 +16,12 @@ import cx_Oracle
 
 DEFAULT_WRITE_BUFFER_SIZE = 1000
 
-def extract_table_schema(dbo, table_name, table_schema_output_path):
+def oracle_extract_table_schema(dbo, table_name, table_schema_output_path):
     db = OracleSdeDatabase(dbo)
     table = db.table(table_name)
     table.extract_table_schema(table_schema_output_path)
 
-etl.extract_table_schema = extract_table_schema
+etl.oracle_extract_table_schema = oracle_extract_table_schema
 
 def fromoraclesde(dbo, table_name, **kwargs):
     db = OracleSdeDatabase(dbo)

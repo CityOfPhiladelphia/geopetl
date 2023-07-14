@@ -44,12 +44,12 @@ GEOM_TYPE_MAP = {
     'geometry':        'Geometry',
 }
 
-def extract_table_schema(dbo, table_name, table_schema_output_path):
+def postgres_extract_table_schema(dbo, table_name, table_schema_output_path):
     db = PostgisDatabase(dbo)
     table = db.table(table_name)
     table.extract_table_schema(table_schema_output_path)
 
-etl.extract_table_schema = extract_table_schema
+etl.postgres_extract_table_schema = postgres_extract_table_schema
 
 def frompostgis(dbo, table_name, fields=None, return_geom=True, geom_with_srid=False,
                 where=None, limit=None, sql=None):
