@@ -72,14 +72,12 @@ COPY pyproject.toml /pyproject.toml
 # syntax check on geopetl code base
 RUN python3 -m compileall ./geopetl
 
+
 RUN python3 -m pip install --upgrade pip
-RUN python3 -m pip --version
 RUN python3 -m venv env
 RUN . env/bin/activate
-
-
-RUN touch setup.cfg
 # Install geopetl via setup.py
+RUN touch setup.cfg
 RUN pip3 install -e .
 
 COPY scripts/oracle_entrypoint.sh /usr/local/bin/entrypoint.sh
