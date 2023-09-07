@@ -12,9 +12,7 @@ authors = ["Victor Espinoza   <victor.espinoza@phila.gov>",
             "Roland MacDavid  <roland.macdavid@phila.gov>"]
 readme = "README.md"
 requires-python = ">=3.7"
-dependencies = [
-    "petl"
-]
+
 
 [tool.setuptools.packages]
 find = {}  # Scan the project directory with the default parameters

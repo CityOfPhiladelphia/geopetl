@@ -73,7 +73,6 @@ COPY pyproject.toml /pyproject.toml
 # syntax check on geopetl code base
 RUN python3 -m compileall ./geopetl
 
-RUN ls -l
 RUN python3 -m pip --version
 RUN python3 -m pip install --upgrade pip
 RUN python3 -m pip --version
