@@ -83,6 +83,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
     create = '.'.join([table.schema, table.name]) not in db.tables
+    print(f'Table "{table.schema}.{table.name}" exists?')
     # Create table if it doesn't exist
     if create:
         # Disable autocreate new postgres table
@@ -94,6 +95,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
             print('Autocreating PostGIS table')
             db.create_table(column_definition_json, table)
     if not create:
+        print('Table exists, truncating.')
         table.truncate()
 
     table.write(rows, from_srid=from_srid)
@@ -726,7 +728,14 @@ class PostgisTable(object):
             elif 'timestamptz' not in str(val).lower():
                 val = '''TIMESTAMPTZ '{}' '''.format(val)
         elif type_ == 'boolean':
-            val = val if val else 'NULL'
+            # if we don't convert to string, then our val join in write() will fail to join the value
+            # since it will be a True/False value
+            if (val == True) or (val == False):
+                val = str(val)
+            elif not val:
+                val = 'NULL'
+            else:
+                val = val
         elif type_ == 'money':
             if not val:
                 val = 'NULL'
