@@ -181,6 +181,7 @@ class PostgisDatabase(object):
         # To be used by setter properties below
         self._is_sde_enabled = None
         self._is_postgis_enabled = None
+        self._is_postgis_sde_rds = None
 
 
     def __str__(self):
@@ -237,6 +238,27 @@ class PostgisDatabase(object):
             return self._is_postgis_enabled
 
 
+    def is_postgis_sde_rds(self):
+        # Get the value
+        if self._is_postgis_sde_rds is not None:
+            return self._is_postgis_sde_rds
+        # Set the value only once (saves on db calls)
+        stmt = '''select case when exists is true then 1 else 0 end as is_Rds from (
+                        SELECT exists (
+                        SELECT FROM information_schema.tables 
+                        WHERE  table_schema = 'sde'
+                        AND    table_name   = 'st_geometry_columns'
+                        )
+                    ) foo;'''
+        self.cursor.execute(stmt)
+        result = self.cursor.fetchall()
+        if result == 0 and self.is_postgis_enabled and self.is_sde_enabled:
+            self._is_postgis_sde_rds = True
+        else:
+            self._is_postgis_sde_rds = False
+        return self._is_postgis_sde_rds
+            
+    
 
     # @property
     # def tables(self, schema='public'):
@@ -748,7 +770,7 @@ class PostgisTable(object):
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
         # if DB is sde enabled
-        if self.db.is_sde_enabled is True:
+        if self.db.is_sde_enabled is True and not self.db.is_postgis_sde_rds:
             geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
         # if DB is postgis enabled
         elif self.db.is_postgis_enabled is True:
