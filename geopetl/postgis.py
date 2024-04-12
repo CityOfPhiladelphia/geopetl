@@ -602,11 +602,10 @@ class PostgisTable(object):
                         stmt = '''select f_geometry_column as column_name from geometry_columns 
                                                 where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
                         target_table_shape_fields = self.db.fetch(stmt)
-
-            elif self.db.is_postgis_enabled: 
-                # this query should work for both postgis mview and table
+		# Could be an odd situation where we have a non-registered table, but the table still has postgis geometry.
+            elif self.db.is_postgis_enabled and not target_table_shape_fields:
                 stmt = '''select f_geometry_column as column_name from geometry_columns 
-                                       where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
+                    where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
                 target_table_shape_fields = self.db.fetch(stmt)
 
             # if we find shape fields in target tables/view/materialized vies
