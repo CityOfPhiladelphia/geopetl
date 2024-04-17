@@ -746,7 +746,15 @@ class OracleSdeTable(object):
         """Prepares WKT geometry by projecting and casting as necessary."""
         if geom is None or geom == '':
             # TODO: should this use the `EMPTY` keyword?
-            return '{} EMPTY'.format(self.geom_type)
+            if not self.geom_type:
+                return 'POINT EMPTY'
+            else:
+                return '{} EMPTY'.format(self.geom_type)
+        
+        # If shape was exported as EWKT (e.g. we exported from postgis with --with_srid), then remove the SRID which is in front of the shape
+        # which is converting to WKT.
+        if geom.startswith('SRID='):
+            geom = geom.split(';')[1]
 
         # Uncomment this to use write method #1 (see write function for details)
         # geom = "SDE.ST_Geometry('{}', {})".format(geom, srid)
@@ -860,7 +868,7 @@ class OracleSdeTable(object):
         fields = sorted(fields, key=lambda x: 'lob' in self.metadata[x]['type'])
 
         table_geom_field = self.geom_field
-        srid = srid or self.srid
+        srid = srid or self.srid 
         table_geom_type = self.geom_type if table_geom_field else None
         # row_geom_type = re.match('[A-Z]+', rows[0][geom_field]).group() \
         #     if geom_field else None
@@ -873,6 +881,8 @@ class OracleSdeTable(object):
             rows_geom_field = None
             for i, val in enumerate(first_row):
                 # TODO make a function to screen for wkt-like text
+                if str(val).startswith('SRID='):
+                    val = val.split(';')[1]
                 if str(val).startswith(('POINT', 'POLYGON', 'LINESTRING', 'MULTIPOLYGON')):
                     if rows_geom_field:
                         raise ValueError('Multiple geometry fields found: {}'.format(', '.join([rows_geom_field, first_row_header[i]])))
@@ -885,6 +895,10 @@ class OracleSdeTable(object):
                 geom_rows = rows.selectnotnone(rows_geom_field).records()
                 geom_row = geom_rows[0]
                 geom = geom_row[rows_geom_field]
+                # Override SRID we'll use to insert with if we find the SRID in the shape field in the CSV.
+                # This is so we can insert shapes into unregistered tables.
+                if geom.startswith('SRID='):
+                    srid = geom.split(';')[0].split('=')[1]
                 # if geom value is empty in staging data, insert "point table"
                 if not geom:
                     geom = 'POINT EMPTY'
