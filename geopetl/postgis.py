@@ -237,25 +237,21 @@ class PostgisDatabase(object):
                 self._is_postgis_enabled = False
             return self._is_postgis_enabled
 
-
+    @property
     def is_postgis_sde_rds(self):
         # Get the value
         if self._is_postgis_sde_rds is not None:
             return self._is_postgis_sde_rds
         # Set the value only once (saves on db calls)
-        stmt = '''select case when exists is true then 1 else 0 end as is_Rds from (
-                        SELECT exists (
-                        SELECT FROM information_schema.tables 
-                        WHERE  table_schema = 'sde'
-                        AND    table_name   = 'st_geometry_columns'
-                        )
-                    ) foo;'''
+        stmt = '''select * from pg_roles where rolname like '%rds%' '''
         self.cursor.execute(stmt)
         result = self.cursor.fetchall()
-        if result == 0 and self.is_postgis_enabled and self.is_sde_enabled:
+        # if result == 0 and self.is_postgis_enabled and self.is_sde_enabled:
+        if result and self.is_postgis_enabled and self.is_sde_enabled:
             self._is_postgis_sde_rds = True
         else:
             self._is_postgis_sde_rds = False
+        print(f'Is postgis sde rds? {self._is_postgis_sde_rds}')
         return self._is_postgis_sde_rds
             
     
