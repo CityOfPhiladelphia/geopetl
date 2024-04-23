@@ -88,6 +88,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
     table = db.table(table_name)
     # sample = 0 if create else None # sample whole table
     create = '.'.join([table.schema, table.name]) not in db.tables
+    print(f'Table "{table.schema}.{table.name}" exists?')
     # Create table if it doesn't exist
     if create:
         # Disable autocreate new postgres table
@@ -99,6 +100,7 @@ def topostgis(rows, dbo, table_name, from_srid=None, column_definition_json=None
             print('Autocreating PostGIS table')
             db.create_table(column_definition_json, table)
     if not create:
+        print('Table exists, truncating.')
         table.truncate()
 
     table.write(rows, from_srid=from_srid)
@@ -184,6 +186,7 @@ class PostgisDatabase(object):
         # To be used by setter properties below
         self._is_sde_enabled = None
         self._is_postgis_enabled = None
+        self._is_postgis_sde_rds = None
 
 
     def __str__(self):
@@ -239,7 +242,24 @@ class PostgisDatabase(object):
                 self._is_postgis_enabled = False
             return self._is_postgis_enabled
 
-
+    @property
+    def is_postgis_sde_rds(self):
+        # Get the value
+        if self._is_postgis_sde_rds is not None:
+            return self._is_postgis_sde_rds
+        # Set the value only once (saves on db calls)
+        stmt = '''select * from pg_roles where rolname like '%rds%' '''
+        self.cursor.execute(stmt)
+        result = self.cursor.fetchall()
+        # if result == 0 and self.is_postgis_enabled and self.is_sde_enabled:
+        if result and self.is_postgis_enabled and self.is_sde_enabled:
+            self._is_postgis_sde_rds = True
+        else:
+            self._is_postgis_sde_rds = False
+        print(f'Is postgis sde rds? {self._is_postgis_sde_rds}')
+        return self._is_postgis_sde_rds
+            
+    
 
     # @property
     # def tables(self, schema='public'):
@@ -783,7 +803,14 @@ class PostgisTable(object):
             elif 'timestamptz' not in str(val).lower():
                 val = '''TIMESTAMPTZ '{}' '''.format(val)
         elif type_ == 'boolean':
-            val = val if val else 'NULL'
+            # if we don't convert to string, then our val join in write() will fail to join the value
+            # since it will be a True/False value
+            if (val == True) or (val == False):
+                val = str(val)
+            elif not val:
+                val = 'NULL'
+            else:
+                val = val
         elif type_ == 'money':
             if not val:
                 val = 'NULL'
@@ -796,7 +823,7 @@ class PostgisTable(object):
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
         # if DB is sde enabled
-        if self.db.is_sde_enabled is True:
+        if self.db.is_sde_enabled is True and not self.db.is_postgis_sde_rds:
             geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
         # if DB is postgis enabled
         elif self.db.is_postgis_enabled is True:
