@@ -904,6 +904,8 @@ class OracleSdeTable(object):
                     geom = 'POINT EMPTY'
                 try:
                     row_geom_type = re.match('[A-Z]+', geom).group()
+                except AttributeError:
+                    raise Exception(f'Could not find geometry type, is the table SDE registered? Geom looks like: {geom}')
                 # For "bytes-like objects"
                 except TypeError:
                     row_geom_type = re.match(b'[A-Z]+', geom).group()
