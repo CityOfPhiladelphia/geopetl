@@ -1051,8 +1051,8 @@ class OracleSdeTable(object):
                 try:
                     self.db.cursor.executemany(None, val_rows, batcherrors=False)
                 except Exception as e:
-                    print('Error trying to write. Length of val_rows {len(val_rows)}'.format(val_rows=val_rows))
-                    print('Prepare statement used for executemany: {prepare_stmt}'.format(prepare_stmt=prepare_stmt))
+                    print(f'Error trying to write. Length of val_rows {len(val_rows)}')
+                    print(f'Prepare statement used for executemany: {prepare_stmt}')
                     err = self.db.cursor.getbatcherrors()
                     print(err)
                     raise e
@@ -1065,8 +1065,8 @@ class OracleSdeTable(object):
             try:
                 self.db.cursor.executemany(None, val_rows, batcherrors=False)
             except Exception as e:
-                print('Error trying to write. Length of val_rows {len(val_rows)}'.format(val_rows=val_rows))
-                print('Prepare statement used for executemany: {prepare_stmt}'.format(prepare_stmt=prepare_stmt))
+                print(f'Error trying to write. Length of val_rows {len(val_rows)}')
+                print(f'Prepare statement used for executemany: {prepare_stmt}')
                 err = self.db.cursor.getbatcherrors()
                 print(err)
                 raise e
@@ -1075,7 +1075,7 @@ class OracleSdeTable(object):
     def truncate(self, cascade=False):
         """Delete all rows."""
         name = self._name_with_schema_p
-        stmt = "TRUNCATE TABLE {}".format(name)
+        stmt = f"TRUNCATE TABLE {name}"
         stmt += ' CASCADE' if cascade else ''
         self.db.cursor.execute(stmt)
         self.db.dbo.commit()
@@ -1084,7 +1084,7 @@ class OracleSdeTable(object):
     def count(self):
         """Count rows."""
         # note: this didn't work with a bind variable
-        stmt = "SELECT COUNT(*) FROM {}".format(self._name_with_schema)
+        stmt = f"SELECT COUNT(*) FROM {self._name_with_schema}"
         cursor = self.db.cursor
         cursor.execute(stmt)
         return cursor.fetchone()[0]
