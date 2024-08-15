@@ -12,7 +12,7 @@ jobs:
   build:
     name: Build and Test Geopetl against PostGIS db
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps: 
 
     - name: Checkout the latest github changes
