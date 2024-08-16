@@ -844,16 +844,12 @@ class OracleSdeTable(object):
             else:
                 return
 
-        # if table doesn't have a srid (probably because it isn't registered
-        # with sde) and none was passed in, error
-        # TODO some tables just don't have a srid -- this should probably go
-        # somewhere else, or needs more logic
-        #######################################################################
-        # table_srid = table_srid or self.srid
-        # if table_srid is None:
-        #     raise ValueError('Table does not define an SRID. Please provide '
-        #                         'a value for `table_srid` or register the '
-        #                         'table with SDE.')
+        # Some tables just don't have a srid, but if we're passed a table_srid,
+        # use that anyway.
+        if not self.srid and table_srid:
+            insert_srid = table_srid
+        else:
+            insert_srid = self.srid
 
         # Get fields from the row because some fields from self.fields may be
         # optional, such as an autoincrementing PK.
@@ -960,8 +956,12 @@ class OracleSdeTable(object):
         for field in fields:
             type_ = type_map[field]
             if type_ == 'geom':
-                geom_placeholder = 'SDE.ST_Geometry(:{}, {})'\
-                                        .format(field, self.srid)
+                # SRID cannot be None here! This will result in this being used in the prepare statment:
+                #SDE.ST_GEOMETRY(:SHAPE, NONE))
+                # which ends with this error: cx_Oracle.DatabaseError: ORA-00984: column not allowed here
+                print('Making sure we have an SRID value..')
+                assert insert_srid, "SRID cannot be None when writing to geometric tables!"
+                geom_placeholder = f'SDE.ST_Geometry(:{field}, {insert_srid})'
                 placeholders.append(geom_placeholder)
             # elif type_ == 'date':
             #     # Insert an ISO-8601 timestring
@@ -1011,6 +1011,7 @@ class OracleSdeTable(object):
         stmt_fields_joined = ', '.join(stmt_fields)
         prepare_stmt = "INSERT INTO {} ({}) VALUES ({})".format(self._name_with_schema, \
             stmt_fields_joined, placeholders_joined)
+        print(f'prepare_stmt: {prepare_stmt}')
         self.db.cursor.prepare(prepare_stmt)
 
         db_types_filtered = {x.upper(): db_types.get(x.upper()) for x in stmt_fields if x != self.objectid_field}
