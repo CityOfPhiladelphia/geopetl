@@ -959,7 +959,6 @@ class OracleSdeTable(object):
                 # SRID cannot be None here! This will result in this being used in the prepare statment:
                 #SDE.ST_GEOMETRY(:SHAPE, NONE))
                 # which ends with this error: cx_Oracle.DatabaseError: ORA-00984: column not allowed here
-                print('Making sure we have an SRID value..')
                 assert insert_srid, "SRID cannot be None when writing to geometric tables!"
                 geom_placeholder = f'SDE.ST_Geometry(:{field}, {insert_srid})'
                 placeholders.append(geom_placeholder)
