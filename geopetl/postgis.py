@@ -360,6 +360,9 @@ FIELD_TYPE_MAP = {
     'st_geometry':              'geometry',
     'geometry':                 'geometry',     # postgis materialized view returns type geometry instead of user-defined or st_geometry
     'st_point':                 'geometry',     # sde mat view?
+    'time without time zone':   'time without time zone',
+    'time':                     'time without time zone',
+    'time with time zone':      'time with time zone',
     'timestamp with time zone': 'timestamptz',
     'timestamptz':              'timestamptz',  # postgis materialized view returns type timestamptz instead of timestamp with time zone
     'timestamp without time zone': 'timestamp',
