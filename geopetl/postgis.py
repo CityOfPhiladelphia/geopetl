@@ -607,7 +607,7 @@ class PostgisTable(object):
                                                 where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
                         target_table_shape_fields = self.db.fetch(stmt)
 		# Could be an odd situation where we have a non-registered table, but the table still has postgis geometry.
-            elif self.db.is_postgis_enabled and not target_table_shape_fields:
+            if self.db.is_postgis_enabled and not target_table_shape_fields:
                 stmt = '''select f_geometry_column as column_name from geometry_columns 
                     where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
                 target_table_shape_fields = self.db.fetch(stmt)
