@@ -800,7 +800,7 @@ class PostgisTable(object):
     def _prepare_geom(self, geom, srid, transform_srid=None, multi_geom=True):
         """Prepares WKT geometry by projecting and casting as necessary."""
         # if DB is sde enabled
-        if self.db.is_sde_enabled is True:
+        if (self.db.is_sde_enabled is True) and not (self.db.is_postgis_enabled is True):
             geom = "ST_GEOMETRY('{}', {})".format(geom, srid) if geom and geom != 'EMPTY' else "null"
         # if DB is postgis enabled
         elif self.db.is_postgis_enabled is True:
