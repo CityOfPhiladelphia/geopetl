@@ -375,7 +375,8 @@ FIELD_TYPE_MAP = {
     'money':                    'money',
     'bytea':                    'text',
     'array':                    'text',
-    'jsonb':                    'text'
+    'jsonb':                    'text',
+    'json':                     'text'
 }
 
 class PostgisTable(object):
