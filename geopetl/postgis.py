@@ -361,6 +361,7 @@ FIELD_TYPE_MAP = {
     'integer':                  'num',
     'smallint':                 'num',
     'float':                    'num',
+    'real':                     'num',
     'double':                   'num',
     'numeric':                  'num',
     'bigint':                   'num',
@@ -576,12 +577,12 @@ class PostgisTable(object):
                                                 where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
                         target_table_shape_fields = self.db.fetch(stmt)
 
-            elif self.db.is_postgis_enabled: 
+            # elif self.db.is_postgis_enabled:
+            if self.db.is_postgis_enabled and not target_table_shape_fields: 
                 # this query should work for both postgis mview and table
                 stmt = '''select f_geometry_column as column_name from geometry_columns 
                                        where f_table_name = '{table_name}' and f_table_schema = '{table_schema}' '''.format(table_name=self.name, table_schema=self.schema)
                 target_table_shape_fields = self.db.fetch(stmt)
-
             # if we find shape fields in target tables/view/materialized vies
             if not target_table_shape_fields:
                 self._geom_field = None
