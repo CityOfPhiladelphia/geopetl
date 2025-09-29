@@ -3,7 +3,6 @@ from geopetl.util import parse_db_url
 
 # activate all extensions
 import geopetl.carto
-import geopetl.oracle_sde
 import geopetl.postgis
 
 # activate transforms
