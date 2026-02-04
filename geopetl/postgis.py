@@ -604,8 +604,7 @@ class PostgisTable(object):
 
     @property
     def objectid_field(self):
-        #
-        f = [x['name'].lower() for x in self.metadata if 'objectid' in x['name']]
+        f = [x['name'].lower() for x in self.metadata if 'objectid' in x['name'] and x['name'][0].lower() == 'o']
         if len(f) == 0:
             return None
         elif len(f) > 1:
