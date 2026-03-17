@@ -4,7 +4,7 @@ psycopg2-binary==2.8.4
 numpy==1.19.5
 petl==1.7.10
 py==1.11.0
-pyasn1==0.4.8
+pyasn1==0.6.3
 pycparser==2.19
 pyparsing==2.4.6
 pytest==5.3.5
